@@ -25,7 +25,7 @@
       (alist
         ;(regexp search-string . replacement)
         "->" "_to_"
-        ".-" (pair "-" "_") ".\\?$" (pair "?" "_p") ".!$" (pair "!" "_x") ".\\+." (pair "+" "_and_"))))
+        ".-" (pair "-" "_") "\\?" "_p" ".!$" (pair "!" "_x") ".\\+." (pair "+" "_and_"))))
 
   (define (sc-apply proc args)
     (c-apply-nc (sc-identifier proc) (string-join (map sc-identifier args) ",")))
