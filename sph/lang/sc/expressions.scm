@@ -22,10 +22,11 @@
 
   (define identifier-replacements
     (alist->regexp-match-replacements
-      (alist
-        ;(regexp search-string . replacement)
-        "->" "_to_"
-        ".-" (pair "-" "_") "\\?" "_p" ".!$" (pair "!" "_x") ".\\+." (pair "+" "_and_"))))
+      ;(regexp search-string . replacement)
+      ;replaced in order
+      (alist "->" "_to_"
+        ".-" (pair "-" "_")
+        ".!$" (pair "!" "_x") "\\?" "_p" ".\\+." (pair "+" "_and_") "./." (pair "/" "_or_"))))
 
   (define (sc-apply proc args)
     (c-apply-nc (sc-identifier proc) (string-join (map sc-identifier args) ",")))
