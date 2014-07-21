@@ -15,7 +15,7 @@
     (sph lang c expressions)
     (only (guile) make-regexp string-join)
     (only (sph alist) alist)
-    (only (sph one) regexp-match-replace))
+    (only (sph one) alist->regexp-match-replacements))
 
   (define (add-begin arg)
     (if (and (list? arg) (not (null? arg)) (equal? (q begin) (first arg))) arg (list (q begin) arg)))
