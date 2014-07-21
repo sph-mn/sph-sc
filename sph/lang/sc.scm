@@ -1,4 +1,4 @@
-;a scheme-data to c compiler
+;a scheme-datum to c compiler
 (library (sph lang sc)
   (export sc->c)
   (import
