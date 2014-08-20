@@ -34,20 +34,20 @@
   (define* (sc-define name type #:optional value) "any [any] -> string"
     (c-define-nc (sc-identifier name) (sc-identifier type) (if value (sc-value value) value)))
 
-  (define (sc-identifier arg)
-    (if (symbol? arg) (translate-identifier (symbol->string arg))
-      (if (list? arg) (string-join (map sc-identifier arg) " ") arg)))
+  (define (sc-identifier a)
+    (if (symbol? a) (translate-identifier (symbol->string a))
+      (if (list? a) (string-join (map sc-identifier a) " ") a)))
 
-  (define (sc-identifier-list arg)
-    (string-append "(" (string-join (map sc-identifier arg) ",") ")"))
+  (define (sc-identifier-list a)
+    (string-append "(" (string-join (map sc-identifier a) ",") ")"))
 
-  (define (sc-value arg)
-    (cond ((symbol? arg) (translate-identifier (symbol->string arg)))
-      ((and (integer? arg) (<= 0 arg)) (string-append (number->string arg) "u"))
-      ((boolean? arg) (if arg "1u" "0u")) (else (c-value arg))))
+  (define (sc-value a)
+    (cond ((symbol? a) (translate-identifier (symbol->string a)))
+      ((and (integer? a) (<= 0 a)) (string-append (number->string a) "u"))
+      ((boolean? a) (if a "1u" "0u")) (else (c-value a))))
 
-  (define (scp-if type arg compile)
-    (match arg
+  (define (scp-if type a compile)
+    (match a
       ( (test consequent alternate)
         (cp-if type (compile test) (compile (add-begin consequent)) (compile (add-begin alternate))))
       ((test consequent) (cp-if type (compile test) (compile (add-begin consequent)) #f))))

@@ -2,12 +2,12 @@
 !#
 
 (import (sph) (sph filesystem) (sph alist)
-  (sph system reader) (sph lang sc) (sph stream) (ice-9 streams) (srfi srfi-1) (sph cli))
+  (sph lang sc) (sph stream) (ice-9 streams) (srfi srfi-1) (sph cli) (sph system reader))
 
 (define (process input-port output-port)
   (display
     (sc->c
-      (pair (q begin) (stream->list (port->stream input-port read-with-uppercase-symbols))))
+      (pair (q begin) (stream->list (port->stream input-port sph-read-with-upper-case-symbols))))
     output-port))
 
 (define (each-input-file proc paths) (each (l (path) (call-with-input-file path proc)) paths))
