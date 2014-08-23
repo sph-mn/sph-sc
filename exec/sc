@@ -29,8 +29,8 @@
 
 (let
   (options
-    (cli-apply #:help
+    ((cli-create #:help
       "compile sc to c reading from files or standard-input, and writing to a file or standard-out
       depending on if paths are given as arguments."
-      #:options (q (((paths ...))))))
+      #:options (q (((paths ...)))))))
   (apply sc (or (alist-ref options (q paths)) (list))))
