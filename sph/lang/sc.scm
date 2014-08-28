@@ -219,11 +219,17 @@
       ((while)
         (match (tail arg)
           ((test body ...)
-            (c-statement-nc "while"
-              (compile (pair (q begin) body))
-              (if (and (list? test) (eqv? (q set) (first test)))
-                (parenthesise (compile test))
-                (compile test))))))
+            (string-append "while"
+              (parenthesise (compile test))
+              (c-compound-nc
+                (compile (pair (q begin) body)))))))
+      ((do-while)
+        (match (tail arg)
+          ((test body ...)
+            (string-append "do"
+              (c-compound-nc
+                (compile (pair (q begin) body)))
+              "while" (parenthesise (compile test))))))
       ((undefine-macro)
         (string-join (map (compose cp-undef sc-identifier) (tail arg)) "\n" (q suffix)))
       ((let-macro)
