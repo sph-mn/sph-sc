@@ -127,10 +127,11 @@
                 (list (q set) (list (q struct-ref) struct-var field) value))
               (tail (tail a))))))
       ((include-sc)
-        (file->datums
-          (search-load-path
-            (string-append (first (tail a)) ".sc")
-            load-paths)))
+        (pair (q begin)
+          (file->datums
+            (search-load-path
+              (string-append (first (tail a)) ".sc")
+              load-paths))))
       ((cond cond*)
         (let
           ( (cond (reverse (tail a)))
