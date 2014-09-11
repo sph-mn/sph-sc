@@ -7,11 +7,19 @@
     (guile)
     (ice-9 match)
     (sph)
+    (sph conditional)
     (only (sph string) string-replace-string string-case parenthesise)
     (sph lang c expressions)
     (sph lang sc expressions)
+    (only (sph filesystem) search-load-path ensure-trailing-slash)
+    (only (sph read-write) file->datums)
     (only (sph list) map-slice length-eq-one?)
     (only (sph tree) tree-transform tree-contains?))
+
+  (define load-paths
+    (map ensure-trailing-slash
+      (or (pass-if (getenv "SC_LOAD_PATH")
+          (l (a) (string-split a #\:))) (list (getcwd)))))
 
   (define-as identical-infix-token list "+" "-" "<" ">" "<=" ">=" "*" "/")
 
@@ -118,6 +126,11 @@
               (l (field value)
                 (list (q set) (list (q struct-ref) struct-var field) value))
               (tail (tail arg))))))
+      ((include-sc)
+        (file->datums
+          (search-load-path
+            (string-append (first (tail arg)) ".sc")
+            load-paths)))
       ((cond cond*)
         (let
           ( (cond (reverse (tail arg)))
