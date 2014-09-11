@@ -1,13 +1,16 @@
 #!/usr/bin/guile
 !#
 
-(import (sph) (sph filesystem) (sph alist)
-  (sph lang sc) (sph stream) (ice-9 streams) (srfi srfi-1) (sph cli) (sph system reader))
+(import (sph) (sph filesystem)
+  (sph alist) (sph lang sc)
+  (sph stream) (ice-9 streams) (srfi srfi-1) (sph conditional) (sph cli) (sph system reader))
 
 (define (process input-port output-port)
   (display
     (sc->c
-      (pair (q begin) (stream->list (port->stream input-port sph-read-with-upper-case-symbols))))
+      (pair (q begin) (stream->list (port->stream input-port sph-read-with-upper-case-symbols)))
+      (pair (ensure-trailing-slash (pass-if (port-filename input-port) dirname (getcwd)))
+        sc-default-load-paths))
     output-port))
 
 (define (each-input-file proc paths) (each (l (path) (call-with-input-file path proc)) paths))
@@ -24,13 +27,12 @@
           (if (null? source-path) (process (current-input-port) target-file)
             (each-input-file (l (source-file) (process source-file target-file)) source-path))))
       (if (null? source-path) (process (current-input-port) (current-output-port))
-        (each-input-file (l (source-file) (process source-file (current-output-port)))
-          source-path)))))
+        (each-input-file (l (source-file) (process source-file (current-output-port))) source-path)))))
 
 (let
   (options
-    ((cli-create #:help
-      "compile sc to c reading from files or standard-input, and writing to a file or standard-out
+    ( (cli-create #:help
+        "compile sc to c reading from files or standard-input, and writing to a file or standard-out
       depending on if paths are given as arguments."
-      #:options (q (((paths ...)))))))
+        #:options (q (((paths ...)))))))
   (apply sc (or (alist-ref options (q paths)) (list))))
