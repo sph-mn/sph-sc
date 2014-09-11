@@ -9,11 +9,14 @@
   (display
     (sc->c
       (pair (q begin) (stream->list (port->stream input-port sph-read-with-upper-case-symbols)))
-      (pair (ensure-trailing-slash (pass-if (port-filename input-port) dirname (getcwd)))
+      (pair
+        (ensure-trailing-slash
+          (pass-if (port-filename input-port) (l (a) (path->full-path (dirname a))) (getcwd)))
         sc-default-load-paths))
     output-port))
 
-(define (each-input-file proc paths) (each (l (path) (call-with-input-file path proc)) paths))
+(define (each-input-file proc paths)
+  (each (l (path) (call-with-input-file path (l (a) (set-port-filename! a path) (proc a)))) paths))
 
 (define* (sc #:optional source-path . source+target-path)
   (let*
