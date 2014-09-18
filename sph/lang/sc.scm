@@ -11,6 +11,7 @@
     (only (sph string) string-replace-string string-case parenthesise)
     (sph lang c expressions)
     (sph lang sc expressions)
+    (sph system reader)
     (only (sph filesystem) search-load-path ensure-trailing-slash)
     (only (sph read-write) file->datums)
     (only (sph list) map-slice length-eq-one?)
@@ -131,7 +132,8 @@
           (file->datums
             (search-load-path
               (string-append (first (tail a)) ".sc")
-              load-paths))))
+              load-paths)
+            sph-read-with-upper-case-symbols)))
       ((cond cond*)
         (let
           ( (cond (reverse (tail a)))
