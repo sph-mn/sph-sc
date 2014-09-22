@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cp -rt $1/usr/share/guile/site sph
+cp -rt $1/usr/bin exec/sc
