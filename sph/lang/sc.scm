@@ -137,7 +137,7 @@
       ((cond cond*)
         (let
           ( (cond (reverse (tail a)))
-            (symbol-if (if (eq? (first a) (q cond*)) (q if*) (q if))))
+            (symbol-if (if (eqv? (first a) (q cond*)) (q if*) (q if))))
           (fold
             (l (cond alternate)
               (list symbol-if (first cond) (add-begin-if-multiple (tail cond)) alternate))
