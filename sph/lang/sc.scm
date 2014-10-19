@@ -36,13 +36,11 @@
     "bit_shift_right"
     "bit_shift_left"
     "eqv_p"
-    "eq_p"
-    "string="
-    "string_equal_p")
+    "eq_p")
 
   (define (translate-infix-token a)
     (string-case a
-      (("=" "equal_p" "eqv_p" "eq_p" "string_equal_p" "string=") "==")
+      (("=" "equal_p" "eqv_p" "eq_p") "==")
       ("and" "&&")
       ("bit_or" "|")
       ("bit_and" "&")
