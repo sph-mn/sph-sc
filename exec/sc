@@ -3,12 +3,11 @@
 
 (import (sph) (sph filesystem)
   (sph alist) (sph lang sc)
-  (sph stream) (ice-9 streams) (srfi srfi-1) (sph conditional) (sph cli) (sph system reader))
+  (only (guile) read) (sph stream) (ice-9 streams) (srfi srfi-1) (sph conditional) (sph cli))
 
 (define (process input-port output-port)
   (display
-    (sc->c
-      (pair (q begin) (stream->list (port->stream input-port sph-read-with-upper-case-symbols)))
+    (sc->c (pair (q begin) (stream->list (port->stream input-port read)))
       (pair
         (ensure-trailing-slash
           (pass-if (port-filename input-port) (l (a) (path->full-path (dirname a))) (getcwd)))

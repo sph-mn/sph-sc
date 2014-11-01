@@ -7,6 +7,7 @@
     c-compound-nc
     c-convert-type-nc
     c-define
+    c-define-array-nc
     c-define-nc
     c-function
     c-function-nc
@@ -49,16 +50,13 @@
     (only (rnrs hashtables) hashtable?))
 
   ;generating c expressions as strings.
-
   ;by default, the functions convert input values from scheme datatypes,
-
   ;the variants with a -nc suffix are non-converting and take strings.
-
-  (define (c-stringify arg) (string-append "#" arg))
-  (define (cp-undef arg) (string-append "#undef " arg))
+  (define (c-stringify a) (string-append "#" a))
+  (define (cp-undef a) (string-append "#undef " a))
   (define (cp-include path) (string-append "#include " (c-string path)))
   (define (cp-includep path) (string-append "#include <" path ">"))
-  (define (cp-concat-nc args) (string-join args "##"))
+  (define (cp-concat-nc a) (string-join a "##"))
 
   (define (cp-define-macro-nc name body identifier-list)
     (string-append "#define " name (if identifier-list identifier-list "") " " body))
@@ -74,26 +72,28 @@
       " " test
       "\n" consequent "\n" (if alternate (string-append "#else\n" alternate "\n") "") "#endif"))
 
-  (define (c-compound-nc arg) (string-append "{" arg "}"))
-  (define (c-typedef-nc name arg) (c-line-nc "typedef" arg name))
+  (define (c-compound-nc a) (string-append "{" a "}"))
+  (define (c-typedef-nc name a) (c-line-nc "typedef" a name))
 
   (define (c-typedef-function-nc name return-type . types)
     (string-append "typedef " (apply c-function-pointer-nc name return-type types)))
 
-  (define (c-convert-type-nc arg type) (string-append "(" type ")(" arg ")"))
-  (define (c-line-nc . arg) (string-join arg " "))
+  (define (c-convert-type-nc a type) (string-append "(" type ")(" a ")"))
+  (define (c-line-nc . a) (string-join a " "))
 
-  (define* (c-statement-nc keyword body #:optional prefix-arg suffix-arg)
-    (string-append keyword (if prefix-arg (parenthesise prefix-arg) "")
-      (c-compound-nc body) (if suffix-arg (parenthesise suffix-arg) "")))
+  (define* (c-statement-nc keyword body #:optional prefix-a suffix-a)
+    (string-append keyword (if prefix-a (parenthesise prefix-a) "")
+      (c-compound-nc body) (if suffix-a (parenthesise suffix-a) "")))
 
   (define (c-enum-nc name enum-list)
     (string-append "enum " name
       (c-compound-nc
         (string-join
-          (map (l (ele) (if (list? ele) (string-append (first ele) "=" (first (tail ele))) ele))
-            enum-list)
-          ","))))
+          (map (l (e) (if (list? e) (string-append (first e) "=" (first (tail e))) e)) enum-list) ","))))
+
+  (define (c-define-array-nc name type size values) "string string string string ... -> string"
+    (string-append type " "
+      name "[" size "]" (if values (string-append "={" (string-join values ",") "}") "")))
 
   (define (c-define-nc name type value) "string string -> string"
     (string-append type " " name (if value (string-append "=" value) "")))
@@ -101,23 +101,23 @@
   (define* (c-define name type #:optional value) "any [any] -> string"
     (c-define-nc (c-identifier name) (c-identifier type) (if value (c-value value) value)))
 
-  (define (c-identifier arg)
+  (define (c-identifier a)
     (string-append
-      (cond ((symbol? arg) (symbol->string arg)) ((string? arg) arg)
+      (cond ((symbol? a) (symbol->string a)) ((string? a) a)
         (else (raise (q cannot-convert-to-c-identifier))))))
 
-  (define (c-identifier-list arg)
+  (define (c-identifier-list a)
     (parenthesise
-      (if (list? arg) (string-join (map c-identifier arg) ",")
-        (if (or (symbol? arg) (string? arg)) (c-identifier arg)
+      (if (list? a) (string-join (map c-identifier a) ",")
+        (if (or (symbol? a) (string? a)) (c-identifier a)
           (raise (q cannot-convert-to-c-identifier))))))
 
-  (define (c-identifier+type arg type) (string-append (c-identifier type) " " (c-identifier arg)))
+  (define (c-identifier+type a type) (string-append (c-identifier type) " " (c-identifier a)))
 
-  (define (c-parameter arg types)
+  (define (c-parameter a types)
     (parenthesise
-      (if (list? arg) (string-join (map c-identifier+type arg types) ",")
-        (if (or (symbol? arg) (string? arg)) (c-identifier+type arg types)
+      (if (list? a) (string-join (map c-identifier+type a types) ",")
+        (if (or (symbol? a) (string? a)) (c-identifier+type a types)
           (raise (q cannot-convert-to-c-parameter))))))
 
   (define (c-function-nc name type body parameter)
@@ -142,31 +142,29 @@
     (string-append "if(" test
       "){" consequent "}" (if alternate (string-append "else{" alternate "}") "")))
 
-  (define (c-pointer-deref-nc arg key)
-    (if key (string-append "*(" arg "+" key ")") (string-append "(*" arg ")")))
+  (define (c-pointer-deref-nc a key)
+    (if key (string-append "*(" a "+" key ")") (string-append "(*" a ")")))
 
-  (define (c-bit-shift-nc left? arg shift-by) (string-append arg (if left? "<<" ">>") shift-by))
+  (define (c-bit-shift-nc left? a shift-by) (string-append a (if left? "<<" ">>") shift-by))
   (define (c-set-nc name value) (string-append name "=" value))
   (define (c-set name value) (c-set-nc (c-identifier name) (c-value value)))
   (define (c-pointer type) (string-append type " * "))
-  (define (c-address-of arg) (string-append "&" arg))
+  (define (c-address-of a) (string-append "&" a))
 
   (define (c-function-pointer-nc name return-type . types)
     (string-append return-type "(*" name ")(" (string-join types ",") ")"))
 
-  (define (c-struct-ref-nc arg key) (string-append arg "." key))
-  (define (c-struct-ref arg key) (c-struct-ref-nc (c-identifier arg) (c-identifier key)))
+  (define (c-struct-ref-nc a key) (string-append a "." key))
+  (define (c-struct-ref a key) (c-struct-ref-nc (c-identifier a) (c-identifier key)))
 
   (define c-escape-single-char
     (alist "\"" "\\\\" "\a" "\\a" "\n" "\\n" "\b" "\\b" "\f" "\\f" "\r" "\\r" "\t" "\\t" "\v" "\\v"))
 
   (define (c-string str)
     (string-enclose
-      (fold (l (ele res) (string-replace-string res (first ele) (tail ele))) str
-        c-escape-single-char)
-      "\""))
+      (fold (l (e r) (string-replace-string r (first e) (tail e))) str c-escape-single-char) "\""))
 
-  (define (c-value arg) "handles the default conversions between scheme and c types"
-    (cond ((symbol? arg) (symbol->string arg)) ((string? arg) (c-string arg))
-      ((number? arg) (number->string arg)) ((boolean? arg) (if arg "1" "0"))
-      ((char? arg) (string-enclose (any->string arg) "'")) (else (raise (q cannot-convert-to-c))))))
+  (define (c-value a) "handles the default conversions between scheme and c types"
+    (cond ((symbol? a) (symbol->string a)) ((string? a) (c-string a))
+      ((number? a) (number->string a)) ((boolean? a) (if a "1" "0"))
+      ((char? a) (string-enclose (any->string a) "'")) (else (raise (q cannot-convert-to-c))))))

@@ -11,7 +11,6 @@
     (only (sph string) string-replace-string string-case parenthesise)
     (sph lang c expressions)
     (sph lang sc expressions)
-    (sph system reader)
     (only (sph filesystem) search-load-path ensure-trailing-slash)
     (only (sph read-write) file->datums)
     (only (sph list) map-slice length-eq-one?)
@@ -131,7 +130,7 @@
             (search-load-path
               (string-append (first (tail a)) ".sc")
               load-paths)
-            sph-read-with-upper-case-symbols)))
+            read)))
       ((cond cond*)
         (let
           ( (cond (reverse (tail a)))
@@ -180,6 +179,14 @@
               (sc-identifier name)
               (sc-identifier type)
               (if (null? value) #f (compile (first value)))))))
+      ((define-array)
+        (match (tail a)
+          ((name type size values ...)
+            (c-define-array-nc
+              (sc-identifier name)
+              (sc-identifier type)
+              (compile size)
+              (if (null? values) #f (map compile values))))))
       ((if)
         (apply c-if-statement
           (compile (first (tail a)))
