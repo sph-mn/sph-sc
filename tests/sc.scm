@@ -4,7 +4,7 @@
   (sph test)
   (sph lang sc))
 
-(define-test (sc->c inp exp name) (sc->c inp))
+(define (test-sc->c inp) (sc->c inp))
 
 (execute-tests-quasiquote
   (sc->c
@@ -67,7 +67,7 @@
       (begin f g))
     "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif"
     (undefine-macro my-macro)
-    "#undef my_macro"
+    "#undef my_macro\n"
     (pre-concat a b cd e)
     "a##b##cd##e"
     (pre-ifndef a b c)
@@ -79,7 +79,7 @@
     (bit-shift-right 1 2) "(1u>>2u)"
     (bit-shift-left 1 2) "(1u<<2u)"
     (length size_t) "(8*sizeof(size_t))"
-    (bit-complement a-b)
+    (bit-not a-b)
     "~a_b"
     (struct (a unsigned int) (b unsigned char 3))
     "struct{unsigned int a;unsigned char b:3u;}"
@@ -94,16 +94,21 @@
     (function-pointer f (unsigned int) (unsigned char) size_t)
     "unsigned int(*f)(unsigned char,size_t)"
     (let-macro (a 1 b 2) (+ a b))
-    "#define b 2u\n#define a 1u\n(a+b);\n#undef b\n#undef a"
+    "#define b 2u\n#define a 1u\n(a+b);\n#undef b\n\n#undef a\n"
     (let-macro (a 1) a)
-    "#define a 1u\na;\n#undef a"
+    "#define a 1u\na;\n#undef a\n"
     (let-macro ((a b) 1) a)
-    "#define a(b) 1u\na;\n#undef a"
+    "#define a(b) 1u\na;\n#undef a\n"
     (let-macro ((a b) 1 (c d) 2) a)
-    "#define c(d) 2u\n#define a(b) 1u\na;\n#undef c\n#undef a"
+    "#define c(d) 2u\n#define a(b) 1u\na;\n#undef c\n\n#undef a\n"
     (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
     "{size_t a=1u;size_t b=2u;c=3u;c=7u;return((4u?5u:6u));}"
     (define-macro (->test a b) c)
     "#define to_test(a,b) c"
-
+    (define-array aaa size-t 3)
+    "size_t aaa[3u]"
+    (define-array aaa size-t size-b)
+    "size_t aaa[size_b]"
+    (define-array aaa size-t size-b -1 2 test-c)
+    "size_t aaa[size_b]={-1,2u,test_c}"
 ))
