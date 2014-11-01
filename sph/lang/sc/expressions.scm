@@ -24,7 +24,8 @@
     (alist->regexp-match-replacements
       ;(regexp search-string . replacement)
       ;replaced in order
-      (alist "->" "_to_"
+      (alist "^->" "to_"
+        "->" "_to_"
         ".-" (pair "-" "_")
         ".!$" (pair "!" "_x") "\\?" "_p" ".\\+." (pair "+" "_and_") "./." (pair "/" "_or_"))))
 
@@ -38,8 +39,7 @@
     (if (symbol? a) (translate-identifier (symbol->string a))
       (if (list? a) (string-join (map sc-identifier a) " ") a)))
 
-  (define (sc-identifier-list a)
-    (string-append "(" (string-join (map sc-identifier a) ",") ")"))
+  (define (sc-identifier-list a) (string-append "(" (string-join (map sc-identifier a) ",") ")"))
 
   (define (sc-value a)
     (cond ((symbol? a) (translate-identifier (symbol->string a)))
