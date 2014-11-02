@@ -34,7 +34,11 @@
 (let
   (options
     ( (cli-create #:help
-        "compile sc to c reading from files or standard-input, and writing to a file or standard-out
-      depending on if paths are given as arguments."
+        (string-join
+          (list
+            "compiles sc to c. uses standard input/output or files, depending on how many paths have been given."
+            "no path: read from standard input and write to standard output"
+            "one path: read from standard input and write to file at path"
+            "two paths: read from the first path and write to the second path") "\n")
         #:options (q (((paths ...)))))))
   (apply sc (or (alist-ref options (q paths)) (list))))
