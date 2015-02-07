@@ -152,7 +152,7 @@
       ((set)
         (match (tail a)
           ((name-1 value-1 name-2 value-2 rest ...)
-            (join-expressions (reverse (map-slice 2 c-set-nc (map compile (tail a))))))
+            (join-expressions (map-slice 2 c-set-nc (map compile (tail a)))))
           ((name value)
             (c-set-nc
               (compile name)
@@ -173,7 +173,7 @@
               (sc-identifier return-type)
               (if (null? body) #f (join-expressions (map compile body)))))
           ((name-1 type-1 name-2 type-2 rest ...)
-            (join-expressions (reverse (map-slice 2 sc-define (tail a)))))
+            (join-expressions (map-slice 2 sc-define (tail a))))
           ((name type value ...)
             (c-define-nc
               (sc-identifier name)
