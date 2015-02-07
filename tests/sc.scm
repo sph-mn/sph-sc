@@ -94,17 +94,17 @@
     (function-pointer f (unsigned int) (unsigned char) size_t)
     "unsigned int(*f)(unsigned char,size_t)"
     (let-macro (a 1 b 2) (+ a b))
-    "#define b 2u\n#define a 1u\n(a+b);\n#undef b\n\n#undef a\n"
+    "#define a 1u\n#define b 2u\n(a+b);\n#undef a\n\n#undef b\n"
     (let-macro (a 1) a)
     "#define a 1u\na;\n#undef a\n"
     (let-macro ((a b) 1) a)
     "#define a(b) 1u\na;\n#undef a\n"
     (let-macro ((a b) 1 (c d) 2) a)
-    "#define c(d) 2u\n#define a(b) 1u\na;\n#undef c\n\n#undef a\n"
+    "#define a(b) 1u\n#define c(d) 2u\na;\n#undef a\n\n#undef c\n"
     (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
     "{size_t a=1u;size_t b=2u;c=3u;c=7u;return((4u?5u:6u));}"
     (define-macro (->test a b) c)
-    "#define to_test(a,b) c"
+    "#define _to_test(a,b) c"
     (define-array aaa size-t 3)
     "size_t aaa[3u]"
     (define-array aaa size-t size-b)
