@@ -7,3 +7,4 @@ cp -rt $t sph
 t=$1/usr/bin
 mkdir -p $t
 cp -rt $t exec/sc
+chmod 755 $t/sc
