@@ -1,2 +1,4 @@
+#!/usr/bin/guile
+!#
 (import (sph common))
 (process-replace "guile" "tests/sc.scm")
