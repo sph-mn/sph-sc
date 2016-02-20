@@ -18,6 +18,8 @@
     (only (sph read-write) file->datums)
     (only (sph string)
       string-replace-string
+      string-quote
+      any->string
       string-case
       parenthesise)
     (only (sph tree) tree-transform tree-contains?))
@@ -107,7 +109,11 @@
               (tail (tail a))))))
       ( (include-sc)
         (pair (q begin)
-          (file->datums (search-load-path (string-append (first (tail a)) ".sc") load-paths) read)))
+          (let*
+            ( (path (string-append (first (tail a)) ".sc"))
+              (path-found (search-load-path path load-paths)))
+            (if path-found (file->datums path-found read)
+              (throw (q file-not-accessible) (string-append (any->string path) " not found in " (any->string load-paths)))))))
       ( (cond cond*)
         (let ((cond (reverse (tail a))) (symbol-if (if (eqv? (first a) (q cond*)) (q if*) (q if))))
           (fold

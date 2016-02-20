@@ -2,5 +2,4 @@
 !#
 
 (import (sph) (sph test))
-(add-to-load-path (getcwd))
-(test-execute-modules-prefix test-settings-default (q (test module sph lang sc)))
+(test-execute-modules-prefix #:path-prefix "modules" (q (test module sph lang sc)))
