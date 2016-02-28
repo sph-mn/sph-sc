@@ -2,4 +2,5 @@
 !#
 
 (import (sph) (sph test))
-(test-execute-modules-prefix #:path-prefix "modules" (q (test module sph lang sc)))
+(let (s (test-settings-default-custom path-search "modules" reporter-name (q compact)))
+  (test-execute-modules-by-prefix #:settings s (q (test module sph lang sc))))
