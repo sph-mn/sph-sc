@@ -3,5 +3,5 @@
 
 (import (sph install))
 
-(install-cli-guile ("/usr/bin" "exe/sc")
+(install-cli-guile ("/usr/bin" #o755 "exe/sc")
   (path-lib-scheme "modules/sph" "modules/test"))
