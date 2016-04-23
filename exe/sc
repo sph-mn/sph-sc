@@ -10,7 +10,7 @@
     (sc->c (pair (q begin) (stream->list (port->stream input-port read)))
       (pair
         (ensure-trailing-slash
-          (pass-if (port-filename input-port) (l (a) (path->full-path (dirname a))) (getcwd)))
+          (if-pass (port-filename input-port) (l (a) (path->full-path (dirname a))) (getcwd)))
         sc-default-load-paths))
     output-port))
 
