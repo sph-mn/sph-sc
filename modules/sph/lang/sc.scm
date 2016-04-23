@@ -26,7 +26,7 @@
 
   (define sc-default-load-paths
     (map ensure-trailing-slash
-      (pass-if (getenv "SC_LOAD_PATH") (l (a) (string-split a #\:)) (list))))
+      (if-pass (getenv "SC_LOAD_PATH") (l (a) (string-split a #\:)) (list))))
 
   (define-as identical-infix-token list "+" "-" "<" ">" "<=" ">=" "*" "/")
 
