@@ -3,7 +3,8 @@
 
 (import (sph) (sph filesystem)
   (sph alist) (sph lang sc)
-  (only (guile) read) (sph stream) (ice-9 streams) (srfi srfi-1) (sph conditional) (sph cli))
+  (only (guile) read) (sph stream)
+  (srfi srfi-1) (sph conditional) (sph cli))
 
 (define (process input-port output-port)
   (display
