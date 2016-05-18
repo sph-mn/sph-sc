@@ -35,8 +35,8 @@
     cp-define-macro
     cp-define-macro-nc
     cp-if
+    cp-include-path
     cp-include
-    cp-includep
     cp-undef
     list->c-vector)
   (import
@@ -54,21 +54,21 @@
   ;the variants with a -nc suffix are non-converting and take strings.
   (define (c-stringify a) (string-append "#" a))
   (define (cp-undef a) (string-append "#undef " a))
-  (define (cp-include path) (string-append "#include " (c-string path)))
-  (define (cp-includep path) (string-append "#include <" path ">"))
+  (define (cp-include-path path) (string-append "#include " (c-string path)))
+  (define (cp-include path) (string-append "#include <" path ">"))
   (define (cp-concat-nc a) (string-join a "##"))
 
-  (define (cp-define-macro-nc name body identifier-list)
-    (string-append "#define " name (if identifier-list identifier-list "") " " body))
+  (define (cp-define-macro-nc name body parameters)
+    (string-append "#define " name (if parameters parameters "") " " body))
 
-  (define* (cp-define-macro name body #:optional identifier-list)
-    (cp-define-macro-nc (c-identifier name) body (map c-identifier identifier-list)))
+  (define* (cp-define-macro name body #:optional parameters)
+    (cp-define-macro-nc (c-identifier name) body (map c-identifier parameters)))
 
   (define* (cp-if type test consequent #:optional alternate)
     (string-append "#"
-      (if (eq? (q if) type) "if"
-        (if (eq? (q ifdef) type) "ifdef"
-          (if (eq? (q ifndef) type) "ifndef" (raise (q cannot-convert-to-c)))))
+      (if (equal? (q if) type) "if"
+        (if (equal? (q ifdef) type) "ifdef"
+          (if (equal? (q ifndef) type) "ifndef" (raise (q cannot-convert-to-c)))))
       " " test
       "\n" consequent "\n" (if alternate (string-append "#else\n" alternate "\n") "") "#endif"))
 
@@ -82,6 +82,7 @@
   (define (c-line-nc . a) (string-join a " "))
 
   (define* (c-statement-nc keyword body #:optional prefix-a suffix-a)
+    "\"keyword (prefix-a) { body } (suffix-a)\""
     (string-append keyword (if prefix-a (parenthesise prefix-a) "")
       (c-compound-nc body) (if suffix-a (parenthesise suffix-a) "")))
 

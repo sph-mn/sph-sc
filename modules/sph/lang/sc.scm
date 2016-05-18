@@ -10,6 +10,7 @@
     (rnrs base)
     (sph)
     (sph conditional)
+    (sph error)
     (sph lang c expressions)
     (sph lang sc expressions)
     (except (srfi srfi-1) map)
@@ -58,6 +59,22 @@
 
   (define-syntax-rule (add-begin-if-multiple a)
     (if (length-eq-one? a) (first a) (pair (q begin) a)))
+
+  (define (sc-enum-entries a) "list -> string"
+    (string-join
+      (map
+        (l (e)
+          (match e ((name value) (string-append (sc-identifier name) "=" (sc-value value)))
+            (name (sc-identifier name))))
+        a)
+      ","))
+
+  (define (sc-enum a)
+    (let
+      (c
+        (l (name entries)
+          (c-statement-nc (string-append "enum" name) (sc-enum-entries entries))))
+      (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries)) (((entries ...)) (c "" entries)))))
 
   (define (struct-or-union-body elements compile)
     (string-join
@@ -108,12 +125,12 @@
               (l (field value) (list (q set) (list (q struct-ref) struct-var field) value))
               (tail (tail a))))))
       ( (include-sc)
-        (pair (q begin)
-          (let*
-            ( (path (string-append (first (tail a)) ".sc"))
-              (path-found (search-load-path path load-paths)))
-            (if path-found (file->datums path-found read)
-              (throw (q file-not-accessible) (string-append (any->string path) " not found in " (any->string load-paths)))))))
+        (let*
+          ( (path (string-append (first (tail a)) ".sc"))
+            (path-found (search-load-path path load-paths)))
+          (if path-found (pair (q begin) (file->datums path-found read))
+            (error-create (q file-not-accessible)
+              (string-append (any->string path) " not found in " (any->string load-paths))))))
       ( (cond cond*)
         (let ((cond (reverse (tail a))) (symbol-if (if (eqv? (first a) (q cond*)) (q if*) (q if))))
           (fold
@@ -122,6 +139,7 @@
             (match (first cond) (((quote else) body ...) (add-begin-if-multiple body))
               ((test consequent ...) (list symbol-if test (add-begin-if-multiple consequent))))
             (tail cond))))
+      ((case case*) (apply sc-case (if (equal? (q case*) (first a)) (q cond*) (q cond)) (tail a)))
       (else #f)))
 
   (define (descend-expr->c a compile)
@@ -151,7 +169,7 @@
         (match (tail a)
           ( (name type size values ...)
             (c-define-array-nc (sc-identifier name) (sc-identifier type)
-              (compile size) (if (null? values) #f (map compile values))))))
+              (if size (compile size) "") (if (null? values) #f (map compile values))))))
       ( (if)
         (apply c-if-statement (compile (first (tail a)))
           (map (l (e) (compile (list (q begin) e))) (tail (tail a)))))
@@ -198,6 +216,7 @@
               (list (string-append " " (sc-identifier (first tail-a))) (tail tail-a))
               (list "" tail-a)))))
       ((struct-init) (string-append (c-compound-nc (string-join (map compile (tail a)) ",")) ";"))
+      ((enum) (sc-enum (tail a)))
       ( (while)
         (match (tail a)
           ( (test body ...)
@@ -225,16 +244,16 @@
                   names+values)
                 "\n" (q prefix))))
           (_ (raise (q syntax-error-for-let-macro)))))
-      ((include) (apply string-append (map cp-include (tail a))))
-      ((includep) (apply string-append (map cp-includep (tail a))))
+      ((pre-include) (sc-pre-include (tail a))) ((pre-include-once) (sc-pre-include-once (tail a)))
       ( (function-pointer)
-        (let (tail-a (tail a))
-          (apply c-function-pointer-nc (sc-identifier (first tail-a))
+        (let* ((tail-a (tail a)) (name (first tail-a)))
+          (apply c-function-pointer-nc (if name (sc-identifier name) "")
             (map (l (e) (if (list? e) (string-join (map sc-identifier e) " ") (sc-identifier e)))
               (tail tail-a)))))
       ((pre-concat) (cp-concat-nc (map sc-identifier (tail a))))
-      ((pre-if) (scp-if (q if) (tail a) compile)) ((pre-ifdef) (scp-if (q ifdef) (tail a) compile))
-      ((pre-ifndef) (scp-if (q ifndef) (tail a) compile)) ((quote) (list-ref a 1))
+      ((pre-if) (scp-if (q if) (tail a) compile))
+      ((pre-if-defined) (scp-if (q ifdef) (tail a) compile))
+      ((pre-if-not-defined) (scp-if (q ifndef) (tail a) compile)) ((quote) (list-ref a 1))
       ( (let*)
         (c-compound-nc
           (match (tail a)
