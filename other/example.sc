@@ -1,5 +1,5 @@
-(includep "stdio.h")
-(include "../lib/mdb.h")
+(pre-include "stdio.h")
+(pre-include "../lib/mdb.h")
 
 (define (main argc argv) (b32 b32 b16*)
   (define
@@ -12,7 +12,4 @@
     data MDB_val)
 
   (set! rc (mdb-env-create (pointer-ref env)))
-  (struct-ref test key)
-
-
-  )
+  (struct-ref test key))
