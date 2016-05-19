@@ -71,10 +71,9 @@
 
   (define (sc-enum a)
     (let
-      (c
-        (l (name entries)
-          (c-statement-nc (string-append "enum" name) (sc-enum-entries entries))))
-      (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries)) (((entries ...)) (c "" entries)))))
+      (c (l (name entries) (c-statement-nc (string-append "enum" name) (sc-enum-entries entries))))
+      (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries))
+        (((entries ...)) (c "" entries)))))
 
   (define (struct-or-union-body elements compile)
     (string-join
@@ -124,6 +123,9 @@
             (map-slice 2
               (l (field value) (list (q set) (list (q struct-ref) struct-var field) value))
               (tail (tail a))))))
+      ( (struct-deref)
+        (match (tail a)
+          ((identifier field) (qq (struct-ref (deref (unquote identifier)) (unquote field))))))
       ( (include-sc)
         (let*
           ( (path (string-append (first (tail a)) ".sc"))
@@ -168,8 +170,10 @@
       ( (define-array)
         (match (tail a)
           ( (name type size values ...)
-            (c-define-array-nc (sc-identifier name) (sc-identifier type)
-              (if size (compile size) "") (if (null? values) #f (map compile values))))))
+            (string-append
+              (c-define-array-nc (sc-identifier name) (sc-identifier type)
+                (if size (compile size) "") (if (null? values) #f (map compile values)))
+              (if (null? values) "" ";")))))
       ( (if)
         (apply c-if-statement (compile (first (tail a)))
           (map (l (e) (compile (list (q begin) e))) (tail (tail a)))))
