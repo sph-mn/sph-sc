@@ -40,8 +40,11 @@
       "return(1,2)" (if 1 2 (begin 3 4 (return #t)))
       "if(1){2;}else{3;4;return(1);}" (deref a-b)
       "(*a_b)" (struct-ref a b)
-      "a.b" (struct-ref (deref a) b)
-      "(*a).b" (define-macro (my-macro a b) (if* a #t #f))
+      "a.b"(struct-ref (deref a) b)
+      "(*a).b"
+      (struct-deref a b)
+      "(*a).b"
+      (define-macro (my-macro a b) (if* a #t #f))
       "#define my_macro(a,b) (a?1:0)" (define-macro ob-ject 3)
       "#define ob_ject 3" (pre-if (equal? a b) (begin c d e) (begin f g))
       "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif" (undefine-macro my-macro)
@@ -80,7 +83,7 @@
       "#define _to_test(a,b) c" (define-array aaa size-t 3)
       "size_t aaa[3]" (define-array aaa size-t size-b)
       "size_t aaa[size_b]" (define-array aaa size-t size-b -1 2 test-c)
-      "size_t aaa[size_b]={-1,2,test_c}" (pre-include "./a/b.c")
+      "size_t aaa[size_b]={-1,2,test_c};" (pre-include "./a/b.c")
       "#include \"./a/b.c\"\n" (pre-include "../a/b.c")
       "#include \"../a/b.c\"\n" (pre-include "a/b.c")
       "#include <a/b.c>\n" (pre-include "bb.h")

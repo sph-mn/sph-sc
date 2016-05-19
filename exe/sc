@@ -2,9 +2,8 @@
 !#
 
 (import (sph) (sph filesystem)
-  (sph alist) (sph lang sc)
-  (only (guile) read) (sph stream)
-  (srfi srfi-1) (sph conditional) (sph cli))
+  (sph list) (sph alist)
+  (sph lang sc) (only (guile) read) (sph stream) (srfi srfi-1) (sph conditional) (sph cli))
 
 (define (process input-port output-port)
   (display
@@ -18,19 +17,14 @@
 (define (each-input-file proc paths)
   (each (l (path) (call-with-input-file path (l (a) (set-port-filename! a path) (proc a)))) paths))
 
-(define* (sc #:optional source-path . source+target-path)
-  (let*
-    ( (target-path (if (null? source+target-path) #f (last source+target-path)))
-      (source-path
-        (if source-path
-          (pair source-path (if target-path (drop-right source+target-path 1) (list))) (list))))
-    (if target-path
-      (call-with-output-file target-path
-        (l (target-file)
-          (if (null? source-path) (process (current-input-port) target-file)
-            (each-input-file (l (source-file) (process source-file target-file)) source-path))))
-      (if (null? source-path) (process (current-input-port) (current-output-port))
-        (each-input-file (l (source-file) (process source-file (current-output-port))) source-path)))))
+(define* (sc #:optional paths-source path-destination) "appends multiple sources"
+  (if path-destination
+    (call-with-output-file path-destination
+      (l (file-destination)
+        (if (null? paths-source) (process (current-input-port) file-destination)
+          (each-input-file (l (source-file) (process source-file file-destination)) paths-source))))
+    (if (null? paths-source) (process (current-input-port) (current-output-port))
+      (each-input-file (l (source-file) (process source-file (current-output-port))) paths-source))))
 
 (let
   (options
@@ -39,7 +33,8 @@
           (list
             "compiles sc to c. uses standard input/output or files, depending on how many paths have been given."
             "no path: read from standard input and write to standard output"
-            "one path: read from standard input and write to file at path"
-            "two paths: read from the first path and write to the second path") "\n")
-        #:options (q (((paths ...)))))))
-  (apply sc (or (alist-ref options (q paths)) (list))))
+            "one path: read from standard input and write to standard output"
+            "two or more paths: read from all leading paths and write to the last path")
+          "\n")
+        #:options (ql ((source-path ... destination-path)) ((source-path))))))
+  (alist-bind options (source-path destination-path) (sc (any->list source-path) destination-path)))
