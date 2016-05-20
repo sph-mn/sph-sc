@@ -40,11 +40,9 @@
       "return(1,2)" (if 1 2 (begin 3 4 (return #t)))
       "if(1){2;}else{3;4;return(1);}" (deref a-b)
       "(*a_b)" (struct-ref a b)
-      "a.b"(struct-ref (deref a) b)
-      "(*a).b"
-      (struct-deref a b)
-      "(*a).b"
-      (define-macro (my-macro a b) (if* a #t #f))
+      "a.b" (struct-ref (deref a) b)
+      "(*a).b" (struct-deref a b)
+      "(*a).b" (define-macro (my-macro a b) (if* a #t #f))
       "#define my_macro(a,b) (a?1:0)" (define-macro ob-ject 3)
       "#define ob_ject 3" (pre-if (equal? a b) (begin c d e) (begin f g))
       "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif" (undefine-macro my-macro)
@@ -97,4 +95,6 @@
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
       "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
       (enum test (a b c d e)) "enum test{a,b,c,d,e}"
-      (enum (a b c d e)) "enum{a,b,c,d,e}" (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4}")))
+      (enum (a b c d e)) "enum{a,b,c,d,e}"
+      (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4}"
+      (array-literal 1 "2" 3 4) "{1,\"2\",3,4};" (struct-literal a 1 b "2") "{.a=1,.b=\"2\"};")))

@@ -35,8 +35,8 @@
     cp-define-macro
     cp-define-macro-nc
     cp-if
-    cp-include-path
     cp-include
+    cp-include-path
     cp-undef
     list->c-vector)
   (import
@@ -72,7 +72,21 @@
       " " test
       "\n" consequent "\n" (if alternate (string-append "#else\n" alternate "\n") "") "#endif"))
 
-  (define (c-compound-nc a) (string-append "{" a "}"))
+  (define (c-compound-nc a)
+    "string/((string string) ...) -> string
+    a: {a}
+    (a): {string}
+    (a b): {a,b}
+    ((a b) (c d)): {.a=b,.c=d}
+    ((a b) c): {.a=b,c}
+    also creates compound literals"
+    (string-append "{"
+      (if (list? a)
+        (string-join (map (l (a) (if (list? a) (string-append "." (first a) "=" (second a)) a)) a)
+          ",")
+        a)
+      "}"))
+
   (define (c-typedef-nc name a) (c-line-nc "typedef" a name))
 
   (define (c-typedef-function-nc name return-type . types)
