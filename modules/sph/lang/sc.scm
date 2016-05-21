@@ -75,6 +75,19 @@
       (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries))
         (((entries ...)) (c "" entries)))))
 
+  (define (error-exit a) (debug-log a) (exit 1))
+
+  (define (sc-include-sc paths load-paths)
+    (pair (q begin)
+      (append-map
+        (l (a)
+          (let* ((path (string-append a ".sc")) (path-found (search-load-path path load-paths)))
+            (if path-found (file->datums path-found read)
+              (error-exit
+                (error-create (q file-not-accessible)
+                  (string-append (any->string path) " not found in " (any->string load-paths)))))))
+        paths)))
+
   (define (struct-or-union-body elements compile)
     (string-join
       (map
@@ -126,13 +139,7 @@
       ( (struct-deref)
         (match (tail a)
           ((identifier field) (qq (struct-ref (deref (unquote identifier)) (unquote field))))))
-      ( (include-sc)
-        (let*
-          ( (path (string-append (first (tail a)) ".sc"))
-            (path-found (search-load-path path load-paths)))
-          (if path-found (pair (q begin) (file->datums path-found read))
-            (error-create (q file-not-accessible)
-              (string-append (any->string path) " not found in " (any->string load-paths))))))
+      ((include-sc) (sc-include-sc (tail a) load-paths))
       ( (cond cond*)
         (let ((cond (reverse (tail a))) (symbol-if (if (eqv? (first a) (q cond*)) (q if*) (q if))))
           (fold
@@ -220,7 +227,8 @@
               (list (string-append " " (sc-identifier (first tail-a))) (tail tail-a))
               (list "" tail-a)))))
       ((array-literal) (string-append (c-compound-nc (map compile (tail a))) ";"))
-      ((struct-literal) (string-append (c-compound-nc (map-slice 2 (l a (map compile a)) (tail a))) ";"))
+      ( (struct-literal)
+        (string-append (c-compound-nc (map-slice 2 (l a (map compile a)) (tail a))) ";"))
       ((enum) (sc-enum (tail a)))
       ( (while)
         (match (tail a)
