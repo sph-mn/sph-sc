@@ -229,7 +229,7 @@
       ((array-literal) (string-append (c-compound-nc (map compile (tail a))) ";"))
       ( (struct-literal)
         (string-append (c-compound-nc (map-slice 2 (l a (map compile a)) (tail a))) ";"))
-      ((enum) (sc-enum (tail a)))
+      ((enum) (string-append (sc-enum (tail a)) ";"))
       ( (while)
         (match (tail a)
           ( (test body ...)
