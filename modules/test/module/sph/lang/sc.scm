@@ -45,7 +45,7 @@
       "(*a).b" (define-macro (my-macro a b) (if* a #t #f))
       "#define my_macro(a,b) (a?1:0)" (define-macro ob-ject 3)
       "#define ob_ject 3" (pre-if (equal? a b) (begin c d e) (begin f g))
-      "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif" (undefine-macro my-macro)
+      "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif" (pre-undefine-macro my-macro)
       "#undef my_macro\n" (pre-concat a b cd e)
       "a##b##cd##e" (pre-if-not-defined a b c)
       "#ifndef a\nb;\n#else\nc;\n#endif" (pre-if-defined a b c)

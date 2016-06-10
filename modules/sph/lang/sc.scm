@@ -240,7 +240,7 @@
           ( (test body ...)
             (string-append "do" (c-compound-nc (compile (pair (q begin) body)))
               "while" (parenthesise (compile test))))))
-      ( (undefine-macro)
+      ( (pre-undefine-macro)
         (string-join (map (compose cp-undef sc-identifier) (tail a)) "\n" (q suffix)))
       ( (let-macro)
         ;descend-expr->sc currently would add an uneccessary semicolon at the end
@@ -253,7 +253,7 @@
               (compile (pair (q begin) body))
               (string-join
                 (map-slice 2
-                  (l (n v) (compile (list (q undefine-macro) (if (pair? n) (first n) n))))
+                  (l (n v) (compile (list (q pre-undefine-macro) (if (pair? n) (first n) n))))
                   names+values)
                 "\n" (q prefix))))
           (_ (raise (q syntax-error-for-let-macro)))))
