@@ -1,5 +1,3 @@
-;a scheme-datum to c compiler
-
 (library (sph lang sc)
   (export
     sc->c
@@ -24,6 +22,8 @@
       string-case
       parenthesise)
     (only (sph tree) tree-transform tree-contains?))
+
+  ;a scheme-datum to c compiler
 
   (define sc-default-load-paths
     (map ensure-trailing-slash
