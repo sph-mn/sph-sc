@@ -88,7 +88,7 @@
         (l (name path)
           (let* ((name (sc-identifier name)) (variable-name (string-append "sc_included_" name)))
             (cp-if (q ifndef) variable-name
-              (string-append (sc-pre-include (list path)) (cp-define-macro-nc variable-name "" "")))))
+              (string-append (sc-pre-include (list path)) (cp-pre-define-nc variable-name "" "")))))
         names/paths)
       "\n"))
 

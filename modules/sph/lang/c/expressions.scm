@@ -32,8 +32,8 @@
     c-vector
     c-vector-nc
     cp-concat-nc
-    cp-define-macro
-    cp-define-macro-nc
+    cp-pre-define
+    cp-pre-define-nc
     cp-if
     cp-include
     cp-include-path
@@ -58,11 +58,11 @@
   (define (cp-include path) (string-append "#include <" path ">"))
   (define (cp-concat-nc a) (string-join a "##"))
 
-  (define (cp-define-macro-nc name body parameters)
+  (define (cp-pre-define-nc name body parameters)
     (string-append "#define " name (if parameters parameters "") " " body))
 
-  (define* (cp-define-macro name body #:optional parameters)
-    (cp-define-macro-nc (c-identifier name) body (map c-identifier parameters)))
+  (define* (cp-pre-define name body #:optional parameters)
+    (cp-pre-define-nc (c-identifier name) body (map c-identifier parameters)))
 
   (define* (cp-if type test consequent #:optional alternate)
     (string-append "#"
