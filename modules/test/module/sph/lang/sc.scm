@@ -42,10 +42,10 @@
       "(*a_b)" (struct-ref a b)
       "a.b" (struct-ref (deref a) b)
       "(*a).b" (struct-deref a b)
-      "(*a).b" (define-macro (my-macro a b) (if* a #t #f))
-      "#define my_macro(a,b) (a?1:0)" (define-macro ob-ject 3)
+      "(*a).b" (pre-define (my-macro a b) (if* a #t #f))
+      "#define my_macro(a,b) (a?1:0)" (pre-define ob-ject 3)
       "#define ob_ject 3" (pre-if (equal? a b) (begin c d e) (begin f g))
-      "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif" (pre-undefine-macro my-macro)
+      "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif" (pre-undefine my-macro)
       "#undef my_macro\n" (pre-concat a b cd e)
       "a##b##cd##e" (pre-if-not-defined a b c)
       "#ifndef a\nb;\n#else\nc;\n#endif" (pre-if-defined a b c)
@@ -64,20 +64,20 @@
       (function-pointer f int char size_t) "int(*f)(char,size_t)"
       (function-pointer f (unsigned int) (unsigned char) size_t)
       "unsigned int(*f)(unsigned char,size_t)"
-      (let-macro
+      (pre-let
         (a 1
           b 2)
         (+ a b))
-      "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n" (let-macro (a 1) a)
-      "#define a 1\na;\n#undef a\n" (let-macro ((a b) 1) a)
+      "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n" (pre-let (a 1) a)
+      "#define a 1\na;\n#undef a\n" (pre-let ((a b) 1) a)
       "#define a(b) 1\na;\n#undef a\n"
-      (let-macro
+      (pre-let
         ( (a b) 1
           (c d) 2)
         a)
       "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n\n#undef c\n"
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
-      "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}" (define-macro (->test a b) c)
+      "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}" (pre-define (->test a b) c)
       "#define _to_test(a,b) c" (define-array aaa size-t 3)
       "size_t aaa[3]" (define-array aaa size-t size-b)
       "size_t aaa[size_b]" (define-array aaa size-t size-b -1 2 test-c)
@@ -94,7 +94,7 @@
       "if(((3==myvalue)||(2==myvalue))){1;}else{if((4==myvalue)){0;}else{if(((\"a\"==myvalue)||(\"b\"==myvalue))){1;1;}else{0;0;}}}"
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
       "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
-      (enum test (a b c d e)) "enum test{a,b,c,d,e}"
-      (enum (a b c d e)) "enum{a,b,c,d,e}"
-      (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4}"
+      (enum test (a b c d e)) "enum test{a,b,c,d,e};"
+      (enum (a b c d e)) "enum{a,b,c,d,e};"
+      (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4};"
       (array-literal 1 "2" 3 4) "{1,\"2\",3,4};" (struct-literal a 1 b "2") "{.a=1,.b=\"2\"};")))
