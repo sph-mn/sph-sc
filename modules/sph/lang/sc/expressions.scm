@@ -2,6 +2,7 @@
   (export
     sc-apply
     sc-case
+    sc-compile-type
     sc-define
     sc-identifier
     sc-identifier-list
@@ -23,10 +24,10 @@
     (only (sph alist) alist)
     (only (sph list) map-slice)
     (only (sph one) alist->regexp-match-replacements)
-    (only (sph string) regexp-match-replace))
+    (only (sph string) any->string regexp-match-replace))
 
-  (define (add-begin arg)
-    (if (and (list? arg) (not (null? arg)) (equal? (q begin) (first arg))) arg (list (q begin) arg)))
+  (define (add-begin a)
+    (if (and (list? a) (not (null? a)) (equal? (q begin) (first a))) a (list (q begin) a)))
 
   (define identifier-replacements
     (alist->regexp-match-replacements
@@ -36,15 +37,21 @@
         ".-" (pair "-" "_")
         ".!$" (pair "!" "_x") "\\?" "_p" ".\\+." (pair "+" "_and_") "./." (pair "/" "_or_"))))
 
-  (define (sc-apply proc args)
-    (c-apply-nc (sc-identifier proc) (string-join (map sc-identifier args) ",")))
+  (define (sc-apply proc a)
+    (c-apply-nc (sc-identifier proc) (string-join (map sc-identifier a) ",")))
 
   (define* (sc-define name type #:optional value) "any [any] -> string"
     (c-define-nc (sc-identifier name) (sc-identifier type) (if value (sc-value value) value)))
 
   (define (sc-identifier a)
     (if (symbol? a) (translate-identifier (symbol->string a))
-      (if (list? a) (string-join (map sc-identifier a) " ") a)))
+      (if (list? a) (string-join (map sc-identifier a) " ") (any->string a))))
+
+  (define (sc-compile-type a compile)
+    (match a
+      ( ( (? symbol? prefix) expr _ ...)
+        (if (string-prefix? "pre-" (symbol->string (first a))) (compile a) (sc-identifier a)))
+      (_ (sc-identifier a))))
 
   (define (sc-identifier-list a) (string-append "(" (string-join (map sc-identifier a) ",") ")"))
 
