@@ -32,6 +32,7 @@
     c-vector
     c-vector-nc
     cp-concat-nc
+    cp-stringify-nc
     cp-pre-define
     cp-pre-define-nc
     cp-if
@@ -56,7 +57,8 @@
   (define (cp-undef a) (string-append "#undef " a))
   (define (cp-include-path path) (string-append "#include " (c-string path)))
   (define (cp-include path) (string-append "#include <" path ">"))
-  (define (cp-concat-nc a) (string-join a "##"))
+  (define (cp-concat-nc a) "(string ...) -> string" (string-join a "##"))
+  (define (cp-stringify-nc a) "string -> string" (string-append "#" a))
 
   (define (cp-pre-define-nc name body parameters)
     (string-append "#define " name (if parameters parameters "") " " body))

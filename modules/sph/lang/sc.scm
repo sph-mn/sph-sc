@@ -261,6 +261,7 @@
             (map (l (e) (if (list? e) (string-join (map sc-identifier e) " ") (sc-identifier e)))
               (tail tail-a)))))
       ((pre-concat) (cp-concat-nc (map sc-identifier (tail a))))
+      ((pre-stringify) (cp-stringify-nc (apply sc-identifier (tail a))))
       ((pre-if) (scp-if (q if) (tail a) compile))
       ((pre-if-defined) (scp-if (q ifdef) (tail a) compile))
       ((pre-if-not-defined) (scp-if (q ifndef) (tail a) compile)) ((quote) (list-ref a 1))

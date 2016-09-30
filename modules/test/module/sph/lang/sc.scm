@@ -97,4 +97,5 @@
       (enum test (a b c d e)) "enum test{a,b,c,d,e};"
       (enum (a b c d e)) "enum{a,b,c,d,e};"
       (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4};"
+      (pre-stringify abc) "#abc"
       (array-literal 1 "2" 3 4) "{1,\"2\",3,4};" (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"};" (struct-literal a 1) "{a,1};")))
