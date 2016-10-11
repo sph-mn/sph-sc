@@ -21,12 +21,9 @@
       (if* (not a) #t #f) "(!a?1:0)"
       (define a b32 1) "b32 a=1"
       (define a b32 b+2 b16 c-3 b0) "b32 a;b16 b_and_2;b0 c_3;"
-      (define (abc) b32 (return 0))
-      "b32 abc(){return(0);}"
-      (define (abc d e) (b32 b64 b16) (return 0))
-      "b32 abc(b64 d,b16 e){return(0);}"
-      (define (abc d e) (b32 (pre-concat b 64) b16) (return 0))
-      "b32 abc(b##64 d,b16 e){return(0);}"
+      (define (abc) b32 (return 0)) "b32 abc(){return(0);}"
+      (define (abc d e) (b32 b64 b16) (return 0)) "b32 abc(b64 d,b16 e){return(0);}"
+      (define (abc d e) (b32 (pre-concat b 64) b16) (return 0)) "b32 abc(b##64 d,b16 e){return(0);}"
       (set a 1) "a=1"
       (deref a 1) "*(a+1)"
       (deref (deref a 1) 2) "*(*(a+1)+2)"
@@ -58,9 +55,10 @@
       "#ifdef a\nb;\n#else\nc;\n#endif" (define-type mytype int)
       "typedef int mytype"
       (define-function-pointer-type type-name type-return type-argument-1 type-argument-2)
-      "typedef type_return(*type_name)(type_argument_1,type_argument_2)"
-      (address-of a-b)
-      "&a_b" (bit-shift-right 1 2)
+      "typedef type_return(*type_name)(type_argument_1,type_argument_2)" (address-of a-b)
+      "&a_b" (convert-type abc int)
+      "((int)(abc))" ((convert-type abc function-t) d e)
+      "((function_t)(abc))(d,e)" (bit-shift-right 1 2)
       "(1>>2)" (bit-shift-left 1 2)
       "(1<<2)" (length size_t)
       "(8*sizeof(size_t))" (bit-not a-b)
@@ -72,18 +70,10 @@
       (union (a unsigned int) (b unsigned char 3)) "union{unsigned int a;unsigned char b:3;}"
       (function-pointer f int char size_t) "int(*f)(char,size_t)"
       (function-pointer f (unsigned int) (unsigned char) size_t)
-      "unsigned int(*f)(unsigned char,size_t)"
-      (pre-let
-        (a 1
-          b 2)
-        (+ a b))
+      "unsigned int(*f)(unsigned char,size_t)" (pre-let (a 1 b 2) (+ a b))
       "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n" (pre-let (a 1) a)
       "#define a 1\na;\n#undef a\n" (pre-let ((a b) 1) a)
-      "#define a(b) 1\na;\n#undef a\n"
-      (pre-let
-        ( (a b) 1
-          (c d) 2)
-        a)
+      "#define a(b) 1\na;\n#undef a\n" (pre-let ((a b) 1 (c d) 2) a)
       "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n\n#undef c\n"
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}" (pre-define (->test a b) c)
@@ -107,4 +97,5 @@
       (enum (a b c d e)) "enum{a,b,c,d,e};"
       (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4};"
       (pre-stringify abc) "#abc"
-      (array-literal 1 "2" 3 4) "{1,\"2\",3,4};" (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"};" (struct-literal a 1) "{a,1};")))
+      (array-literal 1 "2" 3 4) "{1,\"2\",3,4};"
+      (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"};" (struct-literal a 1) "{a,1};")))

@@ -32,12 +32,12 @@
     c-vector
     c-vector-nc
     cp-concat-nc
-    cp-stringify-nc
-    cp-pre-define
-    cp-pre-define-nc
     cp-if
     cp-include
     cp-include-path
+    cp-pre-define
+    cp-pre-define-nc
+    cp-stringify-nc
     cp-undef
     list->c-vector)
   (import
@@ -70,7 +70,7 @@
     (string-append "#"
       (if (equal? (q if) type) "if"
         (if (equal? (q ifdef) type) "ifdef"
-          (if (equal? (q ifndef) type) "ifndef" (raise (q cannot-convert-to-c)))))
+          (if (equal? (q ifndef) type) "ifndef" (throw (q cannot-convert-to-c)))))
       " " test
       "\n" consequent "\n" (if alternate (string-append "#else\n" alternate "\n") "") "#endif"))
 
@@ -94,7 +94,10 @@
   (define (c-typedef-function-nc name return-type . types)
     (string-append "typedef " (apply c-function-pointer-nc name return-type types)))
 
-  (define (c-convert-type-nc a type) (string-append "(" type ")(" a ")"))
+  (define (c-convert-type-nc a type)
+    "extra round brackets ensure nestability in function pointer cases like this: (dg_pair_reader_t)((*state).reader)(state,count,result)"
+    (string-append "((" type ")(" a "))"))
+
   (define (c-line-nc . a) (string-join a " "))
 
   (define* (c-statement-nc keyword body #:optional prefix-a suffix-a)
@@ -121,27 +124,32 @@
   (define (c-identifier a)
     (string-append
       (cond ((symbol? a) (symbol->string a)) ((string? a) a)
-        (else (raise (q cannot-convert-to-c-identifier))))))
+        (else (throw (q cannot-convert-to-c-identifier))))))
 
   (define (c-identifier-list a)
     (parenthesise
       (if (list? a) (string-join (map c-identifier a) ",")
         (if (or (symbol? a) (string? a)) (c-identifier a)
-          (raise (q cannot-convert-to-c-identifier))))))
+          (throw (q cannot-convert-to-c-identifier))))))
 
   (define (c-identifier+type a type) (string-append (c-identifier type) " " (c-identifier a)))
 
   (define (c-parameter a types)
-    (parenthesise
-      (if (list? a) (string-join (map c-identifier+type a types) ",")
-        (if (or (symbol? a) (string? a)) (c-identifier+type a types)
-          (raise (q cannot-convert-to-c-parameter))))))
+    (if (equal? (length a) (length types))
+      (parenthesise
+        (if (list? a) (string-join (map c-identifier+type a types) ",")
+          (if (or (symbol? a) (string? a)) (c-identifier+type a types)
+            (throw (q cannot-convert-to-c-parameter)))))
+      (throw (q type-and-parameter-list-length-mismatch) a)))
 
   (define (c-function-nc name type body parameter)
     (string-append type " " name parameter (if body (string-append "{" body "}") "")))
 
   (define* (c-function name type body #:optional (parameter (list)) (types (list)))
-    (c-function-nc (c-identifier name) (c-identifier type) body (c-parameter parameter types)))
+    (catch (q type-and-parameter-list-length-mismatch)
+      (thunk
+        (c-function-nc (c-identifier name) (c-identifier type) body (c-parameter parameter types)))
+      (l (key . data) (apply throw key name data))))
 
   (define* (c-apply-nc proc-name #:optional (args "")) (string-append proc-name "(" args ")"))
 
@@ -184,4 +192,4 @@
   (define (c-value a) "handles the default conversions between scheme and c types"
     (cond ((symbol? a) (symbol->string a)) ((string? a) (c-string a))
       ((number? a) (number->string a)) ((boolean? a) (if a "1" "0"))
-      ((char? a) (string-enclose (any->string a) "'")) (else (raise (q cannot-convert-to-c))))))
+      ((char? a) (string-enclose (any->string a) "'")) (else (throw (q cannot-convert-to-c))))))
