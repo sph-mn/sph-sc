@@ -21,10 +21,12 @@
   (if path-destination
     (call-with-output-file path-destination
       (l (file-destination)
-        (if (null? paths-source) (process (current-input-port) file-destination)
-          (each-input-file (l (source-file) (process source-file file-destination)) paths-source))))
-    (if (null? paths-source) (process (current-input-port) (current-output-port))
-      (each-input-file (l (source-file) (process source-file (current-output-port))) paths-source))))
+        (if paths-source
+          (each-input-file (l (source-file) (process source-file file-destination)) paths-source)
+          (process (current-input-port) file-destination))))
+    (if paths-source
+      (each-input-file (l (source-file) (process source-file (current-output-port))) paths-source)
+      (process (current-input-port) (current-output-port)))))
 
 (let
   (options
@@ -37,4 +39,5 @@
             "two or more paths: read from all leading paths and write to the last path")
           "\n")
         #:options (ql ((source-path ... destination-path)) ((source-path))))))
-  (alist-bind options (source-path destination-path) (sc (any->list source-path) destination-path)))
+  (alist-bind options (source-path destination-path)
+    (sc (if-pass source-path any->list) destination-path)))

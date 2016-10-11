@@ -32,14 +32,18 @@
   (define-as identical-infix-token list "+" "-" "<" ">" "<=" ">=" "*" "/")
 
   (define-as translated-infix-token list
-    "equal_p" "or"
+    "equal_p"
+    "or"
     "and" "=" "bit_or" "bit_and" "bit_xor" "modulo" "bit_shift_right" "bit_shift_left" "eqv_p" "eq_p")
 
   (define (translate-infix-token a)
     (string-case a (("=" "equal_p" "eqv_p" "eq_p") "==")
-      ("and" "&&") ("bit_or" "|")
-      ("bit_and" "&") ("or" "||")
-      ("modulo" "%") ("bit_shift_right" ">>")
+      ("and" "&&")
+      ("bit_or" "|")
+      ("bit_and" "&")
+      ("or" "||")
+      ("modulo" "%")
+      ("bit_shift_right" ">>")
       ("bit_shift_left" "<<") ("bit_xor" "^") (raise (q cannot-convert-symbol-to-c))))
 
   (define (join-expressions a)
@@ -109,7 +113,8 @@
       ("deref"
         (let (a (tail a)) (c-pointer-deref-nc (first a) (if (null? (tail a)) #f (first (tail a))))))
       ("address_of" (apply c-address-of (tail a)))
-      ("convert_type" (apply c-convert-type-nc (tail a))) ("begin" (join-expressions (tail a)))
+      ("convert_type" (apply c-convert-type-nc (tail a)))
+      ("begin" (join-expressions (tail a)))
       ("struct_ref" (apply c-struct-ref-nc (tail a)))
       ("return" (if (null? (tail a)) "return" (sc-apply (first a) (tail a))))
       ("goto" (string-join a " "))
@@ -139,6 +144,10 @@
       ( (struct-deref)
         (match (tail a)
           ((identifier field) (qq (struct-ref (deref (unquote identifier)) (unquote field))))))
+      ( (struct-deref-set)
+        (match (tail a)
+          ( (identifier field/value ...)
+            (qq (struct-set (deref (unquote identifier)) (unquote-splicing field/value))))))
       ((include-sc) (sc-include-sc (tail a) load-paths))
       ( (cond cond*)
         (let ((cond (reverse (tail a))) (symbol-if (if (eqv? (first a) (q cond*)) (q if*) (q if))))
@@ -165,7 +174,8 @@
           ( ( (name parameter ...) (return-type types ...) body ...)
             (c-function-nc (sc-identifier (compile name)) (sc-compile-type return-type compile)
               (if (null? body) #f (join-expressions (map compile body)))
-              (c-parameter (map (compose sc-identifier compile) parameter) (map (l (a) (sc-compile-type a compile)) types))))
+              (c-parameter (map (compose sc-identifier compile) parameter)
+                (map (l (a) (sc-compile-type a compile)) types))))
           ( ( (name parameter ...) return-type body ...)
             (c-function (sc-identifier (compile name)) (sc-compile-type return-type compile)
               (if (null? body) #f (join-expressions (map compile body)))))
@@ -254,7 +264,8 @@
                   names+values)
                 "\n" (q prefix))))
           (_ (raise (q syntax-error-for-pre-let)))))
-      ((pre-include) (sc-pre-include (tail a))) ((pre-include-once) (sc-pre-include-once (tail a)))
+      ((pre-include) (sc-pre-include (tail a)))
+      ((pre-include-once) (sc-pre-include-once (tail a)))
       ( (function-pointer)
         (let* ((tail-a (tail a)) (name (first tail-a)))
           (apply c-function-pointer-nc (if name (sc-identifier name) "")
@@ -264,7 +275,8 @@
       ((pre-stringify) (cp-stringify-nc (apply sc-identifier (tail a))))
       ((pre-if) (scp-if (q if) (tail a) compile))
       ((pre-if-defined) (scp-if (q ifdef) (tail a) compile))
-      ((pre-if-not-defined) (scp-if (q ifndef) (tail a) compile)) ((quote) (list-ref a 1))
+      ((pre-if-not-defined) (scp-if (q ifndef) (tail a) compile))
+      ((quote) (list-ref a 1))
       ( (let*)
         (c-compound-nc
           (match (tail a)
