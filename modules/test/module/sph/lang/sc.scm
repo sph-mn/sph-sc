@@ -56,7 +56,10 @@
       "a##b##cd##e" (pre-if-not-defined a b c)
       "#ifndef a\nb;\n#else\nc;\n#endif" (pre-if-defined a b c)
       "#ifdef a\nb;\n#else\nc;\n#endif" (define-type mytype int)
-      "typedef int mytype" (address-of a-b)
+      "typedef int mytype"
+      (define-function-pointer-type type-name type-return type-argument-1 type-argument-2)
+      "typedef type_return(*type_name)(type_argument_1,type_argument_2)"
+      (address-of a-b)
       "&a_b" (bit-shift-right 1 2)
       "(1>>2)" (bit-shift-left 1 2)
       "(1<<2)" (length size_t)
