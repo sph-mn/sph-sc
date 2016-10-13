@@ -21,6 +21,7 @@
       (if* (not a) #t #f) "(!a?1:0)"
       (define a b32 1) "b32 a=1"
       (define a b32 b+2 b16 c-3 b0) "b32 a;b16 b_and_2;b0 c_3;"
+      (define (pre-concat a b) b32 1) "b32 a##b=1"
       (define (abc) b32 (return 0)) "b32 abc(){return(0);}"
       (define (abc d e) (b32 b64 b16) (return 0)) "b32 abc(b64 d,b16 e){return(0);}"
       (define (abc d e) (b32 (pre-concat b 64) b16) (return 0)) "b32 abc(b##64 d,b16 e){return(0);}"
