@@ -1,5 +1,7 @@
 (library (sph lang sc expressions)
   (export
+    not-preprocessor-keyword?
+    preprocessor-keyword?
     sc-apply
     sc-case
     sc-compile-type
@@ -19,12 +21,16 @@
     (sph lang c expressions)
     (only (guile)
       string-prefix?
+      negate
       make-regexp
       string-join)
     (only (sph alist) alist)
     (only (sph list) map-slice)
     (only (sph one) alist->regexp-match-replacements)
     (only (sph string) any->string regexp-match-replace))
+
+  (define (preprocessor-keyword? a) (string-prefix? "pre-" (symbol->string a)))
+  (define not-preprocessor-keyword? (negate preprocessor-keyword?))
 
   (define (add-begin a)
     (if (and (list? a) (not (null? a)) (equal? (q begin) (first a))) a (list (q begin) a)))
@@ -50,7 +56,7 @@
   (define (sc-compile-type a compile)
     (match a
       ( ( (? symbol? prefix) expr _ ...)
-        (if (string-prefix? "pre-" (symbol->string (first a))) (compile a) (sc-identifier a)))
+        (if (preprocessor-keyword? (first a)) (compile a) (sc-identifier a)))
       (_ (sc-identifier a))))
 
   (define (sc-identifier-list a) (string-append "(" (string-join (map sc-identifier a) ",") ")"))
