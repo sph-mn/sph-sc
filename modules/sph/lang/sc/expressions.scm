@@ -29,7 +29,7 @@
     (only (sph one) alist->regexp-match-replacements)
     (only (sph string) any->string regexp-match-replace))
 
-  (define (preprocessor-keyword? a) (string-prefix? "pre-" (symbol->string a)))
+  (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
   (define not-preprocessor-keyword? (negate preprocessor-keyword?))
 
   (define (add-begin a)

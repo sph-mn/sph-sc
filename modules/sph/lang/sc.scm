@@ -51,7 +51,7 @@
             (if (string-prefix? "#" e)
               (if (or (null? prev) (not (string-prefix? "\n" (first prev))))
                 (string-append "\n" e "\n") (string-append "\n" e))
-              (if (or (string-suffix? "}" e) (string-suffix? ";" e)) e
+              (if (string-suffix? ";" e) e
                 (if (string-suffix? ":" e) (string-append e "\n") (string-append e ";"))))
             prev))
         (list) a)
@@ -84,7 +84,7 @@
           (let* ((path (string-append a ".sc")) (path-found (search-load-path path load-paths)))
             (if path-found (file->datums path-found read)
               (error-exit
-                (error-create (q file-not-accessible)
+                (error-create (q file-not-accessible) (q sc)
                   (string-append (any->string path) " not found in " (any->string load-paths)))))))
         paths)))
 
@@ -153,6 +153,12 @@
               ((test consequent ...) (list symbol-if test (add-begin-if-multiple consequent))))
             (tail cond))))
       ((case case*) (apply sc-case (if (equal? (q case*) (first a)) (q cond*) (q cond)) (tail a)))
+      ( (pre-define-if-not-defined)
+        (pair (q begin)
+          (map-slice 2
+            (l (name value)
+              (qq (pre-if-not-defined (unquote name) (pre-define (unquote name) (unquote value)))))
+            (tail a))))
       (else #f)))
 
   (define (descend-expr->c a compile)
@@ -185,10 +191,8 @@
       ( (define-array)
         (match (tail a)
           ( (name type size values ...)
-            (string-append
-              (c-define-array-nc (sc-identifier name) (sc-identifier type)
-                (if size (compile size) "") (if (null? values) #f (map compile values)))
-              (if (null? values) "" ";")))))
+            (c-define-array-nc (sc-identifier name) (sc-identifier type)
+              (if size (compile size) "") (if (null? values) #f (map compile values))))))
       ( (if)
         (apply c-if-statement (compile (first (tail a)))
           (map (l (e) (compile (list (q begin) e))) (tail (tail a)))))
@@ -233,11 +237,11 @@
             (if (symbol? (first tail-a))
               (list (string-append " " (sc-identifier (first tail-a))) (tail tail-a))
               (list "" tail-a)))))
-      ((array-literal) (string-append (c-compound-nc (map compile (tail a))) ";"))
+      ((array-literal) (string-append (c-compound-nc (map compile (tail a)))))
       ( (struct-literal)
         (string-append
-          (c-compound-nc (map (l (a) (if (list? a) (map compile a) (compile a))) (tail a))) ";"))
-      ((enum) (string-append (sc-enum (tail a)) ";"))
+          (c-compound-nc (map (l (a) (if (list? a) (map compile a) (compile a))) (tail a)))))
+      ((enum) (string-append (sc-enum (tail a))))
       ( (while)
         (match (tail a)
           ( (test body ...)

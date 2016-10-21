@@ -36,7 +36,9 @@
       (begin #t) "1;"
       (begin -1) "-1;"
       (begin 1 (begin 2 3)) "1;2;3;"
-      (cond ((= a 1) (equal? b 2)) ((equal? c 3) #t)) "if((a==1)){(b==2);}else{if((c==3)){1;}}"
+      (while #t 1 2 3) "while(1){1;2;3;}"
+      (do-while #t 1 2 3) "do{1;2;3;}while(1)"
+      (cond ((= a 1) (equal? b 2)) ((equal? c 3) #t)) "if((a==1)){(b==2);}else{if((c==3)){1;};}"
       (cond* ((= a 1) (equal? b 2)) ((equal? c 3) #f #t) (else #t #f))
       "((a==1)?(b==2):((c==3)?(0,1):(1,0)))" (quote "var a = 3")
       "var a = 3" (return)
@@ -81,7 +83,7 @@
       "#define _to_test(a,b) c" (define-array aaa size-t 3)
       "size_t aaa[3]" (define-array aaa size-t size-b)
       "size_t aaa[size_b]" (define-array aaa size-t size-b -1 2 test-c)
-      "size_t aaa[size_b]={-1,2,test_c};" (pre-include "./a/b.c")
+      "size_t aaa[size_b]={-1,2,test_c}" (pre-include "./a/b.c")
       "#include \"./a/b.c\"\n" (pre-include "../a/b.c")
       "#include \"../a/b.c\"\n" (pre-include "a/b.c")
       "#include <a/b.c>\n" (pre-include "bb.h")
@@ -90,13 +92,18 @@
       "#ifndef sc_included_a\n#include \"./a.c\"\n#define sc_included_a \n#endif\n#ifndef sc_included_b\n#include <b.h>\n#define sc_included_b \n#endif"
       (pre-include-once a "./a.c")
       "#ifndef sc_included_a\n#include \"./a.c\"\n#define sc_included_a \n#endif"
+      (pre-define-if-not-defined abc 3 def 4)
+      "\n#ifndef abc\n\n#define abc 3\n\n#endif\n#ifndef def\n\n#define def 4\n\n#endif\n"
       (case = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-      "if(((3==myvalue)||(2==myvalue))){1;}else{if((4==myvalue)){0;}else{if(((\"a\"==myvalue)||(\"b\"==myvalue))){1;1;}else{0;0;}}}"
+      "if(((3==myvalue)||(2==myvalue))){1;}else{if((4==myvalue)){0;}else{if(((\"a\"==myvalue)||(\"b\"==myvalue))){1;1;}else{0;0;};};}"
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
       "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
-      (enum test (a b c d e)) "enum test{a,b,c,d,e};"
-      (enum (a b c d e)) "enum{a,b,c,d,e};"
-      (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4};"
+      (enum test (a b c d e)) "enum test{a,b,c,d,e}"
+      (define-type test-t (enum (a b c)))
+      "typedef enum{a,b,c} test_t"
+      (enum (a b c d e)) "enum{a,b,c,d,e}"
+      (begin (enum (a b c d e)) (define a int)) "enum{a,b,c,d,e};int a;"
+      (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4}"
       (pre-stringify abc) "#abc"
-      (array-literal 1 "2" 3 4) "{1,\"2\",3,4};"
-      (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"};" (struct-literal a 1) "{a,1};")))
+      (array-literal 1 "2" 3 4) "{1,\"2\",3,4}"
+      (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"}" (struct-literal a 1) "{a,1}")))
