@@ -5,12 +5,15 @@
     sc-apply
     sc-case
     sc-compile-type
+    sc-compile-types
     sc-define
+    sc-function-pointer
     sc-identifier
     sc-identifier-list
     sc-pre-include
     sc-pre-include-once
     sc-value
+    sc-function-pointer?
     scp-if
     translate-identifier)
   (import
@@ -27,7 +30,10 @@
     (only (sph alist) alist)
     (only (sph list) map-slice)
     (only (sph one) alist->regexp-match-replacements)
-    (only (sph string) any->string regexp-match-replace))
+    (only (sph string)
+      parenthesise
+      any->string
+      regexp-match-replace))
 
   (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
   (define not-preprocessor-keyword? (negate preprocessor-keyword?))
@@ -44,22 +50,42 @@
         ".!$" (pair "!" "_x") "\\?" "_p" ".\\+." (pair "+" "_and_") "./." (pair "/" "_or_"))))
 
   (define (sc-apply proc a)
-    (c-apply-nc (sc-identifier proc) (string-join (map sc-identifier a) ",")))
+    (c-apply (sc-identifier proc) (string-join (map sc-identifier a) ",")))
 
   (define* (sc-define name type #:optional value) "any [any] -> string"
-    (c-define-nc (sc-identifier name) (sc-identifier type) (if value (sc-value value) value)))
+    (c-define (sc-identifier name) (sc-identifier type) (if value (sc-value value) value)))
 
   (define (sc-identifier a)
     (if (symbol? a) (translate-identifier (symbol->string a))
       (if (list? a) (string-join (map sc-identifier a) " ") (any->string a))))
 
   (define (sc-compile-type a compile)
-    (match a
-      ( ( (? symbol? prefix) expr _ ...)
-        (if (preprocessor-keyword? (first a)) (compile a) (sc-identifier a)))
-      (_ (sc-identifier a))))
+    (if (list? a)
+      (if
+        (or (null? a)
+          (let (a-first (first a))
+            (not
+              (and (symbol? a-first)
+                (or (preprocessor-keyword? a-first) (eq? (q function-pointer) a-first))))))
+        (string-join (map sc-identifier a) " ") (compile a))
+      (sc-identifier a)))
 
-  (define (sc-identifier-list a) (string-append "(" (string-join (map sc-identifier a) ",") ")"))
+  (define (sc-compile-types a compile)
+    (parenthesise (string-join (map (l (e) (sc-compile-type e compile)) a) ",")))
+
+  (define (sc-function-pointer? a)
+    (and (list? a) (not (null? a)) (eq? (q function-pointer) (first a))))
+
+  (define (sc-function-pointer compile inner type-output . type-input)
+    (if (sc-function-pointer? type-output)
+      (apply sc-function-pointer compile
+        (string-append (parenthesise (string-append "*" inner))
+          (sc-compile-types type-input compile))
+        (tail type-output))
+      (string-append (sc-compile-type type-output compile) (parenthesise (string-append "*" inner))
+        (sc-compile-types type-input compile))))
+
+  (define (sc-identifier-list a) (parenthesise (string-join (map sc-identifier a) ",")))
 
   (define (sc-value a)
     (cond ((symbol? a) (translate-identifier (symbol->string a))) ((boolean? a) (if a "1" "0"))
@@ -101,7 +127,7 @@
         (l (name path)
           (let* ((name (sc-identifier name)) (variable-name (string-append "sc_included_" name)))
             (cp-if (q ifndef) variable-name
-              (string-append (sc-pre-include (list path)) (cp-pre-define-nc variable-name "" "")))))
+              (string-append (sc-pre-include (list path)) (cp-pre-define variable-name "" "")))))
         names/paths)
       "\n"))
 
