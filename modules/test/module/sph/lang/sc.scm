@@ -65,15 +65,13 @@
       "(1>>2)" (bit-shift-left 1 2)
       "(1<<2)" (length size_t)
       "(8*sizeof(size_t))" (bit-not a-b)
-      "~a_b" (struct (a unsigned int) (b unsigned char 3))
+      "~a_b" (struct (a (unsigned int)) (b (unsigned char) 3))
       "struct{unsigned int a;unsigned char b:3;}"
-      (struct testname (a unsigned int) (b unsigned char 3))
+      (struct testname (a (unsigned int)) (b (unsigned char) 3))
       "struct testname{unsigned int a;unsigned char b:3;}"
-      (struct (function-pointer a b c d) (b int)) "struct{b(*a)(c,d);int b;}"
-      (union (a unsigned int) (b unsigned char 3)) "union{unsigned int a;unsigned char b:3;}"
-      (function-pointer f int char size_t) "int(*f)(char,size_t)"
-      (function-pointer f (unsigned int) (unsigned char) size_t)
-      "unsigned int(*f)(unsigned char,size_t)" (pre-let (a 1 b 2) (+ a b))
+      (struct (a (function-pointer b c d)) (b int)) "struct{b(*a)(c,d);int b;}"
+      (union (a (unsigned int)) (b (unsigned char) 3)) "union{unsigned int a;unsigned char b:3;}"
+      (pre-let (a 1 b 2) (+ a b))
       "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n" (pre-let (a 1) a)
       "#define a 1\na;\n#undef a\n" (pre-let ((a b) 1) a)
       "#define a(b) 1\na;\n#undef a\n" (pre-let ((a b) 1 (c d) 2) a)
@@ -106,4 +104,13 @@
       (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4}"
       (pre-stringify abc) "#abc"
       (array-literal 1 "2" 3 4) "{1,\"2\",3,4}"
-      (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"}" (struct-literal a 1) "{a,1}")))
+      (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"}" (struct-literal a 1) "{a,1}"
+      (function-pointer void void*)
+      "void(*)(void*)"
+      (convert-type a (function-pointer void void*))
+      "((void(*)(void*))(a))"
+      (define a (function-pointer (function-pointer (unsinged int) float) double))
+      "unsigned int(*(*a)(double))(float)"
+      (define a (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
+      "int(*(*(*a)(long long int))(double))(float)"
+      )))
