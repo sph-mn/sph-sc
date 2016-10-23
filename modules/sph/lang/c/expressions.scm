@@ -127,7 +127,7 @@
           (throw (q cannot-convert-to-c-parameter))))))
 
   (define* (c-function name type-output body #:optional (names (list)) (type-input (list)))
-    (string-append type-output " " name
+    (string-append (if type-output (string-append type-output " ") "") name
       (catch (q type-and-parameter-list-length-mismatch)
         (thunk (c-function-parameters names type-input)) (l (key . data) (apply throw key name data)))
       (if body (string-append "{" body "}") "")))

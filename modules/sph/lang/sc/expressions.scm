@@ -7,13 +7,15 @@
     sc-compile-type
     sc-compile-types
     sc-define
+    sc-function
     sc-function-pointer
+    sc-function-pointer?
     sc-identifier
     sc-identifier-list
+    sc-join-expressions
     sc-pre-include
     sc-pre-include-once
     sc-value
-    sc-function-pointer?
     scp-if
     translate-identifier)
   (import
@@ -24,6 +26,7 @@
     (sph lang c expressions)
     (only (guile)
       string-prefix?
+      string-suffix?
       negate
       make-regexp
       string-join)
@@ -49,11 +52,28 @@
         ".-" (pair "-" "_")
         ".!$" (pair "!" "_x") "\\?" "_p" ".\\+." (pair "+" "_and_") "./." (pair "/" "_or_"))))
 
-  (define (sc-apply proc a)
-    (c-apply (sc-identifier proc) (string-join (map sc-identifier a) ",")))
+  (define (sc-apply proc a) (c-apply (sc-identifier proc) (string-join (map sc-identifier a) ",")))
 
-  (define* (sc-define name type #:optional value) "any [any] -> string"
-    (c-define (sc-identifier name) (sc-identifier type) (if value (sc-value value) value)))
+  (define (sc-join-expressions a)
+    (string-join
+      (fold-right
+        (l (e prev)
+          (pair
+            ;preprocessor directives need to start on a separate line
+            (if (string-prefix? "#" e)
+              (if (or (null? prev) (not (string-prefix? "\n" (first prev))))
+                (string-append "\n" e "\n") (string-append "\n" e))
+              (if (string-suffix? ";" e) e
+                (if (string-suffix? ":" e) (string-append e "\n") (string-append e ";"))))
+            prev))
+        (list) a)
+      ""))
+
+  (define* (sc-define compile name type #:optional value) "any [any] -> string"
+    (let ((name (compile name)) (value (if value (sc-value value) value)))
+      (if (sc-function-pointer? type)
+        (let (r (apply sc-function-pointer compile name (tail type))) (if value (c-set r value) r))
+        (c-define name (sc-compile-type type compile) value))))
 
   (define (sc-identifier a)
     (if (symbol? a) (translate-identifier (symbol->string a))
@@ -84,6 +104,15 @@
         (tail type-output))
       (string-append (sc-compile-type type-output compile) (parenthesise (string-append "*" inner))
         (sc-compile-types type-input compile))))
+
+  (define (sc-function compile name type-output body parameters type-input)
+    (let (body (if (null? body) #f (sc-join-expressions (map compile body))))
+      (if (sc-function-pointer? type-output)
+        (string-append
+          (apply sc-function-pointer compile (string-append (compile name) "()") (tail type-output))
+          (string-append "{" (or body "") "}"))
+        (c-function (compile name) (sc-compile-type type-output compile)
+          body (map compile parameters) (map (l (a) (sc-compile-type a compile)) type-input)))))
 
   (define (sc-identifier-list a) (parenthesise (string-join (map sc-identifier a) ",")))
 

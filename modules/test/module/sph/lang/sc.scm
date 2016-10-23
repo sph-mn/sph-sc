@@ -67,9 +67,9 @@
       "(8*sizeof(size_t))" (bit-not a-b)
       "~a_b" (struct (a (unsigned int)) (b (unsigned char) 3))
       "struct{unsigned int a;unsigned char b:3;}"
-      (struct testname (a (unsigned int)) (b (unsigned char) 3))
-      "struct testname{unsigned int a;unsigned char b:3;}"
-      (struct (a (function-pointer b c d)) (b int)) "struct{b(*a)(c,d);int b;}"
+      (struct testname (a (uns-igned int)) (b (unsigned char) 3))
+      "struct testname{uns_igned int a;unsigned char b:3;}"
+      (struct (a-b (function-pointer b c-e d)) (b i-nt)) "struct{b(*a_b)(c_e,d);i_nt b;}"
       (union (a (unsigned int)) (b (unsigned char) 3)) "union{unsigned int a;unsigned char b:3;}"
       (pre-let (a 1 b 2) (+ a b))
       "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n" (pre-let (a 1) a)
@@ -105,12 +105,18 @@
       (pre-stringify abc) "#abc"
       (array-literal 1 "2" 3 4) "{1,\"2\",3,4}"
       (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"}" (struct-literal a 1) "{a,1}"
-      (function-pointer void void*)
-      "void(*)(void*)"
+      (function-pointer void vo-id*)
+      "void(*)(vo_id*)"
       (convert-type a (function-pointer void void*))
       "((void(*)(void*))(a))"
-      (define a (function-pointer (function-pointer (unsinged int) float) double))
+      (define a (function-pointer (function-pointer (unsigned int) float) double))
       "unsigned int(*(*a)(double))(float)"
       (define a (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
       "int(*(*(*a)(long long int))(double))(float)"
+      (define (a) (function-pointer b32 b64) #t)
+      "b32(*a())(b64){1;}"
+      (define (a b) ((function-pointer b-32 b64) (function-pointer b-32 b64)) #t)
+      ""
+      (define (a b) ((function-pointer (function-pointer b32 b-16) b8) b-64 b64))
+      ""
       )))
