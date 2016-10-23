@@ -105,14 +105,29 @@
       (string-append (sc-compile-type type-output compile) (parenthesise (string-append "*" inner))
         (sc-compile-types type-input compile))))
 
-  (define (sc-function compile name type-output body parameters type-input)
-    (let (body (if (null? body) #f (sc-join-expressions (map compile body))))
-      (if (sc-function-pointer? type-output)
+  (define (sc-function compile name return-type body parameter-names parameter-types)
+    (let
+      ( (body (if (null? body) "" (string-append "{" (sc-join-expressions (map compile body)) "}")))
+        (parameters (sc-function-parameters compile parameter-names parameter-types))
+        (name (compile name)))
+      (if (sc-function-pointer? return-type)
         (string-append
-          (apply sc-function-pointer compile (string-append (compile name) "()") (tail type-output))
-          (string-append "{" (or body "") "}"))
-        (c-function (compile name) (sc-compile-type type-output compile)
-          body (map compile parameters) (map (l (a) (sc-compile-type a compile)) type-input)))))
+          (apply sc-function-pointer compile (string-append name parameters) (tail return-type)) body)
+        (string-append (sc-compile-type return-type compile) " " name parameters body))))
+
+  (define (sc-function-parameter compile name type)
+    (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
+      (string-append (compile type) " " (compile name))))
+
+  (define (sc-function-parameters compile names types)
+    (parenthesise
+      (if (list? names)
+        (if (equal? (length names) (length types))
+          (string-join (map (l a (apply sc-function-parameter compile a)) names types) ",")
+          (throw (q type-and-parameter-list-length-mismatch) names))
+        (if (or (symbol? names) (string? names))
+          (string-append (compile types) " " (compile names))
+          (throw (q cannot-convert-to-c-parameter))))))
 
   (define (sc-identifier-list a) (parenthesise (string-join (map sc-identifier a) ",")))
 
