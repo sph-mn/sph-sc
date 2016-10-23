@@ -56,7 +56,8 @@
     (string-append "#"
       (if (equal? (q if) type) "if"
         (if (equal? (q ifdef) type) "ifdef"
-          (if (equal? (q ifndef) type) "ifndef" (throw (q cannot-convert-to-c)))))
+          (if (equal? (q ifndef) type) "ifndef"
+            (throw (q cannot-convert-to-c) (list (q if) type test consequent alternate)))))
       " " test
       "\n" consequent "\n" (if alternate (string-append "#else\n" alternate "\n") "") "#endif"))
 
@@ -167,4 +168,4 @@
   (define (c-value a) "handles the default conversions between scheme and c types"
     (cond ((symbol? a) (symbol->string a)) ((string? a) (c-string a))
       ((number? a) (number->string a)) ((boolean? a) (if a "1" "0"))
-      ((char? a) (string-enclose (any->string a) "'")) (else (throw (q cannot-convert-to-c))))))
+      ((char? a) (string-enclose (any->string a) "'")) (else (throw (q cannot-convert-to-c-value) a)))))
