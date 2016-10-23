@@ -71,11 +71,10 @@
       "struct testname{uns_igned int a;unsigned char b:3;}"
       (struct (a-b (function-pointer b c-e d)) (b i-nt)) "struct{b(*a_b)(c_e,d);i_nt b;}"
       (union (a (unsigned int)) (b (unsigned char) 3)) "union{unsigned int a;unsigned char b:3;}"
-      (pre-let (a 1 b 2) (+ a b))
-      "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n" (pre-let (a 1) a)
-      "#define a 1\na;\n#undef a\n" (pre-let ((a b) 1) a)
-      "#define a(b) 1\na;\n#undef a\n" (pre-let ((a b) 1 (c d) 2) a)
-      "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n\n#undef c\n"
+      (pre-let (a 1 b 2) (+ a b)) "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n"
+      (pre-let (a 1) a) "#define a 1\na;\n#undef a\n"
+      (pre-let ((a b) 1) a) "#define a(b) 1\na;\n#undef a\n"
+      (pre-let ((a b) 1 (c d) 2) a) "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n\n#undef c\n"
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}" (pre-define (->test a b) c)
       "#define _to_test(a,b) c" (define-array aaa size-t 3)
@@ -97,26 +96,23 @@
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
       "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
       (enum test (a b c d e)) "enum test{a,b,c,d,e}"
-      (define-type test-t (enum (a b c)))
-      "typedef enum{a,b,c} test_t"
+      (define-type test-t (enum (a b c))) "typedef enum{a,b,c} test_t"
       (enum (a b c d e)) "enum{a,b,c,d,e}"
       (begin (enum (a b c d e)) (define a int)) "enum{a,b,c,d,e};int a;"
       (enum (a b (c 3) d (e 4))) "enum{a,b,c=3,d,e=4}"
       (pre-stringify abc) "#abc"
       (array-literal 1 "2" 3 4) "{1,\"2\",3,4}"
-      (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"}" (struct-literal a 1) "{a,1}"
-      (function-pointer void vo-id*)
-      "void(*)(vo_id*)"
-      (convert-type a (function-pointer void void*))
-      "((void(*)(void*))(a))"
+      (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"}"
+      (struct-literal a 1) "{a,1}"
+      (function-pointer void vo-id*) "void(*)(vo_id*)"
+      (convert-type a (function-pointer void void*)) "((void(*)(void*))(a))"
       (define a (function-pointer (function-pointer (unsigned int) float) double))
       "unsigned int(*(*a)(double))(float)"
-      (define a (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
-      "int(*(*(*a)(long long int))(double))(float)"
-      (define (a) (function-pointer b32 b64) #t)
+      (define a
+        (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
+      "int(*(*(*a)(long long int))(double))(float)" (define (a) (function-pointer b32 b64) #t)
       "b32(*a())(b64){1;}"
       (define (a b) ((function-pointer b-32 b64) (function-pointer b-32 b64)) #t)
-      ""
-      (define (a b) ((function-pointer (function-pointer b32 b-16) b8) b-64 b64))
-      ""
-      )))
+      "b_32(*a(b_32(*b)(b64)))(b64){1;}"
+      (define (a b) ((function-pointer (function-pointer b32 b-16) b8) b-64))
+      "b32(*(*a(b_64 b))(b8))(b_16)")))
