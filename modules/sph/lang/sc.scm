@@ -42,23 +42,10 @@
       ("modulo" "%") ("bit_shift_right" ">>")
       ("bit_shift_left" "<<") ("bit_xor" "^") (throw (q cannot-convert-symbol-to-c))))
 
-  (define (join-expressions a)
-    (string-join
-      (fold-right
-        (l (e prev)
-          (pair
-            ;preprocessor directives need to start on a separate line
-            (if (string-prefix? "#" e)
-              (if (or (null? prev) (not (string-prefix? "\n" (first prev))))
-                (string-append "\n" e "\n") (string-append "\n" e))
-              (if (string-suffix? ";" e) e
-                (if (string-suffix? ":" e) (string-append e "\n") (string-append e ";"))))
-            prev))
-        (list) a)
-      ""))
-
   (define-syntax-rule (add-begin-if-multiple a)
     (if (length-eq-one? a) (first a) (pair (q begin) a)))
+
+  (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
 
   (define (sc-enum-entries a) "list -> string"
     (string-join
@@ -109,10 +96,10 @@
       ("deref"
         (let (a (tail a)) (c-pointer-deref (first a) (if (null? (tail a)) #f (first (tail a))))))
       ("address_of" (apply c-address-of (tail a))) ("convert_type" (apply c-convert-type (tail a)))
-      ("begin" (join-expressions (tail a))) ("struct_ref" (apply c-struct-ref (tail a)))
+      ("begin" (sc-join-expressions (tail a))) ("struct_ref" (apply c-struct-ref (tail a)))
       ("return" (if (null? (tail a)) "return" (sc-apply (first a) (tail a))))
       ("goto" (string-join a " "))
-      ("label" (string-append (first (tail a)) ":" (join-expressions (tail (tail a)))))
+      ("label" (string-append (first (tail a)) ":" (sc-join-expressions (tail (tail a)))))
       ("signed" (string-trim-right (first (tail a)) #\u))
       ("length" (string-append "(8*sizeof(" (apply string-append (tail a)) "))"))
       (identical-infix-token (parenthesise (string-join (tail a) (first a))))
@@ -123,7 +110,7 @@
       ("bit_not" (string-append "~" (first (tail a))))
       ("pre_stringify" (c-stringify (first (tail a))))
       ("pre_string_concat" (string-join (tail a) " "))
-      ("compound_statement" (c-compound (join-expressions (tail a))))
+      ("compound_statement" (c-compound (sc-join-expressions (tail a))))
       (if (list? a) (sc-apply (first a) (tail a)) a)))
 
   (define (descend-expr->sc a compile load-paths)
@@ -167,27 +154,22 @@
       ( (set)
         (match (tail a)
           ( (name-1 value-1 name-2 value-2 rest ...)
-            (join-expressions (map-slice 2 c-set (map compile (tail a)))))
+            (sc-join-expressions (map-slice 2 c-set (map compile (tail a)))))
           ((name value) (c-set (compile name) (compile value)))))
       ( (define)
         (match (tail a)
-          ( ( ( (? not-preprocessor-keyword? name) parameter ...) (return-type types ...) body ...)
-            (c-function (sc-identifier (compile name)) (sc-compile-type return-type compile)
-              (if (null? body) #f (join-expressions (map compile body)))
-              (map (compose sc-identifier compile) parameter)
-              (map (l (a) (sc-compile-type a compile)) types)))
-          ( ( ( (? not-preprocessor-keyword? name) parameter ...) return-type body ...)
-            (c-function (sc-identifier (compile name)) (sc-compile-type return-type compile)
-              (if (null? body) #f (join-expressions (map compile body)))))
+          ( ( ( (? not-preprocessor-keyword? name) parameter ...)
+              ((? not-function-pointer-symbol? return-type) types ...) body ...)
+            (sc-function compile name return-type body parameter types))
+          ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
+            (sc-function compile name return-type body (list) (list)))
           ( (name-1 type-1 name-2 type-2 rest ...)
-            (join-expressions (map-slice 2 sc-define (tail a))))
-          ( (name type value ...)
-            (c-define (sc-identifier (compile name)) (sc-compile-type type compile)
-              (if (null? value) #f (compile (first value)))))))
+            (sc-join-expressions (map-slice 2 (l a (apply sc-define compile a)) (tail a))))
+          ((name type value ...) (sc-define compile name type (if (null? value) #f (first value))))))
       ( (define-array)
         (match (tail a)
           ( (name type size values ...)
-            (c-define-array (sc-identifier name) (sc-identifier type)
+            (c-define-array (compile name) (compile type)
               (if size (compile size) "") (if (null? values) #f (map compile values))))))
       ( (if)
         (apply c-if-statement (compile (first (tail a)))
@@ -214,7 +196,7 @@
         (match (tail a)
           ( ( (name parameter ...) body ...)
             (cp-pre-define (sc-identifier name)
-              (string-trim-right (join-expressions (map compile body)) #\;)
+              (string-trim-right (sc-join-expressions (map compile body)) #\;)
               (sc-identifier-list parameter)))
           ( (name-1 value-1 name-2 value-2 rest ...)
             (string-join
@@ -223,7 +205,7 @@
               "\n"))
           ( (name body ...)
             (cp-pre-define (sc-identifier name)
-              (string-trim-right (join-expressions (map compile body)) #\;) #f))))
+              (string-trim-right (sc-join-expressions (map compile body)) #\;) #f))))
       ( (struct union)
         (let (tail-a (tail a))
           (apply
