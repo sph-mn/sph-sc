@@ -70,7 +70,7 @@
       ""))
 
   (define* (sc-define compile name type #:optional value) "any [any] -> string"
-    (let ((name (compile name)) (value (if value (sc-value value) value)))
+    (let ((name (compile name)) (value (if value (compile value) value)))
       (if (sc-function-pointer? type)
         (let (r (apply sc-function-pointer compile name (tail type))) (if value (c-set r value) r))
         (c-define name (sc-compile-type type compile) value))))
@@ -108,7 +108,7 @@
   (define (sc-function compile name return-type body parameter-names parameter-types)
     (let
       ( (body (if (null? body) "" (string-append "{" (sc-join-expressions (map compile body)) "}")))
-        (parameters (sc-function-parameters compile parameter-names parameter-types))
+        (parameters (sc-function-parameters compile parameter-names parameter-types name))
         (name (compile name)))
       (if (sc-function-pointer? return-type)
         (string-append
@@ -117,14 +117,14 @@
 
   (define (sc-function-parameter compile name type)
     (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
-      (string-append (compile type) " " (compile name))))
+      (string-append (sc-compile-type type compile) " " (compile name))))
 
-  (define (sc-function-parameters compile names types)
+  (define (sc-function-parameters compile names types function-name)
     (parenthesise
       (if (list? names)
         (if (equal? (length names) (length types))
           (string-join (map (l a (apply sc-function-parameter compile a)) names types) ",")
-          (throw (q type-and-parameter-list-length-mismatch) names))
+          (throw (q type-and-parameter-list-length-mismatch) function-name names))
         (if (or (symbol? names) (string? names))
           (string-append (compile types) " " (compile names))
           (throw (q cannot-convert-to-c-parameter))))))
