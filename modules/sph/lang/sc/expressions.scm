@@ -7,6 +7,7 @@
     sc-compile-type
     sc-compile-types
     sc-define
+    sc-define-type
     sc-function
     sc-function-pointer
     sc-function-pointer?
@@ -74,6 +75,12 @@
       (if (sc-function-pointer? type)
         (let (r (apply sc-function-pointer compile name (tail type))) (if value (c-set r value) r))
         (c-define name (sc-compile-type type compile) value))))
+
+  (define* (sc-define-type compile name value) "any any -> string"
+    (let (name (compile name))
+      (if (sc-function-pointer? value)
+        (string-append "typedef " (apply sc-function-pointer compile name (tail value)))
+        (c-typedef name (compile value)))))
 
   (define (sc-identifier a)
     (if (symbol? a) (translate-identifier (symbol->string a))

@@ -57,7 +57,7 @@
       "#ifndef a\nb;\n#else\nc;\n#endif" (pre-if-defined a b c)
       "#ifdef a\nb;\n#else\nc;\n#endif" (define-type mytype int)
       "typedef int mytype"
-      (define-function-pointer-type type-name type-return type-argument-1 type-argument-2)
+      (define-type type-name (function-pointer type-return type-argument-1 type-argument-2))
       "typedef type_return(*type_name)(type_argument_1,type_argument_2)" (address-of a-b)
       "&a_b" (convert-type abc int)
       "((int)(abc))" ((convert-type abc function-t) d e)
@@ -70,11 +70,13 @@
       (struct testname (a (uns-igned int)) (b (unsigned char) 3))
       "struct testname{uns_igned int a;unsigned char b:3;}"
       (struct (a-b (function-pointer b c-e d)) (b i-nt)) "struct{b(*a_b)(c_e,d);i_nt b;}"
-      (union (a (unsigned int)) (b (unsigned char) 3)) "union{unsigned int a;unsigned char b:3;}"
-      (pre-let (a 1 b 2) (+ a b)) "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n"
-      (pre-let (a 1) a) "#define a 1\na;\n#undef a\n"
-      (pre-let ((a b) 1) a) "#define a(b) 1\na;\n#undef a\n"
-      (pre-let ((a b) 1 (c d) 2) a) "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n\n#undef c\n"
+      (define-type e (struct (a-b (function-pointer b c-e d)) (b i-nt)))
+      "typedef struct{b(*a_b)(c_e,d);i_nt b;} e" (union (a (unsigned int)) (b (unsigned char) 3))
+      "union{unsigned int a;unsigned char b:3;}" (pre-let (a 1 b 2) (+ a b))
+      "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n" (pre-let (a 1) a)
+      "#define a 1\na;\n#undef a\n" (pre-let ((a b) 1) a)
+      "#define a(b) 1\na;\n#undef a\n" (pre-let ((a b) 1 (c d) 2) a)
+      "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n\n#undef c\n"
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}" (pre-define (->test a b) c)
       "#define _to_test(a,b) c" (define-array aaa size-t 3)
