@@ -105,8 +105,6 @@
       (identical-infix-token (parenthesise (string-join (tail a) (first a))))
       (translated-infix-token
         (parenthesise (string-append (string-join (tail a) (translate-infix-token (first a))))))
-      ("define_type" (apply c-typedef (tail a)))
-      ("define_function_pointer_type" (apply c-typedef-function (tail a)))
       ("bit_not" (string-append "~" (first (tail a))))
       ("pre_stringify" (c-stringify (first (tail a))))
       ("pre_string_concat" (string-join (tail a) " "))
@@ -215,6 +213,7 @@
             (if (symbol? (first tail-a))
               (list (string-append " " (sc-identifier (first tail-a))) (tail tail-a))
               (list "" tail-a)))))
+      ((define-type) (apply sc-define-type compile (tail a)))
       ((array-literal) (string-append (c-compound (map compile (tail a)))))
       ( (struct-literal)
         (string-append
