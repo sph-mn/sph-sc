@@ -13,6 +13,8 @@
       (begin a+b) "a_and_b;"
       (begin a->b) "a_to_b;"
       (begin a!) "a_x;"
+      (begin a!?<->) "a_x_p_less_to_;"
+      (begin <) "<;"
       (if* a (if* b c d) e) "(a?(b?c:d):e)"
       (if* a (if* (if* b c) d) e) "(a?((b?c:0)?d:0):e)"
       (if* (= a 3) (begin (set b+c 4) (myproc a b+c)) a) "((a==3)?((b_and_c=4),myproc(a,b_and_c)):a)"
@@ -117,4 +119,5 @@
       (define (a b) ((function-pointer b-32 b64) (function-pointer b-32 b64)) #t)
       "b_32(*a(b_32(*b)(b64)))(b64){1;}"
       (define (a b) ((function-pointer (function-pointer b32 b-16) b8) b-64))
-      "b32(*(*a(b_64 b))(b8))(b_16)")))
+      "b32(*(*a(b_64 b))(b8))(b_16)"
+      )))

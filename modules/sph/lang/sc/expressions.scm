@@ -49,9 +49,16 @@
     (alist->regexp-match-replacements
       ;(regexp search-string . replacement)
       ;replaced in order
+      ;mostly equivalent to the c identifier conversion rules used in guile
+      ;https://www.gnu.org/software/guile/manual/html_node/API-Overview.html#API-Overview
       (alist "->" "_to_"
         ".-" (pair "-" "_")
-        ".!$" (pair "!" "_x") "\\?" "_p" ".\\+." (pair "+" "_and_") "./." (pair "/" "_or_"))))
+        ".!" (pair "!" "_x")
+        "\\?" "_p"
+        ".\\+." (pair "+" "_and_")
+        "./." (pair "/" "_or_")
+        ".<" (pair "<" "_less")
+        ".>" (pair ">" "_gr") ".<=" (pair "<=" "_leq") ".>=" (pair ">=" "_geq"))))
 
   (define (sc-apply proc a) (c-apply (sc-identifier proc) (string-join (map sc-identifier a) ",")))
 
