@@ -146,8 +146,8 @@
     (string-append "if(" test
       "){" consequent "}" (if alternate (string-append "else{" alternate "}") "")))
 
-  (define (c-pointer-deref a key)
-    (if key (string-append "*(" a "+" key ")") (string-append "(*" a ")")))
+  (define (c-pointer-deref a index)
+    (if index (string-append "(*(" a "+" index "))") (string-append "(*" a ")")))
 
   (define (c-set name value) (string-append name "=" value))
   (define (c-pointer type) (string-append type " * "))
