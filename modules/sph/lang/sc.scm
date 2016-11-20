@@ -214,9 +214,10 @@
       ((define-type) (apply sc-define-type compile (tail a)))
       ( (define-array)
         (match (tail a)
-          ( (name type size values ...)
+          ( (name type (size ...) values ...)
             (c-define-array (compile name) (compile type)
-              (if size (compile size) "") (if (null? values) #f (map compile values))))))
+              (if (null? size) (list "") (map compile size))
+              (if (null? values) #f (map compile values))))))
       ((array-literal) (c-compound (map compile (tail a))))
       ( (struct-literal)
         (string-append

@@ -82,18 +82,19 @@
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}" (pre-define (->test a b) c)
       "#define _to_test(a,b) c"
-      (define-array aa size-t 3)
-      "size_t aa[3]"(define-array aa size-t b-b)
-      "size_t aa[b_b]"
-      ;
+      (define-array aa size-t (1))
+      "size_t aa[1]"
       (define-array aa size-t (1 2 3))
-      "size_t aaa[1][2][3]"
-      (define-array aa size-t 2 1 2)
-      "size_t aaa[2]={1,2}"
+      "size_t aa[1][2][3]"
+      (define-array aa size-t (b-b))
+      "size_t aa[b_b]"
+      (define-array aa size-t (2) 3 4)
+      "size_t aa[2]={3,4}"
       (array-ref aaa 3) "(*(aaa+3))"
-      (array-ref aaa 3 4 5) "(*(aaa+(3*4)+5))"
-      (define-array aa size-t (1 2 3) (((-4 5 test-c) (6 7 8))))
-      "size_t aaa[1][2][3]={{{-4,5,test_c},{6,7,8}}}"
+      ;
+      (array-ref aaa 3 4 5) "(*(aaa+((3*4)+5)))"
+      (define-array aa size-t (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8)))
+      "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}}"
       ;
       (pre-include "./a/b.c")
       "#include \"./a/b.c\"\n" (pre-include "../a/b.c")
