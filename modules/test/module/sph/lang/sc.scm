@@ -28,8 +28,8 @@
       (define (abc d e) (b32 b64 b16) (return 0)) "b32 abc(b64 d,b16 e){return(0);}"
       (define (abc d e) (b32 (pre-concat b 64) b16) (return 0)) "b32 abc(b##64 d,b16 e){return(0);}"
       (set a 1) "a=1"
-      (deref a 1) "*(a+1)"
-      (deref (deref a 1) 2) "*(*(a+1)+2)"
+      (deref a 1) "(*(a+1))"
+      (deref (deref a 1) 2) "(*((*(a+1))+2))"
       (not 1) "!1"
       (if* (not 1) a b) "(!1?a:b)"
       (and 1 2 3) "(1&&2&&3)"
@@ -81,10 +81,21 @@
       "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n\n#undef c\n"
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}" (pre-define (->test a b) c)
-      "#define _to_test(a,b) c" (define-array aaa size-t 3)
-      "size_t aaa[3]" (define-array aaa size-t size-b)
-      "size_t aaa[size_b]" (define-array aaa size-t size-b -1 2 test-c)
-      "size_t aaa[size_b]={-1,2,test_c}" (pre-include "./a/b.c")
+      "#define _to_test(a,b) c"
+      (define-array aa size-t 3)
+      "size_t aa[3]"(define-array aa size-t b-b)
+      "size_t aa[b_b]"
+      ;
+      (define-array aa size-t (1 2 3))
+      "size_t aaa[1][2][3]"
+      (define-array aa size-t 2 1 2)
+      "size_t aaa[2]={1,2}"
+      (array-ref aaa 3) "(*(aaa+3))"
+      (array-ref aaa 3 4 5) "(*(aaa+(3*4)+5))"
+      (define-array aa size-t (1 2 3) (((-4 5 test-c) (6 7 8))))
+      "size_t aaa[1][2][3]={{{-4,5,test_c},{6,7,8}}}"
+      ;
+      (pre-include "./a/b.c")
       "#include \"./a/b.c\"\n" (pre-include "../a/b.c")
       "#include \"../a/b.c\"\n" (pre-include "a/b.c")
       "#include <a/b.c>\n" (pre-include "bb.h")
