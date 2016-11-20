@@ -91,11 +91,9 @@
       (define-array aa size-t (2) 3 4)
       "size_t aa[2]={3,4}"
       (array-ref aaa 3) "(*(aaa+3))"
-      ;
       (array-ref aaa 3 4 5) "(*(aaa+((3*4)+5)))"
       (define-array aa size-t (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8)))
       "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}}"
-      ;
       (pre-include "./a/b.c")
       "#include \"./a/b.c\"\n" (pre-include "../a/b.c")
       "#include \"../a/b.c\"\n" (pre-include "a/b.c")
