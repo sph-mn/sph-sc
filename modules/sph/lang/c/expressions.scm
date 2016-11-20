@@ -98,9 +98,10 @@
         (string-join
           (map (l (e) (if (list? e) (string-append (first e) "=" (first (tail e))) e)) enum-list) ","))))
 
-  (define (c-define-array name type size values) "string string string string ... -> string"
+  (define (c-define-array name type sizes values) "string string (string ...) string ... -> string"
     (string-append type " "
-      name "[" size "]" (if values (string-append "={" (string-join values ",") "}") "")))
+      name (apply string-append (map (l (a) (string-append "[" a "]")) sizes))
+      (if values (string-append "={" (string-join values ",") "}") "")))
 
   (define (c-define name type value) "string string -> string"
     (string-append type " " name (if value (string-append "=" value) "")))
