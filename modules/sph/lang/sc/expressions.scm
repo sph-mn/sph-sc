@@ -62,7 +62,7 @@
 
   (define (sc-apply proc a) (c-apply (sc-identifier proc) (string-join (map sc-identifier a) ",")))
 
-  (define (sc-join-expressions a)
+  (define* (sc-join-expressions a #:optional (expression-separator ""))
     (string-join
       (fold-right
         (l (e prev)
@@ -75,7 +75,7 @@
                 (if (string-suffix? ":" e) (string-append e "\n") (string-append e ";"))))
             prev))
         (list) a)
-      ""))
+      expression-separator))
 
   (define* (sc-define compile name type #:optional value) "any [any] -> string"
     (let ((name (compile name)) (value (if value (compile value) value)))

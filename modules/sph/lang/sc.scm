@@ -192,7 +192,7 @@
         (match (tail a)
           ( ( (name parameter ...) body ...)
             (cp-pre-define (sc-identifier name)
-              (string-trim-right (sc-join-expressions (map compile body)) #\;)
+              (string-trim-right (sc-join-expressions (map compile body) "\\\n  ") #\;)
               (sc-identifier-list parameter)))
           ( (name-1 value-1 name-2 value-2 rest ...)
             (string-join
@@ -201,7 +201,7 @@
               "\n"))
           ( (name body ...)
             (cp-pre-define (sc-identifier name)
-              (string-trim-right (sc-join-expressions (map compile body)) #\;) #f))))
+              (string-trim-right (sc-join-expressions (map compile body) "\\\n  ") #\;) #f))))
       ( (struct union)
         (let (tail-a (tail a))
           (apply
