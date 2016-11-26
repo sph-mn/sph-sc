@@ -47,9 +47,9 @@
       "return" (return 1 2)
       "return(1,2)" (if 1 2 (begin 3 4 (return #t)))
       "if(1){2;}else{3;4;return(1);}" (deref a-b)
-      "(*a_b)" (struct-ref a b)
-      "a.b" (struct-ref (deref a) b)
-      "(*a).b" (struct-deref a b)
+      "(*a_b)" (struct-get a b)
+      "a.b" (struct-get (deref a) b)
+      "(*a).b" (struct-pointer-get a b)
       "(*a).b" (pre-define (my-macro a b) (if* a #t #f))
       "#define my_macro(a,b) (a?1:0)" (pre-define ob-ject 3)
       "#define ob_ject 3" (pre-if (equal? a b) (begin c d e) (begin f g))
@@ -90,8 +90,8 @@
       "size_t aa[b_b]"
       (define-array aa size-t (2) 3 4)
       "size_t aa[2]={3,4}"
-      (array-ref aaa 3) "(*(aaa+3))"
-      (array-ref aaa 3 4 5) "(*(aaa+((3*4)+5)))"
+      (array-get aaa 3) "(*(aaa+3))"
+      (array-get aaa 3 4 5) "(*(aaa+((3*4)+5)))"
       (define-array aa size-t (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8)))
       "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}}"
       (array-set aa 0 11 1 22 2 33)
