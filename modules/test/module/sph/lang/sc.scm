@@ -132,4 +132,6 @@
       "b_32(*a(b_32(*b)(b64)))(b64){1;}"
       (define (a b) ((function-pointer (function-pointer b32 b-16) b8) b-64))
       "b32(*(*a(b_64 b))(b8))(b_16)"
+      (pre-define-if-not-defined (a b c) #t)
+      "\n#ifndef a\n\n#define a(b,c) 1\n\n#endif\n"
       )))
