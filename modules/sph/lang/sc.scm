@@ -96,8 +96,7 @@
       ("deref"
         (let (a (tail a)) (c-pointer-deref (first a) (if (null? (tail a)) #f (first (tail a))))))
       ("address_of" (apply c-address-of (tail a))) ("convert_type" (apply c-convert-type (tail a)))
-      ("begin" (sc-join-expressions (tail a)))
-      ("struct_get" (apply c-struct-get (tail a)))
+      ("begin" (sc-join-expressions (tail a))) ("struct_get" (apply c-struct-get (tail a)))
       ("return" (if (null? (tail a)) "return" (sc-apply (first a) (tail a))))
       ("goto" (string-join a " "))
       ("label" (string-append (first (tail a)) ":" (sc-join-expressions (tail (tail a)))))
@@ -149,7 +148,8 @@
         (pair (q begin)
           (map-slice 2
             (l (name value)
-              (qq (pre-if-not-defined (unquote name) (pre-define (unquote name) (unquote value)))))
+              (let (identifier (match name (((? not-preprocessor-keyword? name) _ ...) name) (_ name)))
+                (qq (pre-if-not-defined (unquote identifier) (pre-define (unquote name) (unquote value))))))
             (tail a))))
       (else #f)))
 
