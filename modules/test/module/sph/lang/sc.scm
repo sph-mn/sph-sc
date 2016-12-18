@@ -6,7 +6,9 @@
   (define-test (sc->c arguments) (sc->c arguments))
 
   (test-execute-procedures-lambda
-    (sc->c (begin "") "\"\";"
+    (sc->c
+      (begin "\"\"") "\"\\\"\\\"\";"
+      (begin "") "\"\";"
       (begin "a") "\"a\";"
       (begin a?) "a_p;"
       (begin a-b) "a_b;"

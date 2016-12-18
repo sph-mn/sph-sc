@@ -160,7 +160,7 @@
   (define (c-struct-get a key) (string-append a "." key))
 
   (define c-escape-single-char
-    (alist "\"" "\\\\" "\a" "\\a" "\n" "\\n" "\b" "\\b" "\f" "\\f" "\r" "\\r" "\t" "\\t" "\v" "\\v"))
+    (alist "\"" "\\\"" "\a" "\\a" "\n" "\\n" "\b" "\\b" "\f" "\\f" "\r" "\\r" "\t" "\\t" "\v" "\\v"))
 
   (define (c-string str)
     (string-enclose
