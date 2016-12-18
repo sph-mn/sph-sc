@@ -16,8 +16,6 @@
     (only (sph list) map-slice length-eq-one?)
     (only (sph read-write) file->datums)
     (only (sph string)
-      string-replace-string
-      string-quote
       any->string
       string-case
       parenthesise)
