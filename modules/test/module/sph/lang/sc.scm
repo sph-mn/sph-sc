@@ -6,8 +6,7 @@
   (define-test (sc->c arguments) (sc->c arguments))
 
   (test-execute-procedures-lambda
-    (sc->c
-      (begin "\"\"") "\"\\\"\\\"\";"
+    (sc->c (begin "\"\"") "\"\\\"\\\"\";"
       (begin "") "\"\";"
       (begin "a") "\"a\";"
       (begin a?) "a_p;"
@@ -50,9 +49,11 @@
       "return(1,2)" (if 1 2 (begin 3 4 (return #t)))
       "if(1){2;}else{3;4;return(1);}" (deref a-b)
       "(*a_b)" (struct-get a b)
-      "a.b" (struct-get (deref a) b)
+      "a.b" (struct-get a b c d e)
+      "a.b.c.d.e" (struct-get (deref a) b)
       "(*a).b" (struct-pointer-get a b)
-      "(*a).b" (pre-define (my-macro a b) (if* a #t #f))
+      "(*a).b" (struct-pointer-get a b c d)
+      "(*a).b.c.d" (pre-define (my-macro a b) (if* a #t #f))
       "#define my_macro(a,b) (a?1:0)" (pre-define ob-ject 3)
       "#define ob_ject 3" (pre-if (equal? a b) (begin c d e) (begin f g))
       "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif" (pre-undefine my-macro)
@@ -83,22 +84,17 @@
       "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n\n#undef c\n"
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}" (pre-define (->test a b) c)
-      "#define _to_test(a,b) c"
-      (define-array aa size-t (1))
-      "size_t aa[1]"
-      (define-array aa size-t (1 2 3))
-      "size_t aa[1][2][3]"
-      (define-array aa size-t (b-b))
-      "size_t aa[b_b]"
-      (define-array aa size-t (2) 3 4)
-      "size_t aa[2]={3,4}"
-      (array-get aaa 3) "(*(aaa+3))"
-      (array-get aaa 3 4 5) "(*(aaa+((3*4)+5)))"
-      (define-array aa size-t (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8)))
-      "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}}"
-      (array-set aa 0 11 1 22 2 33)
-      "(*(aa+0))=11;(*(aa+1))=22;(*(aa+2))=33;"
-      (pre-include "./a/b.c")
+      "#define _to_test(a,b) c" (define-array aa size-t (1))
+      "size_t aa[1]" (define-array aa size-t (1 2 3))
+      "size_t aa[1][2][3]" (define-array aa size-t (b-b))
+      "size_t aa[b_b]" (define-array aa size-t (2) 3 4)
+      "size_t aa[2]={3,4}" (array-get aaa 3)
+      "(*(aaa+3))" (array-get aaa 3 4 5)
+      "(*(aaa+((3*4)+5)))"
+      (define-array aa size-t
+        (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8)))
+      "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}}" (array-set aa 0 11 1 22 2 33)
+      "(*(aa+0))=11;(*(aa+1))=22;(*(aa+2))=33;" (pre-include "./a/b.c")
       "#include \"./a/b.c\"\n" (pre-include "../a/b.c")
       "#include \"../a/b.c\"\n" (pre-include "a/b.c")
       "#include <a/b.c>\n" (pre-include "bb.h")
@@ -133,7 +129,5 @@
       (define (a b) ((function-pointer b-32 b64) (function-pointer b-32 b64)) #t)
       "b_32(*a(b_32(*b)(b64)))(b64){1;}"
       (define (a b) ((function-pointer (function-pointer b32 b-16) b8) b-64))
-      "b32(*(*a(b_64 b))(b8))(b_16)"
-      (pre-define-if-not-defined (a b c) #t)
-      "\n#ifndef a\n\n#define a(b,c) 1\n\n#endif\n"
-      )))
+      "b32(*(*a(b_64 b))(b8))(b_16)" (pre-define-if-not-defined (a b c) #t)
+      "\n#ifndef a\n\n#define a(b,c) 1\n\n#endif\n")))
