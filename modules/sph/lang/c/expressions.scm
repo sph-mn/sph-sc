@@ -157,7 +157,7 @@
   (define (c-function-pointer inner type-output . type-input)
     (string-append type-output "(*" inner ")(" (string-join type-input ",") ")"))
 
-  (define (c-struct-get a key) (string-append a "." key))
+  (define (c-struct-get a . keys) (string-join (pair a keys) "."))
 
   (define c-escape-single-char
     (alist "\"" "\\\"" "\a" "\\a" "\n" "\\n" "\b" "\\b" "\f" "\\f" "\r" "\\r" "\t" "\\t" "\v" "\\v"))

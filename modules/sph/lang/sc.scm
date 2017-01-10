@@ -119,7 +119,8 @@
               (tail (tail a))))))
       ( (struct-pointer-get)
         (match (tail a)
-          ((identifier field) (qq (struct-get (deref (unquote identifier)) (unquote field))))))
+          ( (identifier fields ...)
+            (qq (struct-get (deref (unquote identifier)) (unquote-splicing fields))))))
       ( (struct-pointer-set)
         (match (tail a)
           ( (identifier field/value ...)
@@ -146,8 +147,11 @@
         (pair (q begin)
           (map-slice 2
             (l (name value)
-              (let (identifier (match name (((? not-preprocessor-keyword? name) _ ...) name) (_ name)))
-                (qq (pre-if-not-defined (unquote identifier) (pre-define (unquote name) (unquote value))))))
+              (let
+                (identifier (match name (((? not-preprocessor-keyword? name) _ ...) name) (_ name)))
+                (qq
+                  (pre-if-not-defined (unquote identifier)
+                    (pre-define (unquote name) (unquote value))))))
             (tail a))))
       (else #f)))
 
