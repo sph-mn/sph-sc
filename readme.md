@@ -1,1 +1,1 @@
-[sph-sc](http://sph.mn/content/3d3) - the [guile](https://gnu.org/software/guile/) scheme s-expression language that translates to c.
+[sph-sc](http://sph.mn/content/3d3) - mostly a 1:1 mapping from s-expression syntax to c
