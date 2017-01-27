@@ -119,15 +119,29 @@
       (string-append (sc-compile-type type-output compile) (parenthesise (string-append "*" inner))
         (sc-compile-types type-input compile))))
 
+  (define (get-body-and-docstring& body compile c) "list procedure -> any"
+    (if (null? body) (c #f "")
+      (apply
+        (l (docstring body)
+          (c docstring (string-append "{" (sc-join-expressions (map compile body)) "}")))
+        (if (string? (first body)) (list (docstring->comment (first body)) (tail body))
+          (list #f body)))))
+
+  (define (docstring->comment a) (string-append "/** " a " */\n"))
+
   (define (sc-function compile name return-type body parameter-names parameter-types)
     (let
-      ( (body (if (null? body) "" (string-append "{" (sc-join-expressions (map compile body)) "}")))
-        (parameters (sc-function-parameters compile parameter-names parameter-types name))
+      ( (parameters (sc-function-parameters compile parameter-names parameter-types name))
         (name (compile name)))
-      (if (sc-function-pointer? return-type)
-        (string-append
-          (apply sc-function-pointer compile (string-append name parameters) (tail return-type)) body)
-        (string-append (sc-compile-type return-type compile) " " name parameters body))))
+      (get-body-and-docstring& body compile
+        (l (docstring body-string)
+          (string-append (or docstring "")
+            (if (sc-function-pointer? return-type)
+              (string-append
+                (apply sc-function-pointer compile
+                  (string-append name parameters) (tail return-type))
+                body-string)
+              (string-append (sc-compile-type return-type compile) " " name parameters body-string)))))))
 
   (define (sc-function-parameter compile name type)
     (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
