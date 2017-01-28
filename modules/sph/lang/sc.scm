@@ -99,7 +99,6 @@
       ("goto" (string-join a " "))
       ("label" (string-append (first (tail a)) ":" (sc-join-expressions (tail (tail a)))))
       ("signed" (string-trim-right (first (tail a)) #\u))
-      ("length" (string-append "(8*sizeof(" (apply string-append (tail a)) "))"))
       (identical-infix-token (parenthesise (string-join (tail a) (first a))))
       (translated-infix-token
         (parenthesise (string-append (string-join (tail a) (translate-infix-token (first a))))))
