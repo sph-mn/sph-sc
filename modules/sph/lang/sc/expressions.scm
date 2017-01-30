@@ -8,12 +8,14 @@
     sc-compile-types
     sc-define
     sc-define-type
+    sc-enum
     sc-function
     sc-function-pointer
     sc-function-pointer?
     sc-identifier
     sc-identifier-list
     sc-join-expressions
+    sc-macro-function
     sc-pre-include
     sc-pre-include-once
     sc-value
@@ -27,6 +29,8 @@
     (sph lang c expressions)
     (only (guile)
       string-prefix?
+      string-null?
+      string-trim-right
       string-suffix?
       negate
       make-regexp
@@ -37,7 +41,8 @@
     (only (sph string)
       parenthesise
       any->string
-      regexp-match-replace))
+      regexp-match-replace)
+    (only (srfi srfi-1) remove))
 
   (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
   (define not-preprocessor-keyword? (negate preprocessor-keyword?))
@@ -74,7 +79,7 @@
               (if (string-suffix? ";" e) e
                 (if (string-suffix? ":" e) (string-append e "\n") (string-append e ";"))))
             prev))
-        (list) a)
+        (list) (remove string-null? a))
       expression-separator))
 
   (define* (sc-define compile name type #:optional value) "any [any] -> string"
@@ -119,11 +124,14 @@
       (string-append (sc-compile-type type-output compile) (parenthesise (string-append "*" inner))
         (sc-compile-types type-input compile))))
 
-  (define (get-body-and-docstring& body compile c) "list procedure -> any"
+  (define (get-body-and-docstring& body compile macro-function? c) "list procedure -> any"
     (if (null? body) (c #f "")
       (apply
         (l (docstring body)
-          (c docstring (string-append "{" (sc-join-expressions (map compile body)) "}")))
+          (c docstring
+            (if macro-function?
+              (string-trim-right (sc-join-expressions (map compile body) "\\\n  ") #\;)
+              (string-append "{" (sc-join-expressions (map compile body)) "}"))))
         (if (string? (first body)) (list (docstring->comment (first body)) (tail body))
           (list #f body)))))
 
@@ -134,6 +142,7 @@
       ( (parameters (sc-function-parameters compile parameter-names parameter-types name))
         (name (compile name)))
       (get-body-and-docstring& body compile
+        #f
         (l (docstring body-string)
           (string-append (or docstring "")
             (if (sc-function-pointer? return-type)
@@ -142,6 +151,13 @@
                   (string-append name parameters) (tail return-type))
                 body-string)
               (string-append (sc-compile-type return-type compile) " " name parameters body-string)))))))
+
+  (define (sc-macro-function name parameter body compile)
+    (get-body-and-docstring& body compile
+      #t
+      (l (docstring body-string)
+        (string-append (or docstring "")
+          (cp-pre-define (sc-identifier name) body-string (sc-identifier-list parameter))))))
 
   (define (sc-function-parameter compile name type)
     (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
@@ -203,4 +219,18 @@
         names/paths)
       "\n"))
 
-  (define (translate-identifier a) (regexp-match-replace a identifier-replacements)))
+  (define (translate-identifier a) (regexp-match-replace a identifier-replacements))
+
+  (define (sc-enum-entries a) "list -> string"
+    (string-join
+      (map
+        (l (e)
+          (match e ((name value) (string-append (sc-identifier name) "=" (sc-value value)))
+            (name (sc-identifier name))))
+        a)
+      ","))
+
+  (define (sc-enum a)
+    (let (c (l (name entries) (c-statement (string-append "enum" name) (sc-enum-entries entries))))
+      (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries))
+        (((entries ...)) (c "" entries))))))

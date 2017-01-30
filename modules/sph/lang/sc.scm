@@ -9,8 +9,10 @@
     (sph)
     (sph conditional)
     (sph error)
+    (sph hashtable)
     (sph lang c expressions)
     (sph lang sc expressions)
+    (except (rnrs hashtables) hashtable-ref)
     (except (srfi srfi-1) map)
     (only (sph filesystem) search-load-path ensure-trailing-slash)
     (only (sph list) map-slice length-eq-one?)
@@ -44,29 +46,18 @@
     (if (length-eq-one? a) (first a) (pair (q begin) a)))
 
   (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
+  (define (error-exit a) (write a) (newline) (exit 1))
+  (define sc-included-paths (string-hashtable))
 
-  (define (sc-enum-entries a) "list -> string"
-    (string-join
-      (map
-        (l (e)
-          (match e ((name value) (string-append (sc-identifier name) "=" (sc-value value)))
-            (name (sc-identifier name))))
-        a)
-      ","))
-
-  (define (sc-enum a)
-    (let (c (l (name entries) (c-statement (string-append "enum" name) (sc-enum-entries entries))))
-      (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries))
-        (((entries ...)) (c "" entries)))))
-
-  (define (error-exit a) (debug-log a) (exit 1))
-
-  (define (sc-include-sc paths load-paths)
+  (define (sc-include-sc paths load-paths once?)
     (pair (q begin)
       (append-map
         (l (a)
           (let* ((path (string-append a ".sc")) (path-found (search-load-path path load-paths)))
-            (if path-found (file->datums path-found read)
+            (if path-found
+              (if (and once? (hashtable-ref sc-included-paths path-found)) (list)
+                (begin (hashtable-set! sc-included-paths path-found #t)
+                  (file->datums path-found read)))
               (error-exit
                 (error-create (q file-not-accessible) (q sc)
                   (string-append (any->string path) " not found in " (any->string load-paths)))))))
@@ -132,7 +123,8 @@
       ( (array-get)
         (match (tail a) ((a index) (list (q deref) a index))
           ((a index ... index-last) (list (q deref) a (list (q +) (pair (q *) index) index-last)))))
-      ((include-sc) (sc-include-sc (tail a) load-paths))
+      ((sc-include) (sc-include-sc (tail a) load-paths #f))
+      ((sc-depend) (sc-include-sc (tail a) load-paths #t))
       ( (cond cond*)
         (let ((cond (reverse (tail a))) (symbol-if (if (eqv? (first a) (q cond*)) (q if*) (q if))))
           (fold
@@ -195,11 +187,7 @@
                     (compile e)))))
             (tail a))))
       ( (pre-define)
-        (match (tail a)
-          ( ( (name parameter ...) body ...)
-            (cp-pre-define (sc-identifier name)
-              (string-trim-right (sc-join-expressions (map compile body) "\\\n  ") #\;)
-              (sc-identifier-list parameter)))
+        (match (tail a) (((name parameter ...) body ...) (sc-macro-function name parameter body compile))
           ( (name-1 value-1 name-2 value-2 rest ...)
             (string-join
               (map-slice 2 (l (name value) (cp-pre-define (sc-identifier name) (compile value) #f))
