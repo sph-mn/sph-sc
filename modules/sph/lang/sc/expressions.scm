@@ -135,7 +135,7 @@
         (if (string? (first body)) (list (docstring->comment (first body)) (tail body))
           (list #f body)))))
 
-  (define (docstring->comment a) (string-append "/** " a " */\n"))
+  (define (docstring->comment a) (string-append "\n/** " a " */\n"))
 
   (define (sc-function compile name return-type body parameter-names parameter-types)
     (let

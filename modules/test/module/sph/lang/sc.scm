@@ -226,9 +226,9 @@
       (pre-define-if-not-defined (a b c) #t)
       "\n#ifndef a\n\n#define a(b,c) 1\n\n#endif\n"
       (define (a) b0 "test-docstring")
-      "/** test-docstring */\nb0 a(){}"
+      "\n/** test-docstring */\nb0 a(){}"
       (define (a b c) (b0 b0 b0) "test-docstring" (+ b c))
-      "/** test-docstring */\nb0 a(b0 b,b0 c){(b+c);}"
+      "\n/** test-docstring */\nb0 a(b0 b,b0 c){(b+c);}"
       (pre-define (a b) "test-docstring" (+ b c) 3)
-      "/** test-docstring */\n#define a(b) (b+c);\\\n  3"
+      "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3"
       )))
