@@ -157,7 +157,8 @@
       #t
       (l (docstring body-string)
         (string-append (or docstring "")
-          (cp-pre-define (sc-identifier name) body-string (sc-identifier-list parameter))))))
+          (cp-pre-define (sc-identifier name) body-string (sc-identifier-list parameter))
+          (if docstring "\n" "")))))
 
   (define (sc-function-parameter compile name type)
     (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
