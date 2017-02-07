@@ -230,5 +230,5 @@
       (define (a b c) (b0 b0 b0) "test-docstring" (+ b c))
       "\n/** test-docstring */\nb0 a(b0 b,b0 c){(b+c);}"
       (pre-define (a b) "test-docstring" (+ b c) 3)
-      "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3"
+      "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
       )))
