@@ -79,6 +79,8 @@
         elements)
       ";" (q suffix)))
 
+  (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
+
   (define (ascend-expr->c a)
     ;these are applied when ascending the tree
     (string-case (first a) ("not" (string-append "!" (apply string-append (tail a))))
@@ -92,7 +94,12 @@
       ("signed" (string-trim-right (first (tail a)) #\u))
       (identical-infix-token (parenthesise (string-join (tail a) (first a))))
       (translated-infix-token
-        (parenthesise (string-append (string-join (tail a) (translate-infix-token (first a))))))
+        (parenthesise
+          (string-append
+            (string-join
+              ;the map is for cases like a&&b=c where a lvalue error would occur for b=c
+              (map (l (a) (if (string-contains a "=") (parenthesise a) a)) (tail a))
+              (translate-infix-token (first a))))))
       ("bit_not" (string-append "~" (first (tail a))))
       ("pre_stringify" (c-stringify (first (tail a))))
       ("pre_string_concat" (string-join (tail a) " "))
@@ -178,16 +185,15 @@
                     (string-join
                       (map
                         (l (e)
-                          (if (and (list? e) (tree-contains? e (q set))) (parenthesise (compile e))
+                          (if (and (list? e) (contains-set? e)) (parenthesise (compile e))
                             (compile e)))
                         body)
                       ",")))
-                (_
-                  (if (and (list? e) (tree-contains? e (q set))) (parenthesise (compile e))
-                    (compile e)))))
+                (_ (if (and (list? e) (contains-set? e)) (parenthesise (compile e)) (compile e)))))
             (tail a))))
       ( (pre-define)
-        (match (tail a) (((name parameter ...) body ...) (sc-macro-function name parameter body compile))
+        (match (tail a)
+          (((name parameter ...) body ...) (sc-macro-function name parameter body compile))
           ( (name-1 value-1 name-2 value-2 rest ...)
             (string-join
               (map-slice 2 (l (name value) (cp-pre-define (sc-identifier name) (compile value) #f))
