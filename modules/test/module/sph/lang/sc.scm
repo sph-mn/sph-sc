@@ -187,9 +187,9 @@
       (pre-define-if-not-defined abc 3 def 4)
       "\n#ifndef abc\n\n#define abc 3\n\n#endif\n#ifndef def\n\n#define def 4\n\n#endif\n"
       (case = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-      "if(((3==myvalue)||(2==myvalue))){1;}else{if((4==myvalue)){0;}else{if(((\"a\"==myvalue)||(\"b\"==myvalue))){1;1;}else{0;0;};};}"
+      "if((((3==myvalue))||((2==myvalue)))){1;}else{if((4==myvalue)){0;}else{if((((\"a\"==myvalue))||((\"b\"==myvalue)))){1;1;}else{0;0;};};}"
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-      "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
+      "((((3==myvalue))||((2==myvalue)))?1:((4==myvalue)?0:((((\"a\"==myvalue))||((\"b\"==myvalue)))?(1,1):(0,0))))"
       (enum test (a b c d e))
       "enum test{a,b,c,d,e}"
       (define-type test-t (enum (a b c)))
@@ -231,4 +231,7 @@
       "\n/** test-docstring */\nb0 a(b0 b,b0 c){(b+c);}"
       (pre-define (a b) "test-docstring" (+ b c) 3)
       "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
+      (and a (set b (c d)))
+      "(a&&(b=c(d)))"
+
       )))

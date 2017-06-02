@@ -37,7 +37,7 @@
       string-join)
     (only (sph alist) alist)
     (only (sph list) map-slice)
-    (only (sph one) alist->regexp-match-replacements)
+    (only (sph two) alist->regexp-match-replacements)
     (only (sph string)
       parenthesise
       any->string
