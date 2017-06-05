@@ -1,7 +1,8 @@
 (library (sph lang sc)
   (export
     sc->c
-    sc-default-load-paths)
+    sc-default-load-paths
+    sph-lang-sc-description)
   (import
     (guile)
     (ice-9 match)
@@ -15,15 +16,15 @@
     (except (rnrs hashtables) hashtable-ref)
     (except (srfi srfi-1) map)
     (only (sph filesystem) search-load-path ensure-trailing-slash)
+    (only (sph io) file->datums)
     (only (sph list) map-slice length-eq-one?)
-    (only (sph read-write) file->datums)
     (only (sph string)
       any->string
       string-case
       parenthesise)
     (only (sph tree) tree-transform tree-contains?))
 
-  ;a scheme-datum to c compiler
+  (define sph-lang-sc-description "a scheme data to c compiler")
 
   (define sc-default-load-paths
     (map ensure-trailing-slash
