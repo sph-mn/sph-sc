@@ -38,6 +38,6 @@
             "one path: read from standard input and write to standard output"
             "two or more paths: read from all leading paths and write to the last path")
           "\n")
-        #:options (ql ((source-path ... destination-path)) ((source-path))))))
+        #:options (list-q ((source-path ... destination-path)) ((source-path))))))
   (alist-bind options (source-path destination-path)
     (sc (if-pass source-path any->list) destination-path)))
