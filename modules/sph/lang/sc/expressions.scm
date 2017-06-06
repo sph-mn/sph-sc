@@ -169,10 +169,10 @@
       (if (list? names)
         (if (equal? (length names) (length types))
           (string-join (map (l a (apply sc-function-parameter compile a)) names types) ",")
-          (throw (q type-and-parameter-list-length-mismatch) function-name names))
+          (raise (list (q type-and-parameter-list-length-mismatch) function-name  names)))
         (if (or (symbol? names) (string? names))
           (string-append (compile types) " " (compile names))
-          (throw (q cannot-convert-to-c-parameter))))))
+          (raise (q cannot-convert-to-c-parameter))))))
 
   (define (sc-identifier-list a) (parenthesise (string-join (map sc-identifier a) ",")))
 
