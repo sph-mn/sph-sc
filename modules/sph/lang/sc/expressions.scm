@@ -24,8 +24,7 @@
   (import
     (ice-9 match)
     (ice-9 regex)
-    (rnrs base)
-    (sph)
+    (sph base)
     (sph lang c expressions)
     (only (guile)
       string-prefix?
@@ -35,14 +34,7 @@
       negate
       make-regexp
       string-join)
-    (only (sph alist) alist)
-    (only (sph list) map-slice)
-    (only (sph two) alist->regexp-match-replacements)
-    (only (sph string)
-      parenthesise
-      any->string
-      regexp-match-replace)
-    (only (srfi srfi-1) remove))
+    (only (sph two) alist->regexp-match-replacements))
 
   (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
   (define not-preprocessor-keyword? (negate preprocessor-keyword?))
