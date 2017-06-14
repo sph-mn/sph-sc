@@ -161,7 +161,7 @@
       (if (list? names)
         (if (equal? (length names) (length types))
           (string-join (map (l a (apply sc-function-parameter compile a)) names types) ",")
-          (raise (list (q type-and-parameter-list-length-mismatch) function-name  names)))
+          (raise (list (q type-and-parameter-list-length-mismatch) function-name names)))
         (if (or (symbol? names) (string? names))
           (string-append (compile types) " " (compile names))
           (raise (q cannot-convert-to-c-parameter))))))

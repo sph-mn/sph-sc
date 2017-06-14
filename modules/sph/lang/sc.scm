@@ -20,6 +20,7 @@
     (only (sph list) map-slice length-eq-one?)
     (only (sph string)
       any->string
+      string-replace-string
       string-case
       parenthesise)
     (only (sph tree) tree-transform tree-contains?))
@@ -274,4 +275,5 @@
 
   (define* (sc->c a #:optional (load-paths sc-default-load-paths))
     ;expression -> string
-    (tree-transform a (descend-proc load-paths) ascend-expr->c sc-value)))
+    (string-replace-string (tree-transform a (descend-proc load-paths) ascend-expr->c sc-value)
+      "\n\n" "\n")))
