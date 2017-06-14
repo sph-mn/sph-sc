@@ -68,8 +68,9 @@
             (if (string-prefix? "#" e)
               (if (or (null? prev) (not (string-prefix? "\n" (first prev))))
                 (string-append "\n" e "\n") (string-append "\n" e))
-              (if (string-suffix? ";" e) e
-                (if (string-suffix? ":" e) (string-append e "\n") (string-append e ";"))))
+              (if (string-prefix? "\n#" e) e
+                (if (string-suffix? ";" e) e
+                  (if (string-suffix? ":" e) (string-append e "\n") (string-append e ";")))))
             prev))
         (list) (remove string-null? a))
       expression-separator))
