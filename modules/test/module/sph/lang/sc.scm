@@ -142,13 +142,13 @@
       (union (a (unsigned int)) (b (unsigned char) 3))
       "union{unsigned int a;unsigned char b:3;}"
       (pre-let (a 1 b 2) (+ a b))
-      "#define a 1\n#define b 2\n(a+b);\n#undef a\n\n#undef b\n"
+      "#define a 1\n#define b 2\n(a+b);\n#undef a\n#undef b\n"
       (pre-let (a 1) a)
       "#define a 1\na;\n#undef a\n"
       (pre-let ((a b) 1) a)
       "#define a(b) 1\na;\n#undef a\n"
       (pre-let ((a b) 1 (c d) 2) a)
-      "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n\n#undef c\n"
+      "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n#undef c\n"
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}"
       (pre-define (->test a b) c)
@@ -185,7 +185,7 @@
       (pre-include-once a "./a.c")
       "#ifndef sc_included_a\n#include \"./a.c\"\n#define sc_included_a \n#endif"
       (pre-define-if-not-defined abc 3 def 4)
-      "\n#ifndef abc\n\n#define abc 3\n\n#endif\n#ifndef def\n\n#define def 4\n\n#endif\n"
+      "\n#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
       (case = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
       "if((((3==myvalue))||((2==myvalue)))){1;}else{if((4==myvalue)){0;}else{if((((\"a\"==myvalue))||((\"b\"==myvalue)))){1;1;}else{0;0;};};}"
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
@@ -224,7 +224,7 @@
       (define (a b) ((function-pointer (function-pointer b32 b-16) b8) b-64))
       "b32(*(*a(b_64 b))(b8))(b_16)"
       (pre-define-if-not-defined (a b c) #t)
-      "\n#ifndef a\n\n#define a(b,c) 1\n\n#endif\n"
+      "\n#ifndef a\n#define a(b,c) 1\n#endif\n"
       (define (a) b0 "test-docstring")
       "\n/** test-docstring */\nb0 a(){}"
       (define (a b c) (b0 b0 b0) "test-docstring" (+ b c))
