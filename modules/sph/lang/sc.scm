@@ -17,7 +17,7 @@
     (except (srfi srfi-1) map)
     (only (sph filesystem) search-load-path ensure-trailing-slash)
     (only (sph io) file->datums)
-    (only (sph list) map-slice length-eq-one?)
+    (only (sph list) map-slice length-one?)
     (only (sph string)
       any->string
       string-replace-string
@@ -45,7 +45,7 @@
       ("bit_shift_left" "<<") ("bit_xor" "^") (throw (q cannot-convert-symbol-to-c))))
 
   (define-syntax-rule (add-begin-if-multiple a)
-    (if (length-eq-one? a) (first a) (pair (q begin) a)))
+    (if (length-one? a) (first a) (pair (q begin) a)))
 
   (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
   (define (error-exit a) (write a) (newline) (exit 1))
@@ -263,7 +263,7 @@
               (compile
                 (pair (q begin)
                   (append
-                    (map (l (n v) (pairs (if (length-eq-one? v) (q set) (q define)) n v)) names
+                    (map (l (n v) (pairs (if (length-one? v) (q set) (q define)) n v)) names
                       values)
                     body)))))))
       (else #f)))
