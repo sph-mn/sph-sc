@@ -6,10 +6,8 @@
   (import
     (guile)
     (ice-9 match)
-    (rnrs base)
     (sph)
     (sph conditional)
-    (sph error)
     (sph hashtable)
     (sph lang c expressions)
     (sph lang sc expressions)
@@ -42,28 +40,36 @@
       ("and" "&&") ("bit_or" "|")
       ("bit_and" "&") ("or" "||")
       ("modulo" "%") ("bit_shift_right" ">>")
-      ("bit_shift_left" "<<") ("bit_xor" "^") (throw (q cannot-convert-symbol-to-c))))
+      ("bit_shift_left" "<<") ("bit_xor" "^") (raise (q cannot-convert-symbol-to-c))))
 
-  (define-syntax-rule (add-begin-if-multiple a)
-    (if (length-one? a) (first a) (pair (q begin) a)))
-
+  (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
   (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
-  (define (error-exit a) (write a) (newline) (exit 1))
   (define sc-included-paths (string-hashtable))
 
-  (define (sc-include-sc paths load-paths once?)
+  (define (sc-path->full-path load-paths path)
+    (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
+      (if path-found path-found
+        (raise
+          (list (q file-not-accessible)
+            (string-append (any->string path) " not found in " (any->string load-paths)))))))
+
+  (define (sc-include-sc-once load-paths name/path)
+    "(string ...) (symbol/string ...) -> list
+     pre-include-once should be preferred for modules that are available to other code because
+     sc can not prevent repeated inclusion with c files that were built using sc-include-sc"
     (pair (q begin)
-      (append-map
-        (l (a)
-          (let* ((path (string-append a ".sc")) (path-found (search-load-path path load-paths)))
-            (if path-found
-              (if (and once? (hashtable-ref sc-included-paths path-found)) (list)
-                (begin (hashtable-set! sc-included-paths path-found #t)
-                  (file->datums path-found read)))
-              (error-exit
-                (error-create (q file-not-accessible) (q sc)
-                  (string-append (any->string path) " not found in " (any->string load-paths)))))))
-        paths)))
+      (apply append
+        (map-slice 2
+          (l (name path)
+            (let (path (sc-path->full-path load-paths path))
+              (if (hashtable-ref sc-included-paths path) (list)
+                (begin (hashtable-set! sc-included-paths path #t)
+                  (pair (sc-pre-include-define name) (file->datums path))))))
+          name/path))))
+
+  (define (sc-include-sc load-paths paths) "(string ...) (string ...) -> list"
+    (pair (q begin)
+      (append-map (l (a) (let (a (sc-path->full-path load-paths a)) (file->datums a read))) paths)))
 
   (define (struct-or-union-body elements compile)
     (string-join
@@ -84,7 +90,8 @@
   (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
 
   (define (ascend-expr->c a)
-    ;these are applied when ascending the tree
+    "any -> string
+     handles expressions that are processed when ascending the tree"
     (string-case (first a) ("not" (string-append "!" (apply string-append (tail a))))
       ("deref"
         (let (a (tail a)) (c-pointer-deref (first a) (if (null? (tail a)) #f (first (tail a))))))
@@ -109,7 +116,8 @@
       (if (list? a) (sc-apply (first a) (tail a)) a)))
 
   (define (descend-expr->sc a compile load-paths)
-    ;these are applied when descending the tree, and the result is parsed again
+    "list procedure list -> list
+     handles expressions that are processed when descending the tree. the result is parsed again"
     (case (first a)
       ( (struct-set)
         (let (struct (first (tail a)))
@@ -132,8 +140,8 @@
       ( (array-get)
         (match (tail a) ((a index) (list (q deref) a index))
           ((a index ... index-last) (list (q deref) a (list (q +) (pair (q *) index) index-last)))))
-      ((sc-include) (sc-include-sc (tail a) load-paths #f))
-      ((sc-depend) (sc-include-sc (tail a) load-paths #t))
+      ((sc-include) (sc-include-sc load-paths (tail a)))
+      ((sc-include-once) (sc-include-sc-once load-paths (tail a)))
       ( (cond cond*)
         (let ((cond (reverse (tail a))) (symbol-if (if (eqv? (first a) (q cond*)) (q if*) (q if))))
           (fold
@@ -156,8 +164,9 @@
       (else #f)))
 
   (define (descend-expr->c a compile)
-    ;these are applied when descending the tree, and the result is not parsed again.
-    ;this is for expressions that create syntax that can not be created with basic sc syntax
+    "list procedure -> string
+     handles expressions that are processed when descending the tree. the result is not parsed again.
+     this is for expressions that create syntax that can not be created with other sc syntax"
     (case (first a)
       ( (set)
         (match (tail a)
@@ -237,7 +246,7 @@
               "while" (parenthesise (compile test))))))
       ((pre-undefine) (string-join (map (compose cp-undef sc-identifier) (tail a)) "\n" (q suffix)))
       ( (pre-let)
-        ;descend-expr->sc currently would add an uneccessary semicolon at the end
+        ; descend-expr->sc currently would add an uneccessary semicolon at the end
         (match (tail a)
           ( ( (names+values ...) body ...)
             (string-append
@@ -248,7 +257,7 @@
                 (map-slice 2 (l (n v) (compile (list (q pre-undefine) (if (pair? n) (first n) n))))
                   names+values)
                 "\n" (q prefix))))
-          (_ (throw (q syntax-error-for-pre-let)))))
+          (_ (raise (q syntax-error-for-pre-let)))))
       ((pre-include) (sc-pre-include (tail a))) ((pre-include-once) (sc-pre-include-once (tail a)))
       ((function-pointer) (apply sc-function-pointer compile "" (tail a)))
       ((pre-concat) (cp-concat (map sc-identifier (tail a))))
@@ -263,8 +272,7 @@
               (compile
                 (pair (q begin)
                   (append
-                    (map (l (n v) (pairs (if (length-one? v) (q set) (q define)) n v)) names
-                      values)
+                    (map (l (n v) (pairs (if (length-one? v) (q set) (q define)) n v)) names values)
                     body)))))))
       (else #f)))
 
@@ -274,6 +282,6 @@
         (if r (list r #t) (let (r (descend-expr->c a compile)) (if r (list r #f) (list #f #t)))))))
 
   (define* (sc->c a #:optional (load-paths sc-default-load-paths))
-    ;expression -> string
+    "expression [(string ...)] -> string"
     (string-replace-string (tree-transform a (descend-proc load-paths) ascend-expr->c sc-value)
       "\n\n" "\n")))
