@@ -17,7 +17,9 @@
     sc-join-expressions
     sc-macro-function
     sc-pre-include
+    sc-pre-include-define
     sc-pre-include-once
+    sc-pre-include-variable
     sc-value
     scp-if
     translate-identifier)
@@ -191,7 +193,7 @@
 
   (define (sc-pre-include paths)
     "(string ...) -> string
-    uses c load path <> notation when a given path does not start with a slash or with a directory reference"
+     uses c load path <> notation when a given path does not start with a slash or with a directory reference"
     (string-join
       (map
         (l (a)
@@ -201,13 +203,26 @@
         paths)
       "\n" (q suffix)))
 
+  (define (sc-pre-include-variable name)
+    "symbol -> string
+     return a name for a preprocessor variable marking a file as having been included.
+     #define sc_included_{name}"
+    (string-append "sc_included_" (sc-identifier name)))
+
+  (define (sc-pre-include-define name)
+    "symbol -> string
+     define a preprocessor variable for marking a file as having been included"
+    (list (q pre-define) (sc-pre-include-variable name)))
+
   (define (sc-pre-include-once names/paths)
-    "([symbol string] ...)
-    unfortunately it seems too difficult to guess globally identifying names for included files, therefore they have to be specified"
+    "([symbol:name string:path] ...) ->
+     include a c file as with sc-pre-include but also check and eventually create a preprocessor variable sc_included_{name}
+     that specifies if the file has already been included. wrap the include in a #ifndef.
+     unfortunately it seems too difficult to automatically create identifiers sfor included files, therefore they need to be specified"
     (string-join
       (map-slice 2
         (l (name path)
-          (let* ((name (sc-identifier name)) (variable-name (string-append "sc_included_" name)))
+          (let (variable-name (sc-pre-include-variable name))
             (cp-if (q ifndef) variable-name
               (string-append (sc-pre-include (list path)) (cp-pre-define variable-name "" "")))))
         names/paths)
