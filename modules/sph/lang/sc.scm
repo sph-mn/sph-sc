@@ -58,14 +58,16 @@
      pre-include-once should be preferred for modules that are available to other code because
      sc can not prevent repeated inclusion with c files that were built using sc-include-sc"
     (pair (q begin)
-      (apply append
-        (map-slice 2
-          (l (name path)
-            (let (path (sc-path->full-path load-paths path))
-              (if (hashtable-ref sc-included-paths path) (list)
-                (begin (hashtable-set! sc-included-paths path #t)
-                  (pair (sc-pre-include-define name) (file->datums path))))))
-          name/path))))
+      (map-slice 2
+        (l (name path)
+          (let
+            ( (path (sc-path->full-path load-paths path))
+              (variable-name (sc-pre-include-variable name)))
+            (if (hashtable-ref sc-included-paths path) (q (begin))
+              (begin (hashtable-set! sc-included-paths path #t)
+                (list (q pre-if-not-defined) variable-name
+                  (pairs (q begin) (sc-pre-include-define name) (file->datums path)))))))
+        name/path)))
 
   (define (sc-include-sc load-paths paths) "(string ...) (string ...) -> list"
     (pair (q begin)

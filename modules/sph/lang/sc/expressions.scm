@@ -204,10 +204,10 @@
       "\n" (q suffix)))
 
   (define (sc-pre-include-variable name)
-    "symbol -> string
+    "symbol -> symbol
      return a name for a preprocessor variable marking a file as having been included.
      #define sc_included_{name}"
-    (string-append "sc_included_" (sc-identifier name)))
+    (string->symbol (string-append "sc_included_" (symbol->string name))))
 
   (define (sc-pre-include-define name)
     "symbol -> string
@@ -222,7 +222,7 @@
     (string-join
       (map-slice 2
         (l (name path)
-          (let (variable-name (sc-pre-include-variable name))
+          (let (variable-name (sc-identifier (sc-pre-include-variable name)))
             (cp-if (q ifndef) variable-name
               (string-append (sc-pre-include (list path)) (cp-pre-define variable-name "" "")))))
         names/paths)
