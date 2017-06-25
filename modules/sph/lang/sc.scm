@@ -6,22 +6,12 @@
   (import
     (guile)
     (ice-9 match)
-    (sph)
     (sph conditional)
-    (sph hashtable)
+    (sph base)
     (sph lang c expressions)
     (sph lang sc expressions)
-    (except (rnrs hashtables) hashtable-ref)
-    (except (srfi srfi-1) map)
-    (only (sph filesystem) search-load-path ensure-trailing-slash)
-    (only (sph io) file->datums)
-    (only (sph list) map-slice length-one?)
-    (only (sph string)
-      any->string
-      string-replace-string
-      string-case
-      parenthesise)
-    (only (sph tree) tree-transform tree-contains?))
+    (sph tree)
+    )
 
   (define sph-lang-sc-description "a scheme data to c compiler")
 
@@ -44,7 +34,7 @@
 
   (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
   (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
-  (define sc-included-paths (string-hashtable))
+  (define sc-included-paths (ht-create-string))
 
   (define (sc-path->full-path load-paths path)
     (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
@@ -63,8 +53,8 @@
           (let
             ( (path (sc-path->full-path load-paths path))
               (variable-name (sc-pre-include-variable name)))
-            (if (hashtable-ref sc-included-paths path) (q (begin))
-              (begin (hashtable-set! sc-included-paths path #t)
+            (if (ht-ref sc-included-paths path) (q (begin))
+              (begin (ht-set! sc-included-paths path #t)
                 (list (q pre-if-not-defined) variable-name
                   (pairs (q begin) (sc-pre-include-define name) (file->datums path)))))))
         name/path)))

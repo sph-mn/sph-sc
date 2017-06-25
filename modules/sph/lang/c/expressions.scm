@@ -33,15 +33,12 @@
     cp-undef)
   (import
     (guile)
-    (rnrs base)
     (sph)
     (sph alist)
-    (sph hashtable)
     (sph list)
-    (sph string)
-    (only (rnrs hashtables) hashtable?))
+    (sph string))
 
-  ;generating c expressions as strings.
+  (define sph-lang-c-expressions-description "generating c expressions as strings")
   (define (c-stringify a) (string-append "#" a))
   (define (cp-undef a) (string-append "#undef " a))
   (define (cp-include-path path) (string-append "#include " (c-string path)))
@@ -63,12 +60,12 @@
 
   (define (c-compound a)
     "string/((string string) ...) -> string
-    a: {a}
-    (a): {string}
-    (a b): {a,b}
-    ((a b) (c d)): {.a=b,.c=d}
-    ((a b) c): {.a=b,c}
-    also creates compound literals"
+     a: {a}
+     (a): {string}
+     (a b): {a,b}
+     ((a b) (c d)): {.a=b,.c=d}
+     ((a b) c): {.a=b,c}
+     also creates compound literals"
     (string-append "{"
       (if (list? a)
         (string-join (map (l (a) (if (list? a) (string-append "." (first a) "=" (second a)) a)) a)
@@ -131,19 +128,20 @@
   (define* (c-function name type-output body #:optional (names (list)) (type-input (list)))
     (string-append (if type-output (string-append type-output " ") "") name
       (catch (q type-and-parameter-list-length-mismatch)
-        (nullary (c-function-parameters names type-input)) (l (key . data) (apply throw key name data)))
+        (nullary (c-function-parameters names type-input))
+        (l (key . data) (apply throw key name data)))
       (if body (string-append "{" body "}") "")))
 
   (define* (c-apply proc-name #:optional (args "")) (string-append proc-name "(" args ")"))
 
   (define* (c-if test consequent #:optional alternate)
     "string string [string] -> string
-    create an if expression"
+     create an if expression"
     (string-append "(" test "?" consequent ":" (if alternate alternate "0") ")"))
 
   (define* (c-if-statement test consequent #:optional alternate)
     "string string [string] -> string
-    create an if statement"
+     create an if statement"
     (string-append "if(" test
       "){" consequent "}" (if alternate (string-append "else{" alternate "}") "")))
 
