@@ -1,9 +1,7 @@
 #!/usr/bin/guile
 !#
 
-(import (sph) (sph filesystem)
-  (sph list) (sph alist)
-  (sph lang sc) (only (guile) read) (sph stream) (srfi srfi-1) (sph conditional) (sph cli))
+(import (sph base) (sph lang sc) (only (guile) read) (sph stream) (sph conditional) (sph cli))
 
 (define (process input-port output-port)
   (display
