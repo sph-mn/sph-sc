@@ -6,12 +6,11 @@
   (import
     (guile)
     (ice-9 match)
-    (sph conditional)
     (sph base)
+    (sph conditional)
     (sph lang c expressions)
     (sph lang sc expressions)
-    (sph tree)
-    )
+    (sph tree))
 
   (define sph-lang-sc-description "a scheme data to c compiler")
 
@@ -271,9 +270,11 @@
   (define (descend-proc load-paths)
     (l (a compile)
       (let (r (descend-expr->sc a compile load-paths))
-        (if r (list r #t) (let (r (descend-expr->c a compile)) (if r (list r #f) (list #f #t)))))))
+        (if r (list r #t)
+          (let (r (descend-expr->c a compile)) (if r (list r #f) (list #f #t)))))))
 
   (define* (sc->c a #:optional (load-paths sc-default-load-paths))
     "expression [(string ...)] -> string"
-    (string-replace-string (tree-transform a (descend-proc load-paths) ascend-expr->c sc-value)
+    (string-replace-string
+      (tree-transform a (descend-proc load-paths) ascend-expr->c sc-value)
       "\n\n" "\n")))
