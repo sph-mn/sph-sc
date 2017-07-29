@@ -29,7 +29,7 @@
       ("and" "&&") ("bit_or" "|")
       ("bit_and" "&") ("or" "||")
       ("modulo" "%") ("bit_shift_right" ">>")
-      ("bit_shift_left" "<<") ("bit_xor" "^") (raise (q cannot-convert-symbol-to-c))))
+      ("bit_shift_left" "<<") ("bit_xor" "^") (else (raise (q fail-translate-infix-token)))))
 
   (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
   (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
@@ -104,7 +104,7 @@
       ("pre_stringify" (c-stringify (first (tail a))))
       ("pre_string_concat" (string-join (tail a) " "))
       ("compound_statement" (c-compound (sc-join-expressions (tail a))))
-      (if (list? a) (sc-apply (first a) (tail a)) a)))
+      (else (if (list? a) (sc-apply (first a) (tail a)) a))))
 
   (define (descend-expr->sc a compile load-paths)
     "list procedure list -> list
@@ -270,11 +270,9 @@
   (define (descend-proc load-paths)
     (l (a compile)
       (let (r (descend-expr->sc a compile load-paths))
-        (if r (list r #t)
-          (let (r (descend-expr->c a compile)) (if r (list r #f) (list #f #t)))))))
+        (if r (list r #t) (let (r (descend-expr->c a compile)) (if r (list r #f) (list #f #t)))))))
 
   (define* (sc->c a #:optional (load-paths sc-default-load-paths))
     "expression [(string ...)] -> string"
-    (string-replace-string
-      (tree-transform a (descend-proc load-paths) ascend-expr->c sc-value)
+    (string-replace-string (tree-transform a (descend-proc load-paths) ascend-expr->c sc-value)
       "\n\n" "\n")))
