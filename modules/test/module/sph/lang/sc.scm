@@ -27,6 +27,12 @@
       "a_x_p_less_to_;"
       (begin <)
       "<;"
+      (begin #t)
+      "1;"
+      (begin -1)
+      "-1;"
+      (begin 1 (begin 2 3))
+      "1;2;3;"
       (if* a (if* b c d) e)
       "(a?(b?c:d):e)"
       (if* a (if* (if* b c) d) e)
@@ -67,12 +73,6 @@
       "(1==2==3)"
       (equal? a 1)
       "(a==1)"
-      (begin #t)
-      "1;"
-      (begin -1)
-      "-1;"
-      (begin 1 (begin 2 3))
-      "1;2;3;"
       (while #t 1 2 3)
       "while(1){1;2;3;}"
       (do-while #t 1 2 3)
@@ -233,5 +233,6 @@
       "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
       (and a (set b (c d)))
       "(a&&(b=c(d)))"
-
+      (label abc (define a b32 3) (+ a b))
+      "abc:b32 a=3;(a+b);"
       )))
