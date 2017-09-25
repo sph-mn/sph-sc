@@ -9,6 +9,7 @@
     (sph base)
     (sph conditional)
     (sph lang c expressions)
+    (sph lang parser)
     (sph lang sc expressions)
     (sph tree))
 
