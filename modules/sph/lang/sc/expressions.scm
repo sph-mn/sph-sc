@@ -64,15 +64,15 @@
   (define* (sc-join-expressions a #:optional (expression-separator ""))
     (string-join
       (fold-right
-        (l (e prev)
+        (l (b prev)
           (pair
-            ;preprocessor directives need to start on a separate line
-            (if (string-prefix? "#" e)
+            ; preprocessor directives need to start on a separate line
+            (if (string-prefix? "#" b)
               (if (or (null? prev) (not (string-prefix? "\n" (first prev))))
-                (string-append "\n" e "\n") (string-append "\n" e))
-              (if (string-prefix? "\n#" e) e
-                (if (string-suffix? ";" e) e
-                  (if (string-suffix? ":" e) (string-append e "\n") (string-append e ";")))))
+                (string-append "\n" b "\n") (string-append "\n" b))
+              (if (string-prefix? "\n#" b) b
+                (if (or (string-suffix? ";" b) (string-suffix? "*/" b)) b
+                  (if (string-suffix? ":" b) (string-append b "\n") (string-append b ";")))))
             prev))
         (list) (remove string-null? a))
       expression-separator))

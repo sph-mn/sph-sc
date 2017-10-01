@@ -9,7 +9,7 @@
     (sph base)
     (sph conditional)
     (sph lang c expressions)
-    (sph lang parser)
+    (sph lang scheme)
     (sph lang sc expressions)
     (sph tree))
 
@@ -266,7 +266,7 @@
                   (append
                     (map (l (n v) (pairs (if (length-one? v) (q set) (q define)) n v)) names values)
                     body)))))))
-      (else #f)))
+      ((sc-comment) (string-append "/* " (second a) " */")) (else #f)))
 
   (define (descend-proc load-paths)
     (l (a compile)
