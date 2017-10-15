@@ -15,7 +15,7 @@
         ((? not-function-pointer-symbol? return-type) types ...) body ...)
       (list (list (q routine) name parameter return-type types)))
     ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
-      (list (list (q variable) name return-type)))
+      (list (list (q routine) name null return-type null)))
     ( (name-1 type-1 name-2 type-2 rest ...)
       (map-slice 2 (l (name type) (list (q variable) name type)) a))
     ((name type value ...) (list (list (q variable) name type))) (else #f)))
@@ -23,7 +23,7 @@
 (define (extract-pre-define a) "-> ((macro name parameters) ...)"
   (match a (((name parameter ...) body ...) (list (list (q macro) name parameter)))
     ( (name-1 value-1 name-2 value-2 rest ...)
-      (map-slice 2 (l (name value) (list (list (q macro) name null))) a))
+      (map-slice 2 (l (name value) (list (q macro) name null)) a))
     ((name body ...) (list (list (q macro) name null))) (else #f)))
 
 (define (extract-define-type a) "-> ((type symbol:other/struct/union/function name [value]) ...)"
@@ -65,28 +65,27 @@
         (and-let* ((sub-group (alist-ref a sub-type)))
           (map
             (l (a)
-              (let (a (tail (tail a)))
-                (case sub-type ((other) (sc-identifier (first a)))
-                  ( (function)
+              (case sub-type ((other) (sc-identifier (first a)))
+                ( (function)
+                  (let
+                    (a
+                      (string-split
+                        (string-drop-prefix "typedef " (sc->c (pair (q define-type) a))) #\())
+                    (string-append (first a) " (" (string-join (tail a) "("))))
+                ( (struct union)
+                  (string-append (sc-identifier (first a)) " "
                     (let
-                      (a
-                        (string-split
-                          (string-drop-prefix "typedef " (sc->c (pair (q define-type) a))) #\())
-                      (string-append (first a) " (" (string-join (tail a) "("))))
-                  ( (struct union)
-                    (string-append (sc-identifier (first a)) " "
-                      (let
-                        ( (a (sc->c (second a)))
-                          (type (if (eq? (q union) sub-type) "union" "struct")))
-                        (string-trim-right
-                          (string-append type "\n  "
-                            (string-join
-                              (string-split
-                                (string-trim-both
-                                  (string-trim-both (string-drop-prefix type a) #\{) #\})
-                                #\;)
-                              ";\n  ")))))))))
-            sub-group)))
+                      ((a (sc->c (second a))) (type (if (eq? (q union) sub-type) "union" "struct")))
+                      (string-trim-right
+                        (string-append type "\n  "
+                          (string-join
+                            (string-split
+                              (string-trim-both (string-trim-both (string-drop-prefix type a) #\{)
+                                #\})
+                              #\;)
+                            ";\n  "))))))))
+            (list-sort-with-accessor string<? (compose symbol->string first)
+              (map (compose tail tail) sub-group)))))
       (list-q other function union struct))))
 
 (define (format-group id a)
@@ -119,15 +118,83 @@
                 (tail a)))
             ( (enum)
               (string-join (map-slice 3 (l a (string-join (map sc-identifier a) ", ")) (second a))
-                "\n"))))
+                ",\n"))))
         a))))
+
+(define generated null)
+(define excluded null)
+(define identifier-replacements null)
+
+(define (extracted-identifier-replace a identifier-replacements)
+  "(string:regexppattern string:replacement [string:pattern string:replacement] ...)
+   replace any identifier by regexp"
+  (let
+    (replace
+      (let
+        (b
+          (map (l (a) (pair (make-regexp (first a)) (tail a)))
+            (list->alist identifier-replacements)))
+        (l (a)
+          (if (symbol? a)
+            (string->symbol
+              (fold (l (b result) (regexp-replace result (first b) (tail b))) (symbol->string a) b))
+            a))))
+    (map
+      (l (a)
+        (case (first a)
+          ( (macro)
+            (apply (l (name parameters) (list (q macro) (replace name) (map replace parameters)))
+              (tail a)))
+          ( (routine)
+            (apply
+              (l (name parameters type-out type-in)
+                (list (q routine) (replace name)
+                  (map replace parameters) (replace type-out) (map replace type-in)))
+              (tail a)))
+          ( (variable)
+            (apply (l (name type-out) (list (q variable) (replace name) (replace type-out)))
+              (tail a)))
+          ( (type)
+            (pair (first a)
+              (match (tail a)
+                ( ( (quote struct) name ((quote struct) struct-body ...))
+                  (list (q struct) name
+                    (pair (q struct)
+                      (map (l (a) (pairs (first a) (replace (second a)) (tail (tail a))))
+                        struct-body))))
+                (else (tail a)))))
+          (else a)))
+      a)))
+
+(define (extracted-exclude a excluded) "(string:regexp-pattern)"
+  (let
+    (excluded?
+      (let (excluded (map make-regexp excluded))
+        (l (a) "string -> booloean" (any (l (b) (regexp-exec b a)) excluded))))
+    (filter
+      (l (a)
+        (let
+          (name
+            (case (first a) ((macro variable routine) (symbol->string (second a)))
+              ((type) (symbol->string (list-ref a 2))) (else #f)))
+          (not (and name (excluded? name)))))
+      a)))
 
 (define (sc-documentor-cli)
   (let*
     ( (options
-        ( (cli-create #:options (list-q ((sc-file-path ...) #:required? #t #:value-required? #t))
+        ( (cli-create #:options
+            (list-q ((sc-file-path ...) #:required? #t #:value-required? #t)
+              (extra #:value-required? #t))
             #:description sph-sc-documentor-description)))
-      (grouped (group (extract-from-files-combined (alist-ref-q options sc-file-path)) first)))
+      (extracted
+        ; -> ((extracted-element-type _ ...) ...)
+        (append generated (extract-from-files-combined (alist-ref-q options sc-file-path))))
+      (extracted
+        (begin (and-let* ((extra (alist-ref-q options extra))) (load extra))
+          (extracted-identifier-replace (extracted-exclude extracted excluded)
+            identifier-replacements)))
+      (grouped (group extracted first)))
     (display-line
       (string-join
         (filter-map
