@@ -1,5 +1,6 @@
 (library (sph lang sc expressions)
   (export
+    not-function-pointer-symbol?
     not-preprocessor-keyword?
     preprocessor-keyword?
     sc-apply
@@ -40,6 +41,7 @@
 
   (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
   (define not-preprocessor-keyword? (negate preprocessor-keyword?))
+  (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
 
   (define (add-begin a)
     (if (and (list? a) (not (null? a)) (equal? (q begin) (first a))) a (list (q begin) a)))

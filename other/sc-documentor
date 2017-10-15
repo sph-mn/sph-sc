@@ -1,0 +1,142 @@
+#!/usr/bin/guile
+!#
+
+(define sph-sc-documentor-description
+  "lists types, functions, macros and variables in c format defined in files")
+
+(import (sph) (sph stream)
+  (ice-9 match) (sph lang sc expressions)
+  (sph alist) (sph list) (sph cli) (sph list one) (sph lang sc) (sph string) (rnrs sorting))
+
+(define (extract-define a)
+  "-> ((routine name parameters output-type input-type)/(variable name output-type) ...)"
+  (match a
+    ( ( ( (? not-preprocessor-keyword? name) parameter ...)
+        ((? not-function-pointer-symbol? return-type) types ...) body ...)
+      (list (list (q routine) name parameter return-type types)))
+    ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
+      (list (list (q variable) name return-type)))
+    ( (name-1 type-1 name-2 type-2 rest ...)
+      (map-slice 2 (l (name type) (list (q variable) name type)) a))
+    ((name type value ...) (list (list (q variable) name type))) (else #f)))
+
+(define (extract-pre-define a) "-> ((macro name parameters) ...)"
+  (match a (((name parameter ...) body ...) (list (list (q macro) name parameter)))
+    ( (name-1 value-1 name-2 value-2 rest ...)
+      (map-slice 2 (l (name value) (list (list (q macro) name null))) a))
+    ((name body ...) (list (list (q macro) name null))) (else #f)))
+
+(define (extract-define-type a) "-> ((type symbol:other/struct/union/function name [value]) ...)"
+  (match a
+    ((name ((quote function-pointer) body ...)) (list (list (q type) (q function) name (second a))))
+    ((name ((quote struct) body ...)) (list (list (q type) (q struct) name (second a))))
+    ((name ((quote union) body ...)) (list (list (q type) (q union) name (second a))))
+    ((name _ ...) (list (list (q type) (q other) name))) (else #f)))
+
+(define (extract-enum a) "-> ((enum names ...) ...)" (list (pair (q enum) a)))
+
+(define-as extractors alist-q
+  enum extract-enum
+  define extract-define pre-define extract-pre-define define-type extract-define-type)
+
+(define (extract-from-file path) "string -> (element ...)"
+  (stream-fold
+    (l (result a)
+      (let
+        (matched
+          (any
+            (l (extractor)
+              (and (not (null? a)) (eq? (first extractor) (first a)) ((tail extractor) (tail a))))
+            extractors))
+        (if matched (append result matched) result)))
+    null (file->stream path read)))
+
+(define (extract-from-files-combined paths) (append-map extract-from-file paths))
+(define-as group-order list-q type enum routine macro variable)
+
+(define (group-title id)
+  (case id ((type) "# types")
+    ((enum) "# enum") ((routine) "# routines") ((macro) "# macros") ((variable) "# variables")))
+
+(define (format-group-type a)
+  (apply append
+    (filter-map
+      (l (sub-type)
+        (and-let* ((sub-group (alist-ref a sub-type)))
+          (map
+            (l (a)
+              (let (a (tail (tail a)))
+                (case sub-type ((other) (sc-identifier (first a)))
+                  ( (function)
+                    (let
+                      (a
+                        (string-split
+                          (string-drop-prefix "typedef " (sc->c (pair (q define-type) a))) #\())
+                      (string-append (first a) " (" (string-join (tail a) "("))))
+                  ( (struct union)
+                    (string-append (sc-identifier (first a)) " "
+                      (let
+                        ( (a (sc->c (second a)))
+                          (type (if (eq? (q union) sub-type) "union" "struct")))
+                        (string-trim-right
+                          (string-append type "\n  "
+                            (string-join
+                              (string-split
+                                (string-trim-both
+                                  (string-trim-both (string-drop-prefix type a) #\{) #\})
+                                #\;)
+                              ";\n  ")))))))))
+            sub-group)))
+      (list-q other function union struct))))
+
+(define (format-group id a)
+  (if (eq? (q type) id) (format-group-type a)
+    (list-sort string<?
+      (map
+        (l (a)
+          (case id
+            ( (routine)
+              (apply
+                (l (name parameters type-out type-in)
+                  (string-append (sc-identifier type-out) " "
+                    (sc-identifier name) "("
+                    (if (null? parameters) ""
+                      (string-join
+                        (map (l (a b) (string-append (sc-identifier a) " " (sc-identifier b)))
+                          type-in parameters)
+                        ", "))
+                    ")"))
+                (tail a)))
+            ( (macro)
+              (apply
+                (l (name parameters)
+                  (string-append (sc-identifier name)
+                    (if (null? parameters) ""
+                      (string-append "(" (string-join (map sc-identifier parameters) ", ") ")"))))
+                (tail a)))
+            ( (variable)
+              (apply (l (name type) (string-append (sc-identifier type) " " (sc-identifier name)))
+                (tail a)))
+            ( (enum)
+              (string-join (map-slice 3 (l a (string-join (map sc-identifier a) ", ")) (second a))
+                "\n"))))
+        a))))
+
+(define (sc-documentor-cli)
+  (let*
+    ( (options
+        ( (cli-create #:options (list-q ((sc-file-path ...) #:required? #t #:value-required? #t))
+            #:description sph-sc-documentor-description)))
+      (grouped (group (extract-from-files-combined (alist-ref-q options sc-file-path)) first)))
+    (display-line
+      (string-join
+        (filter-map
+          (l (group-id)
+            (and-let*
+              ((a (alist-ref grouped group-id)) (a (if (eq? (q type) group-id) (group a second) a)))
+              (string-append (group-title group-id) "\n"
+                "```c\n" (string-join (format-group group-id a) "\n") "\n```")))
+          group-order)
+        "\n\n"))))
+
+(sc-documentor-cli)

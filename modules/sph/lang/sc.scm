@@ -9,8 +9,8 @@
     (sph base)
     (sph conditional)
     (sph lang c expressions)
-    (sph lang scheme)
     (sph lang sc expressions)
+    (sph lang scheme)
     (sph tree))
 
   (define sph-lang-sc-description "a scheme data to c compiler")
@@ -33,7 +33,6 @@
       ("bit_shift_left" "<<") ("bit_xor" "^") (else (raise (q fail-translate-infix-token)))))
 
   (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
-  (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
   (define sc-included-paths (ht-create-string))
 
   (define (sc-path->full-path load-paths path)
