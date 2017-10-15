@@ -39,17 +39,16 @@
   enum extract-enum
   define extract-define pre-define extract-pre-define define-type extract-define-type)
 
+(define (extract-one a)
+  (any
+    (l (extractor)
+      (and (not (null? a)) (eq? (first extractor) (first a)) ((tail extractor) (tail a))))
+    extractors))
+
 (define (extract-from-file path) "string -> (element ...)"
   (stream-fold
-    (l (result a)
-      (let
-        (matched
-          (any
-            (l (extractor)
-              (and (not (null? a)) (eq? (first extractor) (first a)) ((tail extractor) (tail a))))
-            extractors))
-        (if matched (append result matched) result)))
-    null (file->stream path read)))
+    (l (result a) (let (matched (extract-one a)) (if matched (append result matched) result))) null
+    (file->stream path read)))
 
 (define (extract-from-files-combined paths) (append-map extract-from-file paths))
 (define-as group-order list-q type enum routine macro variable)
@@ -189,11 +188,12 @@
             #:description sph-sc-documentor-description)))
       (extracted
         ; -> ((extracted-element-type _ ...) ...)
-        (append generated (extract-from-files-combined (alist-ref-q options sc-file-path))))
-      (extracted
         (begin (and-let* ((extra (alist-ref-q options extra))) (load extra))
-          (extracted-identifier-replace (extracted-exclude extracted excluded)
-            identifier-replacements)))
+          (append (apply append (filter-map extract-one generated))
+            (extract-from-files-combined (alist-ref-q options sc-file-path)))))
+      (extracted
+        (extracted-identifier-replace (extracted-exclude extracted excluded)
+          identifier-replacements))
       (grouped (group extracted first)))
     (display-line
       (string-join
