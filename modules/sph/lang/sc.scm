@@ -265,7 +265,7 @@
                   (append
                     (map (l (n v) (pairs (if (length-one? v) (q set) (q define)) n v)) names values)
                     body)))))))
-      ((sc-comment) (string-append "/* " (second a) " */")) (else #f)))
+      ((sc-comment) (string-append "\n/* " (second a) " */")) (else #f)))
 
   (define (descend-proc load-paths)
     (l (a compile)
