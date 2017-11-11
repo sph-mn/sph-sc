@@ -168,7 +168,9 @@
       (define-array aa size-t
         (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8)))
       "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}}"
-      (array-set aa 0 11 1 22 2 33)
+      (array-set-index aa 0 11 1 22 3 33)
+      "(*(aa+0))=11;(*(aa+1))=22;(*(aa+3))=33;"
+      (array-set aa 11 22 33)
       "(*(aa+0))=11;(*(aa+1))=22;(*(aa+2))=33;"
       (pre-include "./a/b.c")
       "#include \"./a/b.c\"\n"
