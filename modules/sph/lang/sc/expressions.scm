@@ -27,7 +27,7 @@
   (import
     (ice-9 match)
     (ice-9 regex)
-    (sph base)
+    (sph common)
     (sph lang c expressions)
     (only (guile)
       string-prefix?

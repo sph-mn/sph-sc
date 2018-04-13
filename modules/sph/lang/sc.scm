@@ -6,7 +6,7 @@
   (import
     (guile)
     (ice-9 match)
-    (sph base)
+    (sph common)
     (sph conditional)
     (sph lang c expressions)
     (sph lang sc expressions)
