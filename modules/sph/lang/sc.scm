@@ -34,6 +34,7 @@
 
   (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
   (define sc-included-paths (ht-create-string))
+  (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
 
   (define (sc-path->full-path load-paths path)
     (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
@@ -65,8 +66,8 @@
   (define (struct-or-union-body elements compile)
     (string-join
       (map
-        (l (e)
-          (match e
+        (l (a)
+          (match a
             ( (name type (? integer? bits))
               (string-append
                 (string-join (map (l (a) (sc-compile-type a compile)) type) " " (q suffix))
@@ -77,8 +78,6 @@
                 (string-append (sc-compile-type type compile) " " (compile name))))))
         elements)
       ";" (q suffix)))
-
-  (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
 
   (define (ascend-expr->c a)
     "any -> string
@@ -270,7 +269,7 @@
                   (append
                     (map (l (n v) (pairs (if (length-one? v) (q set) (q define)) n v)) names values)
                     body)))))))
-      ((sc-comment) (string-append "\n/* " (second a) " */")) (else #f)))
+      ((sc-comment) (string-append "\n/* " (second a) " */\n")) (else #f)))
 
   (define (descend-proc load-paths)
     (l (a compile)

@@ -64,17 +64,21 @@
   (define (sc-apply proc a) (c-apply (sc-identifier proc) (string-join (map sc-identifier a) ",")))
 
   (define* (sc-join-expressions a #:optional (expression-separator ""))
+    "main procedure for the concatenation of toplevel expressions. adds semicolons"
     (string-join
       (fold-right
         (l (b prev)
           (pair
             ; preprocessor directives need to start on a separate line
-            (if (string-prefix? "#" b)
-              (if (or (null? prev) (not (string-prefix? "\n" (first prev))))
-                (string-append "\n" b "\n") (string-append "\n" b))
-              (if (string-prefix? "\n#" b) b
-                (if (or (string-suffix? ";" b) (string-suffix? "*/" b)) b
-                  (if (string-suffix? ":" b) (string-append b "\n") (string-append b ";")))))
+            (cond
+              ( (string-prefix? "#" b)
+                (if (or (null? prev) (not (string-prefix? "\n" (first prev))))
+                  (string-append "\n" b "\n") (string-append "\n" b)))
+              ((string-prefix? "\n#" b) b)
+              (else
+                (cond
+                  ((or (string-suffix? ";" b) (string-suffix? "*/" b) (string-suffix? "*/\n" b)) b)
+                  ((string-suffix? ":" b) (string-append b "\n")) (else (string-append b ";")))))
             prev))
         (list) (remove string-null? a))
       expression-separator))
