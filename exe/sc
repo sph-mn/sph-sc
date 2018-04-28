@@ -1,7 +1,7 @@
 #!/usr/bin/guile
 !#
 
-(import (sph base) (sph lang sc) (only (guile) read) (sph stream) (sph conditional) (sph cli))
+(import (sph common) (sph lang sc) (only (guile) read) (sph stream) (sph conditional) (sph cli))
 
 (define (process input-port output-port)
   (display
