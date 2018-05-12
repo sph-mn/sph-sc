@@ -15,20 +15,31 @@
     sc-function-pointer?
     sc-identifier
     sc-identifier-list
+    sc-include-sc
+    sc-include-sc-once
     sc-join-expressions
     sc-macro-function
     sc-pre-include
     sc-pre-include-define
     sc-pre-include-once
     sc-pre-include-variable
+    sc-struct-or-union-body
     sc-value
     scp-if
     translate-identifier)
   (import
     (ice-9 match)
     (ice-9 regex)
-    (sph common)
+    (rnrs exceptions)
+    (rnrs io simple)
+    (sph)
+    (sph alist)
+    (sph filesystem)
+    (sph hashtable)
     (sph lang c expressions)
+    (sph lang scheme)
+    (sph list)
+    (sph string)
     (only (guile)
       string-prefix?
       string-null?
@@ -248,4 +259,49 @@
   (define (sc-enum a)
     (let (c (l (name entries) (c-statement (string-append "enum" name) (sc-enum-entries entries))))
       (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries))
-        (((entries ...)) (c "" entries))))))
+        (((entries ...)) (c "" entries)))))
+
+  (define (sc-struct-or-union-body elements compile)
+    (string-join
+      (map
+        (l (a)
+          (match a
+            ( (name type (? integer? bits))
+              (string-append
+                (string-join (map (l (a) (sc-compile-type a compile)) type) " " (q suffix))
+                (sc-identifier name) ":" (sc-value bits)))
+            ( (name type)
+              (if (sc-function-pointer? type)
+                (apply sc-function-pointer compile (compile name) (tail type))
+                (string-append (sc-compile-type type compile) " " (compile name))))))
+        elements)
+      ";" (q suffix)))
+
+  (define (sc-path->full-path load-paths path)
+    (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
+      (if path-found path-found
+        (raise
+          (list (q file-not-accessible)
+            (string-append (any->string path) " not found in " (any->string load-paths)))))))
+
+  (define sc-included-paths (ht-create-string))
+
+  (define (sc-include-sc-once load-paths name/path)
+    "(string ...) (symbol/string ...) -> list
+     pre-include-once should be preferred for modules that are available to other code because
+     sc can not prevent repeated inclusion with c files that were built using sc-include-sc"
+    (pair (q begin)
+      (map-slice 2
+        (l (name path)
+          (let
+            ( (path (sc-path->full-path load-paths path))
+              (variable-name (sc-pre-include-variable name)))
+            (if (ht-ref sc-included-paths path) (q (begin))
+              (begin (ht-set! sc-included-paths path #t)
+                (list (q pre-if-not-defined) variable-name
+                  (pairs (q begin) (sc-pre-include-define name) (file->datums path)))))))
+        name/path)))
+
+  (define (sc-include-sc load-paths paths) "(string ...) (string ...) -> list"
+    (pair (q begin)
+      (append-map (l (a) (let (a (sc-path->full-path load-paths a)) (file->datums a read))) paths))))

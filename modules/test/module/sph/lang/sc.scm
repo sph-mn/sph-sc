@@ -105,6 +105,14 @@
       "#define my_macro(a,b) (a?1:0)"
       (pre-define ob-ject 3)
       "#define ob_ject 3"
+      (pre-define a 1 (id a b) (= a b))
+      "#define a 1\n#define id(a,b) (a==b)"
+      (pre-define a 1 (id) b)
+      "#define a 1\n#define id() b"
+      (pre-define (->test a b) c)
+      "#define _to_test(a,b) c"
+      (pre-define (a b) "test-docstring" (+ b c) 3)
+      "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
       (pre-if (equal? a b) (begin c d e) (begin f g))
       "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif"
       (pre-undefine my-macro)
@@ -151,8 +159,6 @@
       "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n#undef c\n"
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}"
-      (pre-define (->test a b) c)
-      "#define _to_test(a,b) c"
       (define-array aa size-t (1))
       "size_t aa[1]"
       (define-array aa size-t (1 2 3))
@@ -231,8 +237,6 @@
       "\n/** test-docstring */\nb0 a(){}"
       (define (a b c) (b0 b0 b0) "test-docstring" (+ b c))
       "\n/** test-docstring */\nb0 a(b0 b,b0 c){(b+c);}"
-      (pre-define (a b) "test-docstring" (+ b c) 3)
-      "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
       (and a (set b (c d)))
       "(a&&(b=c(d)))"
       (label abc (define a b32 3) (+ a b))
