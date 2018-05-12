@@ -4,16 +4,34 @@
     sc-default-load-paths
     sph-lang-sc-description)
   (import
-    (guile)
     (ice-9 match)
-    (sph common)
+    (rnrs exceptions)
+    (sph)
     (sph conditional)
+    (sph filesystem)
     (sph lang c expressions)
     (sph lang sc expressions)
     (sph lang scheme)
-    (sph tree))
+    (sph list)
+    (sph string)
+    (sph tree)
+    (only (guile)
+      string-contains
+      string-join
+      string-split
+      string-trim-right
+      getenv
+      member
+      compose))
 
-  (define sph-lang-sc-description "a scheme data to c compiler")
+  (define sph-lang-sc-description
+    "a scheme data to c compiler.
+     main algorithm: source code is parsed using scheme read, resulting in a list of expressions / syntax tree.
+       the syntax tree is traversed top to bottom and eventually bottom to top and matching elements are
+       mapped to strings which are joined to the result in the end")
+
+  (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
+  (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
 
   (define sc-default-load-paths
     (map ensure-trailing-slash
@@ -31,53 +49,6 @@
       ("bit_and" "&") ("or" "||")
       ("modulo" "%") ("bit_shift_right" ">>")
       ("bit_shift_left" "<<") ("bit_xor" "^") (else (raise (q fail-translate-infix-token)))))
-
-  (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
-  (define sc-included-paths (ht-create-string))
-  (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
-
-  (define (sc-path->full-path load-paths path)
-    (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
-      (if path-found path-found
-        (raise
-          (list (q file-not-accessible)
-            (string-append (any->string path) " not found in " (any->string load-paths)))))))
-
-  (define (sc-include-sc-once load-paths name/path)
-    "(string ...) (symbol/string ...) -> list
-     pre-include-once should be preferred for modules that are available to other code because
-     sc can not prevent repeated inclusion with c files that were built using sc-include-sc"
-    (pair (q begin)
-      (map-slice 2
-        (l (name path)
-          (let
-            ( (path (sc-path->full-path load-paths path))
-              (variable-name (sc-pre-include-variable name)))
-            (if (ht-ref sc-included-paths path) (q (begin))
-              (begin (ht-set! sc-included-paths path #t)
-                (list (q pre-if-not-defined) variable-name
-                  (pairs (q begin) (sc-pre-include-define name) (file->datums path)))))))
-        name/path)))
-
-  (define (sc-include-sc load-paths paths) "(string ...) (string ...) -> list"
-    (pair (q begin)
-      (append-map (l (a) (let (a (sc-path->full-path load-paths a)) (file->datums a read))) paths)))
-
-  (define (struct-or-union-body elements compile)
-    (string-join
-      (map
-        (l (a)
-          (match a
-            ( (name type (? integer? bits))
-              (string-append
-                (string-join (map (l (a) (sc-compile-type a compile)) type) " " (q suffix))
-                (sc-identifier name) ":" (sc-value bits)))
-            ( (name type)
-              (if (sc-function-pointer? type)
-                (apply sc-function-pointer compile (compile name) (tail type))
-                (string-append (sc-compile-type type compile) " " (compile name))))))
-        elements)
-      ";" (q suffix)))
 
   (define (ascend-expr->c a)
     "any -> string
@@ -202,7 +173,11 @@
           (((name parameter ...) body ...) (sc-macro-function name parameter body compile))
           ( (name-1 value-1 name-2 value-2 rest ...)
             (string-join
-              (map-slice 2 (l (name value) (cp-pre-define (sc-identifier name) (compile value) #f))
+              (map-slice 2
+                (l (name value)
+                  (match name
+                    ((name parameter ...) (sc-macro-function name parameter (list value) compile))
+                    (_ (cp-pre-define (sc-identifier name) (compile value) #f))))
                 (tail a))
               "\n"))
           ( (name body ...)
@@ -213,7 +188,7 @@
           (apply
             (l (name body)
               (c-statement (string-append (symbol->string (first a)) name)
-                (struct-or-union-body body compile)))
+                (sc-struct-or-union-body body compile)))
             (if (symbol? (first tail-a))
               (list (string-append " " (sc-identifier (first tail-a))) (tail tail-a))
               (list "" tail-a)))))
