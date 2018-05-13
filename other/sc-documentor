@@ -2,7 +2,8 @@
 !#
 
 (define sph-sc-documentor-description
-  "lists types, functions, macros and variables in c format defined in files")
+  "lists types, functions, macros and variables in c format defined in files.
+  todo: doesnt support the \"declare\" form yet")
 
 (import (sph) (sph stream)
   (ice-9 match) (sph lang sc expressions)
