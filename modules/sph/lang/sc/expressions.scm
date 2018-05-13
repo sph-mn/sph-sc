@@ -7,7 +7,7 @@
     sc-case
     sc-compile-type
     sc-compile-types
-    sc-define
+    sc-define-function
     sc-define-type
     sc-enum
     sc-function
@@ -94,7 +94,7 @@
         (list) (remove string-null? a))
       expression-separator))
 
-  (define* (sc-define compile name type #:optional value) "any [any] -> string"
+  (define* (sc-define-function compile name type #:optional value) "any [any] -> string"
     (let ((name (compile name)) (value (if value (compile value) value)))
       (if (sc-function-pointer? type)
         (let (r (apply sc-function-pointer compile name (tail type))) (if value (c-set r value) r))
