@@ -7,6 +7,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (pre-define a)
+      "#define a"
       (= 1 2 3)
       "(1==2==3)"
       (address-of a-b)

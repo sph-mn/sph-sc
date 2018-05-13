@@ -200,14 +200,16 @@
                 (_ (if (and (list? e) (contains-set? e)) (parenthesise (compile e)) (compile e)))))
             (tail a))))
       ( (pre-define)
-        (string-join
-          (map-slice 2
-            (l (name value)
-              (match name
-                ((name parameter ...) (sc-macro-function name parameter (list value) compile))
-                (_ (cp-pre-define (sc-identifier name) (compile value) #f))))
-            (tail a))
-          "\n"))
+        (if (= 2 (length a))
+          (cp-pre-define (sc-identifier (second a)) #f #f)
+          (string-join
+            (map-slice 2
+              (l (name value)
+                (match name
+                  ((name parameter ...) (sc-macro-function name parameter (list value) compile))
+                  (_ (cp-pre-define (sc-identifier name) (compile value) #f))))
+              (tail a))
+            "\n")))
       ((struct union) (sc-struct-or-union (first a) (tail a) compile))
       ((define-type) (apply sc-define-type compile (tail a)))
       ((define-array) (sc-define-array (tail a) compile))
