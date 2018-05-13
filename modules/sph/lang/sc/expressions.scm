@@ -136,7 +136,8 @@
       (string-append (sc-compile-type type-output compile) (parenthesise (string-append "*" inner))
         (sc-compile-types type-input compile))))
 
-  (define (get-body-and-docstring& body compile macro-function? c) "list procedure -> any"
+  (define (get-body-and-docstring& body compile macro-function? c)
+    "list procedure:{string:docstring string:body -> any} -> any"
     (if (null? body) (c #f "")
       (apply
         (l (docstring body)
@@ -144,8 +145,13 @@
             (if macro-function?
               (string-trim-right (sc-join-expressions (map compile body) "\\\n  ") #\;)
               (string-append "{" (sc-join-expressions (map compile body)) "}"))))
-        (if (string? (first body)) (list (docstring->comment (first body)) (tail body))
-          (list #f body)))))
+        (if macro-function?
+          (match (first body)
+            ( ( (quote begin) (? string? docstring) body ...)
+              (list (docstring->comment docstring) body))
+            (_ (list #f body)))
+          (if (string? (first body)) (list (docstring->comment (first body)) (tail body))
+            (list #f body))))))
 
   (define (docstring->comment a) (string-append "\n/** " a " */\n"))
 

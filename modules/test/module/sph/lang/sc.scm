@@ -171,6 +171,10 @@
       "a##b##cd##e"
       (pre-define (my-macro a b) (if* a #t #f))
       "#define my_macro(a,b) (a?1:0)"
+      (pre-define (a) #t)
+      "#define a() 1"
+      (pre-define (a b) (begin "test-docstring" (+ b c) 3))
+      "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
       (pre-define ob-ject 3)
       "#define ob_ject 3"
       (pre-define a 1 (id a b) (= a b))
@@ -179,8 +183,6 @@
       "#define a 1\n#define id() b"
       (pre-define (->test a b) c)
       "#define _to_test(a,b) c"
-      (pre-define (a b) "test-docstring" (+ b c) 3)
-      "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
       (pre-define-if-not-defined abc 3 def 4)
       "\n#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
       (pre-if (equal? a b) (begin c d e) (begin f g))

@@ -200,20 +200,14 @@
                 (_ (if (and (list? e) (contains-set? e)) (parenthesise (compile e)) (compile e)))))
             (tail a))))
       ( (pre-define)
-        (match (tail a)
-          (((name parameter ...) body ...) (sc-macro-function name parameter body compile))
-          ( (name-1 value-1 name-2 value-2 rest ...)
-            (string-join
-              (map-slice 2
-                (l (name value)
-                  (match name
-                    ((name parameter ...) (sc-macro-function name parameter (list value) compile))
-                    (_ (cp-pre-define (sc-identifier name) (compile value) #f))))
-                (tail a))
-              "\n"))
-          ( (name body ...)
-            (cp-pre-define (sc-identifier name)
-              (string-trim-right (sc-join-expressions (map compile body) "\\\n  ") #\;) #f))))
+        (string-join
+          (map-slice 2
+            (l (name value)
+              (match name
+                ((name parameter ...) (sc-macro-function name parameter (list value) compile))
+                (_ (cp-pre-define (sc-identifier name) (compile value) #f))))
+            (tail a))
+          "\n"))
       ((struct union) (sc-struct-or-union (first a) (tail a) compile))
       ((define-type) (apply sc-define-type compile (tail a)))
       ((define-array) (sc-define-array (tail a) compile))
