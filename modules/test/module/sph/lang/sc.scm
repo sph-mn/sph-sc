@@ -81,33 +81,35 @@
       "enum{ea,eb,ec};struct d{unsigned int da;};"
       (declare f (type uint8_t) g (type (struct (ga (unsigned int)))))
       "typedef uint8_t f;typedef struct{unsigned int ga;} g;"
-      (define a b32 1)
-      "b32 a=1"
-      (define a b32 b+2 b16 c-3 b0)
-      "b32 a;b16 b_and_2;b0 c_3;"
+      (declare (pre-concat h i) uint32_t)
+      "uint32_t h##i;"
+      (define a uint32_t 1)
+      "uint32_t a=1"
+      (define a uint32_t b+2 b16 c-3 void)
+      "uint32_t a;b16 b_and_2;void c_3;"
       (define a (function-pointer (function-pointer (unsigned int) float) double))
       "unsigned int(*(*a)(double))(float)"
       (define a
         (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
       "int(*(*(*a)(long long int))(double))(float)"
-      (define (a) (function-pointer b32 b64) #t)
-      "b32(*a())(b64){1;}"
-      (define (a b) ((function-pointer b-32 b64) (function-pointer b-32 b64)) #t)
-      "b_32(*a(b_32(*b)(b64)))(b64){1;}"
-      (define (a b) ((function-pointer (function-pointer b32 b-16) b8) b-64))
-      "b32(*(*a(b_64 b))(b8))(b_16)"
-      (define (pre-concat a b) b32 1)
-      "b32 a##b=1"
-      (define (abc) b32 (return 0))
-      "b32 abc(){return(0);}"
-      (define (abc d e) (b32 b64 b16) (return 0))
-      "b32 abc(b64 d,b16 e){return(0);}"
-      (define (abc d e) (b32 (pre-concat b 64) b16) (return 0))
-      "b32 abc(b##64 d,b16 e){return(0);}"
-      (define (a) b0 "test-docstring")
-      "\n/** test-docstring */\nb0 a(){}"
-      (define (a b c) (b0 b0 b0) "test-docstring" (+ b c))
-      "\n/** test-docstring */\nb0 a(b0 b,b0 c){(b+c);}"
+      (define (a) (function-pointer uint32_t uint64_t) #t)
+      "uint32_t(*a())(uint64_t){1;}"
+      (define (a b) ((function-pointer uint32-t uint64_t) (function-pointer uint32-t uint64_t)) #t)
+      "uint32_t(*a(uint32_t(*b)(uint64_t)))(uint64_t){1;}"
+      (define (a b) ((function-pointer (function-pointer uint32_t b-16) uint8_t) b-64))
+      "uint32_t(*(*a(b_64 b))(uint8_t))(b_16)"
+      (define (pre-concat a b) uint32_t 1)
+      "uint32_t a##b=1"
+      (define (abc) uint32_t (return 0))
+      "uint32_t abc(){return(0);}"
+      (define (abc d e) (uint32_t uint64_t b16) (return 0))
+      "uint32_t abc(uint64_t d,b16 e){return(0);}"
+      (define (abc d e) (uint32_t (pre-concat b 64) b16) (return 0))
+      "uint32_t abc(b##64 d,b16 e){return(0);}"
+      (define (a) void "test-docstring")
+      "\n/** test-docstring */\nvoid a(){}"
+      (define (a b c) (void void void) "test-docstring" (+ b c))
+      "\n/** test-docstring */\nvoid a(void b,void c){(b+c);}"
       (define-array aa size-t (1))
       "size_t aa[1]"
       (define-array aa size-t (1 2 3))
@@ -153,8 +155,8 @@
       "(!a?1:0)"
       (if* (not 1) a b)
       "(!1?a:b)"
-      (label abc (define a b32 3) (+ a b))
-      "abc:b32 a=3;(a+b);"
+      (label abc (define a uint32_t 3) (+ a b))
+      "abc:uint32_t a=3;(a+b);"
       (let* ((a size_t 1) (b size_t 2) (c 3)) (set c 7) (return (if* 4 5 6)))
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}"
       (not 1)
@@ -179,8 +181,6 @@
       "#define _to_test(a,b) c"
       (pre-define (a b) "test-docstring" (+ b c) 3)
       "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
-      (pre-define-if-not-defined (a b c) #t)
-      "\n#ifndef a\n#define a(b,c) 1\n#endif\n"
       (pre-define-if-not-defined abc 3 def 4)
       "\n#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
       (pre-if (equal? a b) (begin c d e) (begin f g))
