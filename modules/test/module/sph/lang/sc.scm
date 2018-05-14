@@ -7,8 +7,6 @@
 
   (test-execute-procedures-lambda
     (sc->c
-      (pre-define a)
-      "#define a"
       (= 1 2 3)
       "(1==2==3)"
       (address-of a-b)
@@ -162,6 +160,8 @@
       "(*a_b)"
       (pre-concat a b cd e)
       "a##b##cd##e"
+      (pre-define a)
+      "#define a"
       (pre-define (my-macro a b) (if* a #t #f))
       "#define my_macro(a,b) (a?1:0)"
       (pre-define (a) #t)
@@ -194,10 +194,6 @@
       "#include <bb.h>\n"
       (pre-include "a" "b" "c")
       "#include <a>\n#include <b>\n#include <c>\n"
-      (pre-include-once a "./a.c" b "b.h")
-      "#ifndef sc_included_a\n#include \"./a.c\"\n#define sc_included_a \n#endif\n#ifndef sc_included_b\n#include <b.h>\n#define sc_included_b \n#endif"
-      (pre-include-once a "./a.c")
-      "#ifndef sc_included_a\n#include \"./a.c\"\n#define sc_included_a \n#endif"
       (pre-let (a 1 b 2) (+ a b))
       "#define a 1\n#define b 2\n(a+b);\n#undef a\n#undef b\n"
       (pre-let (a 1) a)
@@ -206,6 +202,8 @@
       "#define a(b) 1\na;\n#undef a\n"
       (pre-let ((a b) 1 (c d) 2) a)
       "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n#undef c\n"
+      (pre-pragma once)
+      "#pragma once\n"
       (pre-stringify abc)
       "#abc"
       (pre-undefine my-macro)

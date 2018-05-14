@@ -21,7 +21,6 @@
     sc-macro-function
     sc-pre-include
     sc-pre-include-define
-    sc-pre-include-once
     sc-pre-include-variable
     sc-struct-or-union-body
     sc-value
@@ -237,20 +236,6 @@
      define a preprocessor variable for marking a file as having been included"
     (list (q pre-define) (sc-pre-include-variable name)))
 
-  (define (sc-pre-include-once names/paths)
-    "([symbol:name string:path] ...) ->
-     include a c file as with sc-pre-include but also check and eventually create a preprocessor variable sc_included_{name}
-     that specifies if the file has already been included. wrap the include in a #ifndef.
-     unfortunately it seems too difficult to automatically create identifiers sfor included files, therefore they need to be specified"
-    (string-join
-      (map-slice 2
-        (l (name path)
-          (let (variable-name (sc-identifier (sc-pre-include-variable name)))
-            (cp-if (q ifndef) variable-name
-              (string-append (sc-pre-include (list path)) (cp-pre-define variable-name "" "")))))
-        names/paths)
-      "\n"))
-
   (define (translate-identifier a) (regexp-match-replace a identifier-replacements))
 
   (define (sc-enum-entries a) "list -> string"
@@ -283,30 +268,23 @@
         elements)
       ";" (q suffix)))
 
+  (define sc-included-paths (ht-create-string))
+
   (define (sc-path->full-path load-paths path)
     (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
-      (if path-found path-found
+      (if path-found (realpath* path-found)
         (raise
           (list (q file-not-accessible)
             (string-append (any->string path) " not found in " (any->string load-paths)))))))
 
-  (define sc-included-paths (ht-create-string))
-
-  (define (sc-include-sc-once load-paths name/path)
-    "(string ...) (symbol/string ...) -> list
-     pre-include-once should be preferred for modules that are available to other code because
-     sc can not prevent repeated inclusion with c files that were built using sc-include-sc"
+  (define (sc-include-sc-once load-paths paths) "(string ...) (symbol/string ...) -> list"
     (pair (q begin)
-      (map-slice 2
-        (l (name path)
-          (let
-            ( (path (sc-path->full-path load-paths path))
-              (variable-name (sc-pre-include-variable name)))
+      (map
+        (l (path)
+          (let (path (sc-path->full-path load-paths path))
             (if (ht-ref sc-included-paths path) (q (begin))
-              (begin (ht-set! sc-included-paths path #t)
-                (list (q pre-if-not-defined) variable-name
-                  (pairs (q begin) (sc-pre-include-define name) (file->datums path)))))))
-        name/path)))
+              (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
+        paths)))
 
   (define (sc-include-sc load-paths paths) "(string ...) (string ...) -> list"
     (pair (q begin)
