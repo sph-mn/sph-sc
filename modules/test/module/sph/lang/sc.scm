@@ -75,6 +75,16 @@
       "((function_t)(abc))(d,e)"
       (convert-type a (function-pointer void void*))
       "((void(*)(void*))(a))"
+      (declare aa (array size-t (b-b)))
+      "size_t aa[b_b];"
+      (declare aa (array size-t (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8))))
+      "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}};"
+      (declare type-name (type (function-pointer type-return type-argument-1 type-argument-2)))
+      "typedef type_return(*type_name)(type_argument_1,type_argument_2);"
+      (declare test-t (type (enum (a b c))))
+      "typedef enum{a,b,c} test_t;"
+      (declare e (type (struct (a-b (function-pointer b c-e d)) (b i-nt))))
+      "typedef struct{b(*a_b)(c_e,d);i_nt b;} e;"
       (declare a uint32_t (b ba bb) (void uint8_t uint32_t))
       "uint32_t a;void b(uint8_t ba,uint32_t bb);"
       (declare c (array uint8_t (3 4)) c (array uint8_t 5) c (array uint8_t (2) 0 0))
@@ -112,25 +122,6 @@
       "\n/** test-docstring */\nvoid a(){}"
       (define (a b c) (void void void) "test-docstring" (+ b c))
       "\n/** test-docstring */\nvoid a(void b,void c){(b+c);}"
-      (define-array aa size-t (1))
-      "size_t aa[1]"
-      (define-array aa size-t (1 2 3))
-      "size_t aa[1][2][3]"
-      (define-array aa size-t (b-b))
-      "size_t aa[b_b]"
-      (define-array aa size-t (2) 3 4)
-      "size_t aa[2]={3,4}"
-      (define-array aa size-t
-        (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8)))
-      "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}}"
-      (define-type mytype int)
-      "typedef int mytype"
-      (define-type type-name (function-pointer type-return type-argument-1 type-argument-2))
-      "typedef type_return(*type_name)(type_argument_1,type_argument_2)"
-      (define-type test-t (enum (a b c)))
-      "typedef enum{a,b,c} test_t"
-      (define-type e (struct (a-b (function-pointer b c-e d)) (b i-nt)))
-      "typedef struct{b(*a_b)(c_e,d);i_nt b;} e"
       (do-while #t 1 2 3)
       "do{1;2;3;}while(1)"
       (enum (a b c d e))
