@@ -220,6 +220,7 @@
                   (_ (cp-pre-define (sc-identifier name) (compile value) #f))))
               (tail a))
             "\n")))
+      ((pre-pragma) (string-append "#pragma " (string-join (map sc-identifier (tail a)) " ") "\n"))
       ((struct union) (sc-struct-or-union (first a) (tail a) compile))
       ( (struct-literal)
         (string-append
@@ -238,7 +239,7 @@
                   names+values)
                 "\n" (q prefix))))
           (_ (raise (q syntax-error-for-pre-let)))))
-      ((pre-include) (sc-pre-include (tail a))) ((pre-include-once) (sc-pre-include-once (tail a)))
+      ((pre-include) (sc-pre-include (tail a)))
       ((pre-concat) (cp-concat (map sc-identifier (tail a))))
       ((pre-stringify) (cp-stringify (apply sc-identifier (tail a))))
       ((pre-if) (scp-if (q if) (tail a) compile))
