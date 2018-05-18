@@ -25,7 +25,7 @@
       compose))
 
   (define sph-lang-sc-description
-    "a scheme data to c compiler.
+    "an s-expression to c compiler.
      main algorithm: source code is parsed using scheme read, resulting in a list of expressions / syntax tree.
        the syntax tree is traversed top to bottom and eventually bottom to top and matching elements are
        mapped to strings which are joined to the result in the end")
@@ -71,6 +71,26 @@
             (((quote type) type) (sc-define-type compile id type))
             (_ (sc-define (list id type) compile))))
         a)))
+
+  (define (sc-cond a compile)
+    (match a
+      ( (only-cond)
+        (c-if-statement (compile (first only-cond)) (compile (pair (q begin) (tail only-cond)))))
+      ( (first-cond middle-cond ... last-cond)
+        (string-append
+          (c-if-statement (compile (first first-cond)) (compile (pair (q begin) (tail first-cond))))
+          (apply string-append
+            (map
+              (l (a)
+                (string-append "else "
+                  (c-if-statement (compile (first a)) (compile (pair (q begin) (tail a))))))
+              middle-cond))
+          (let
+            ( (test (compile (first last-cond)))
+              (consequent (compile (pair (q begin) (tail last-cond)))))
+            (string-append "else"
+              (if (eq? (q else) (first last-cond)) (string-append "{" consequent "}")
+                (string-append " " (c-if-statement test consequent)))))))))
 
   (define sc-default-load-paths
     (map ensure-trailing-slash
@@ -133,15 +153,18 @@
           (pair (q begin)
             (map-slice 2 (l (index value) (list (q set) (list (q array-get) array index) value))
               (tail (tail a))))))
-      ( (cond cond*)
-        (let ((cond (reverse (tail a))) (symbol-if (if (eqv? (first a) (q cond*)) (q if*) (q if))))
-          (fold
-            (l (cond alternate)
-              (list symbol-if (first cond) (add-begin-if-multiple (tail cond)) alternate))
-            (match (first cond) (((quote else) body ...) (add-begin-if-multiple body))
-              ((test consequent ...) (list symbol-if test (add-begin-if-multiple consequent))))
-            (tail cond))))
       ((case case*) (apply sc-case (if (equal? (q case*) (first a)) (q cond*) (q cond)) (tail a)))
+      ( (cond*)
+        (let (conditions (reverse (tail a)))
+          (fold
+            (l (condition alternate)
+              (list (q if*) (first condition) (add-begin-if-multiple (tail condition)) alternate))
+            (match (first conditions) (((quote else) body ...) (add-begin-if-multiple body))
+              ((test consequent ...) (list (q if*) test (add-begin-if-multiple consequent))))
+            (tail conditions))))
+      ( (pointer-set)
+        (match (tail a)
+          ((pointer value) (qq (set (pointer-get (unquote pointer)) (unquote value))))))
       ( (pre-define-if-not-defined)
         (pair (q begin)
           (map-slice 2
@@ -173,8 +196,11 @@
     "list procedure -> string
      handles expressions that are processed when descending the tree. the result is not parsed again.
      this is for expressions that create syntax that can not be created with other sc syntax"
-    (case (first a) ((array-literal) (c-compound (map compile (tail a))))
-      ((declare) (sc-declare (tail a) compile)) ((define) (sc-define (tail a) compile))
+    (case (first a)
+      ((array-literal) (c-compound (map compile (tail a))))
+      ((cond) (sc-cond (tail a) compile))
+      ((declare) (sc-declare (tail a) compile))
+      ((define) (sc-define (tail a) compile))
       ( (do-while)
         (match (tail a)
           ( (test body ...)
@@ -244,7 +270,8 @@
       ((pre-stringify) (cp-stringify (apply sc-identifier (tail a))))
       ((pre-if) (scp-if (q if) (tail a) compile))
       ((pre-if-defined) (scp-if (q ifdef) (tail a) compile))
-      ((pre-if-not-defined) (scp-if (q ifndef) (tail a) compile)) ((quote) (list-ref a 1))
+      ((pre-if-not-defined) (scp-if (q ifndef) (tail a) compile))
+      ((quote) (list-ref a 1))
       ((sc-comment) (string-append "\n/* " (second a) " */\n"))
       ( (set)
         (match (tail a)
