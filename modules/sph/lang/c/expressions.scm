@@ -106,7 +106,9 @@
 
   (define (c-identifier a)
     (string-append
-      (cond ((symbol? a) (symbol->string a)) ((string? a) a)
+      (cond
+        ((symbol? a) (symbol->string a))
+        ((string? a) a)
         (else (throw (q cannot-convert-to-c-identifier))))))
 
   (define (c-identifier-list a)
@@ -166,6 +168,10 @@
       (fold (l (e r) (string-replace-string r (first e) (tail e))) str c-escape-single-char) "\""))
 
   (define (c-value a) "handles the default conversions between scheme and c types"
-    (cond ((symbol? a) (symbol->string a)) ((string? a) (c-string a))
-      ((number? a) (number->string a)) ((boolean? a) (if a "1" "0"))
-      ((char? a) (string-enclose (any->string a) "'")) (else (throw (q cannot-convert-to-c-value) a)))))
+    (cond
+      ((symbol? a) (symbol->string a))
+      ((string? a) (c-string a))
+      ((number? a) (number->string a))
+      ((boolean? a) (if a "1" "0"))
+      ((char? a) (string-enclose (any->string a) "'"))
+      (else (throw (q cannot-convert-to-c-value) a)))))

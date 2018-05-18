@@ -60,11 +60,15 @@
       (bit-not a-b)
       "~a_b"
       (case = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-      "if((((3==myvalue))||((2==myvalue)))){1;}else{if((4==myvalue)){0;}else{if((((\"a\"==myvalue))||((\"b\"==myvalue)))){1;1;}else{0;0;};};}"
+      "if((((3==myvalue))||((2==myvalue)))){1;}else if((4==myvalue)){0;}else if((((\"a\"==myvalue))||((\"b\"==myvalue)))){1;1;}else{0;0;}"
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
       "((((3==myvalue))||((2==myvalue)))?1:((4==myvalue)?0:((((\"a\"==myvalue))||((\"b\"==myvalue)))?(1,1):(0,0))))"
+      (cond ((= a 1) #t))
+      "if((a==1)){1;}"
       (cond ((= a 1) (equal? b 2)) ((equal? c 3) #t))
-      "if((a==1)){(b==2);}else{if((c==3)){1;};}"
+      "if((a==1)){(b==2);}else if((c==3)){1;}"
+      (cond ((= a 1) (equal? b 2)) ((equal? c 3) #t) (else 4))
+      "if((a==1)){(b==2);}else if((c==3)){1;}else{4;}"
       (cond* ((= a 1) (equal? b 2)) ((equal? c 3) #f #t) (else #t #f))
       "((a==1)?(b==2):((c==3)?(0,1):(1,0)))"
       (convert-type abc int)

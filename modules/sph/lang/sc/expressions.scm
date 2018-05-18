@@ -88,7 +88,8 @@
               (else
                 (cond
                   ((or (string-suffix? ";" b) (string-suffix? "*/" b) (string-suffix? "*/\n" b)) b)
-                  ((string-suffix? ":" b) (string-append b "\n")) (else (string-append b ";")))))
+                  ((string-suffix? ":" b) (string-append b "\n"))
+                  (else (string-append b ";")))))
             prev))
         (list) (remove string-null? a))
       expression-separator))
@@ -194,7 +195,9 @@
   (define (sc-identifier-list a) (parenthesise (string-join (map sc-identifier a) ",")))
 
   (define (sc-value a)
-    (cond ((symbol? a) (translate-identifier (symbol->string a))) ((boolean? a) (if a "1" "0"))
+    (cond
+      ((symbol? a) (translate-identifier (symbol->string a)))
+      ((boolean? a) (if a "1" "0"))
       (else (c-value a))))
 
   (define (scp-if type a compile)
@@ -203,7 +206,8 @@
         (cp-if type (compile test) (compile (add-begin consequent)) (compile (add-begin alternate))))
       ((test consequent) (cp-if type (compile test) (compile (add-begin consequent)) #f))))
 
-  (define (sc-case cond-name predicate subject . clauses) "cond-name is either cond or cond*"
+  (define (sc-case cond-name predicate subject . clauses)
+    "symbol:cond/cond* symbol any any ...-> list:sc"
     (pair cond-name
       (map
         (l (a)
