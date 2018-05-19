@@ -47,6 +47,8 @@
       "a_x_p_less_to_;"
       (begin <)
       "<;"
+      (begin &a *a a.b)
+      "&a;*a;a.b;"
       (begin #t)
       "1;"
       (begin -1)
