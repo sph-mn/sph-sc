@@ -19,6 +19,7 @@
       string-contains
       string-join
       string-split
+      string-trim
       string-trim-right
       getenv
       member
@@ -292,5 +293,6 @@
 
   (define* (sc->c a #:optional (load-paths sc-default-load-paths))
     "expression [(string ...)] -> string"
-    (string-replace-string (tree-transform a (descend-proc load-paths) ascend-expr->c sc-value)
-      "\n\n" "\n")))
+    (string-trim
+      (regexp-replace (tree-transform a (descend-proc load-paths) ascend-expr->c sc-value) "\n\n+"
+        "\n"))))

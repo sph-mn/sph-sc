@@ -196,8 +196,8 @@
       "#include <a/b.c>\n"
       (pre-include "bb.h")
       "#include <bb.h>\n"
-      (pre-include "a" "b" "c")
-      "#include <a>\n#include <b>\n#include <c>\n"
+      (pre-include "a" "b" "./c")
+      "#include <a>\n#include <b>\n#include \"./c\"\n"
       (pre-let (a 1 b 2) (+ a b))
       "#define a 1\n#define b 2\n(a+b);\n#undef a\n#undef b\n"
       (pre-let (a 1) a)

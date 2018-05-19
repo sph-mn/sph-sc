@@ -12,18 +12,26 @@
         sc-default-load-paths))
     output-port))
 
-(define (each-input-file proc paths)
-  (each (l (path) (call-with-input-file path (l (a) (set-port-filename! a path) (proc a)))) paths))
+(define (with-input-file path c)
+  (call-with-input-file path (l (a) (set-port-filename! a path) (c a))))
 
-(define* (sc #:optional paths-source path-destination) "appends multiple sources"
-  (if path-destination
-    (call-with-output-file path-destination
-      (l (file-destination)
-        (if paths-source
-          (each-input-file (l (source-file) (process source-file file-destination)) paths-source)
-          (process (current-input-port) file-destination))))
-    (if paths-source
-      (each-input-file (l (source-file) (process source-file (current-output-port))) paths-source)
+(define (each-input-file proc paths) (each (l (a) (with-input-file a proc)) paths))
+
+(define* (sc #:optional paths-source path-target parents) "appends multiple sources"
+  (if path-target
+    (if parents
+      (each
+        (l (a)
+          (let
+            (target-path
+              (string-append path-target "/" (string-drop-suffix-if-exists ".sc" a) ".c"))
+            (and (ensure-directory-structure (dirname target-path))
+              (call-with-output-file target-path
+                (l (target-file) (with-input-file a (l (a) (process a target-file))))))))
+        paths-source)
+      (call-with-output-file path-target
+        (l (target-file) (each-input-file (l (a) (process a target-file)) paths-source))))
+    (if paths-source (each-input-file (l (a) (process a (current-output-port))) paths-source)
       (process (current-input-port) (current-output-port)))))
 
 (let
@@ -36,6 +44,9 @@
             "one path: read from standard input and write to standard output"
             "two or more paths: read from all leading paths and write to the last path")
           "\n")
-        #:options (list-q ((source-path ... destination-path)) ((source-path))))))
-  (alist-bind options (source-path destination-path)
-    (sc (if-pass source-path any->list) destination-path)))
+        #:options
+        (list-q ((source-path ... target-path)) ((source-path))
+          (parents #:description
+            "treat target as directory and recreate the directory structure of source files for compiled files")))))
+  (alist-bind options (source-path target-path parents)
+    (sc (if-pass source-path any->list) target-path parents)))
