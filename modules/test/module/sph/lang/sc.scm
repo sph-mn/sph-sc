@@ -7,6 +7,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (: ab cd)
+      "(*ab).cd"
       (= 1 2 3)
       "(1==2==3)"
       (address-of a-b)
@@ -45,6 +47,8 @@
       "a_x_p_less_to_;"
       (begin <)
       "<;"
+      (begin &a *a a.b)
+      "&a;*a;a.b;"
       (begin #t)
       "1;"
       (begin -1)
@@ -53,6 +57,10 @@
       "1;2;3;"
       (begin (enum (a b c d e)) (define a int))
       "enum{a,b,c,d,e};int a;"
+      (begin ab:cd:ef)
+      "(*(*ab).cd).ef;"
+      (begin ab:cd)
+      "(*ab).cd;"
       (bit-shift-right 1 2)
       "(1>>2)"
       (bit-shift-left 1 2)
