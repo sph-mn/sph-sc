@@ -121,9 +121,9 @@
       (define (abc d e) (uint32_t (pre-concat b 64) b16) (return 0))
       "uint32_t abc(b##64 d,b16 e){return(0);}"
       (define (a) void "test-docstring")
-      "\n/** test-docstring */\nvoid a(){}"
+      "/** test-docstring */\nvoid a(){}"
       (define (a b c) (void void void) "test-docstring" (+ b c))
-      "\n/** test-docstring */\nvoid a(void b,void c){(b+c);}"
+      "/** test-docstring */\nvoid a(void b,void c){(b+c);}"
       (do-while #t 1 2 3)
       "do{1;2;3;}while(1)"
       (enum (a b c d e))
@@ -171,7 +171,7 @@
       (pre-define (a) #t)
       "#define a() 1"
       (pre-define (a b) (begin "test-docstring" (+ b c) 3))
-      "\n/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
+      "/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
       (pre-define ob-ject 3)
       "#define ob_ject 3"
       (pre-define a 1 (id a b) (= a b))
@@ -181,7 +181,7 @@
       (pre-define (->test a b) c)
       "#define _to_test(a,b) c"
       (pre-define-if-not-defined abc 3 def 4)
-      "\n#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
+      "#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
       (pre-if (equal? a b) (begin c d e) (begin f g))
       "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif"
       (pre-if-not-defined a b c)
