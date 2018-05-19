@@ -7,6 +7,10 @@
     sc-case
     sc-compile-type
     sc-compile-types
+    sc-cond
+    sc-declare
+    sc-define
+    sc-define-array
     sc-define-function
     sc-define-type
     sc-enum
@@ -22,10 +26,10 @@
     sc-pre-include
     sc-pre-include-define
     sc-pre-include-variable
+    sc-struct-or-union
     sc-struct-or-union-body
     sc-value
-    scp-if
-    translate-identifier)
+    scp-if)
   (import
     (ice-9 match)
     (ice-9 regex)
@@ -40,13 +44,14 @@
     (sph list)
     (sph string)
     (only (guile)
-      string-prefix?
-      string-null?
-      string-trim-right
-      string-suffix?
       negate
       make-regexp
-      string-join)
+      string-join
+      string-prefix?
+      string-null?
+      string-split
+      string-suffix?
+      string-trim-right)
     (only (sph two) alist->regexp-match-replacements))
 
   (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
@@ -71,7 +76,19 @@
         ".<" (pair "<" "_less")
         ".>" (pair ">" "_gr") ".<=" (pair "<=" "_leq") ".>=" (pair ">=" "_geq"))))
 
-  (define (sc-apply proc a) (c-apply (sc-identifier proc) (string-join (map sc-identifier a) ",")))
+  (define (sc-identifier-struct-pointer-get a)
+    (let (a (string-split a #\:))
+      (if (= 1 (length a)) (first a)
+        (fold (l (field result) (c-struct-get (c-pointer-deref result) field)) (first a) (tail a)))))
+
+  (define (translate-identifier a)
+    (sc-identifier-struct-pointer-get (regexp-match-replace a identifier-replacements)))
+
+  (define (sc-identifier a)
+    (if (symbol? a) (translate-identifier (symbol->string a))
+      (if (list? a) (string-join (map sc-identifier a) " ") (any->string a))))
+
+  (define (sc-apply name a) (c-apply (sc-identifier name) (string-join (map sc-identifier a) ",")))
 
   (define* (sc-join-expressions a #:optional (expression-separator ""))
     "main procedure for the concatenation of toplevel expressions. adds semicolons"
@@ -105,10 +122,6 @@
       (if (sc-function-pointer? value)
         (string-append "typedef " (apply sc-function-pointer compile name (tail value)))
         (c-typedef name (compile value)))))
-
-  (define (sc-identifier a)
-    (if (symbol? a) (translate-identifier (symbol->string a))
-      (if (list? a) (string-join (map sc-identifier a) " ") (any->string a))))
 
   (define (sc-compile-type a compile)
     (if (list? a)
@@ -240,8 +253,6 @@
      define a preprocessor variable for marking a file as having been included"
     (list (q pre-define) (sc-pre-include-variable name)))
 
-  (define (translate-identifier a) (regexp-match-replace a identifier-replacements))
-
   (define (sc-enum-entries a) "list -> string"
     (string-join
       (map
@@ -292,4 +303,63 @@
 
   (define (sc-include-sc load-paths paths) "(string ...) (string ...) -> list"
     (pair (q begin)
-      (append-map (l (a) (let (a (sc-path->full-path load-paths a)) (file->datums a read))) paths))))
+      (append-map (l (a) (let (a (sc-path->full-path load-paths a)) (file->datums a read))) paths)))
+
+  (define (sc-define-array a compile)
+    (match a
+      ( (name type size values ...)
+        (let (size (any->list size))
+          (c-define-array (compile name) (compile type)
+            (if (null? size) (list "") (map compile size))
+            (if (null? values) #f (map compile values)))))))
+
+  (define (sc-define a compile)
+    (match a
+      ( ( ( (? not-preprocessor-keyword? name) parameter ...)
+          ((? not-function-pointer-symbol? return-type) types ...) body ...)
+        (sc-function compile name return-type body parameter types))
+      ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
+        (sc-function compile name return-type body (list) (list)))
+      ( (name-1 type-1 name-2 type-2 rest ...)
+        (sc-join-expressions (map-slice 2 (l a (apply sc-define-function compile a)) a)))
+      ( (name type value ...)
+        (sc-define-function compile name type (if (null? value) #f (first value))))))
+
+  (define (sc-struct-or-union keyword a compile) "symbol/false ? procedure -> string"
+    (let (keyword-string (symbol->string keyword))
+      (apply (l (name body) (c-statement name (sc-struct-or-union-body body compile)))
+        (if (symbol? (first a))
+          (list (string-append keyword-string " " (sc-identifier (first a))) (tail a))
+          (list keyword-string a)))))
+
+  (define (sc-declare a compile)
+    (sc-join-expressions
+      (map-slice 2
+        (l (id type)
+          (match type (((quote array) a ...) (sc-define-array (pair id a) compile))
+            (((quote enum) a ...) (sc-enum a))
+            ( ( (or (quote struct) (quote union)) _ ...)
+              (sc-struct-or-union (first type) (pair id (tail type)) compile))
+            (((quote type) type) (sc-define-type compile id type))
+            (_ (sc-define (list id type) compile))))
+        a)))
+
+  (define (sc-cond a compile)
+    (match a
+      ( (only-cond)
+        (c-if-statement (compile (first only-cond)) (compile (pair (q begin) (tail only-cond)))))
+      ( (first-cond middle-cond ... last-cond)
+        (string-append
+          (c-if-statement (compile (first first-cond)) (compile (pair (q begin) (tail first-cond))))
+          (apply string-append
+            (map
+              (l (a)
+                (string-append "else "
+                  (c-if-statement (compile (first a)) (compile (pair (q begin) (tail a))))))
+              middle-cond))
+          (let
+            ( (test (compile (first last-cond)))
+              (consequent (compile (pair (q begin) (tail last-cond)))))
+            (string-append "else"
+              (if (eq? (q else) (first last-cond)) (string-append "{" consequent "}")
+                (string-append " " (c-if-statement test consequent))))))))))

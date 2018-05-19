@@ -34,65 +34,6 @@
   (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
   (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
 
-  (define (sc-define-array a compile)
-    (match a
-      ( (name type size values ...)
-        (let (size (any->list size))
-          (c-define-array (compile name) (compile type)
-            (if (null? size) (list "") (map compile size))
-            (if (null? values) #f (map compile values)))))))
-
-  (define (sc-define a compile)
-    (match a
-      ( ( ( (? not-preprocessor-keyword? name) parameter ...)
-          ((? not-function-pointer-symbol? return-type) types ...) body ...)
-        (sc-function compile name return-type body parameter types))
-      ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
-        (sc-function compile name return-type body (list) (list)))
-      ( (name-1 type-1 name-2 type-2 rest ...)
-        (sc-join-expressions (map-slice 2 (l a (apply sc-define-function compile a)) a)))
-      ( (name type value ...)
-        (sc-define-function compile name type (if (null? value) #f (first value))))))
-
-  (define (sc-struct-or-union keyword a compile) "symbol/false ? procedure -> string"
-    (let (keyword-string (symbol->string keyword))
-      (apply (l (name body) (c-statement name (sc-struct-or-union-body body compile)))
-        (if (symbol? (first a))
-          (list (string-append keyword-string " " (sc-identifier (first a))) (tail a))
-          (list keyword-string a)))))
-
-  (define (sc-declare a compile)
-    (sc-join-expressions
-      (map-slice 2
-        (l (id type)
-          (match type (((quote array) a ...) (sc-define-array (pair id a) compile))
-            (((quote enum) a ...) (sc-enum a))
-            ( ( (or (quote struct) (quote union)) _ ...)
-              (sc-struct-or-union (first type) (pair id (tail type)) compile))
-            (((quote type) type) (sc-define-type compile id type))
-            (_ (sc-define (list id type) compile))))
-        a)))
-
-  (define (sc-cond a compile)
-    (match a
-      ( (only-cond)
-        (c-if-statement (compile (first only-cond)) (compile (pair (q begin) (tail only-cond)))))
-      ( (first-cond middle-cond ... last-cond)
-        (string-append
-          (c-if-statement (compile (first first-cond)) (compile (pair (q begin) (tail first-cond))))
-          (apply string-append
-            (map
-              (l (a)
-                (string-append "else "
-                  (c-if-statement (compile (first a)) (compile (pair (q begin) (tail a))))))
-              middle-cond))
-          (let
-            ( (test (compile (first last-cond)))
-              (consequent (compile (pair (q begin) (tail last-cond)))))
-            (string-append "else"
-              (if (eq? (q else) (first last-cond)) (string-append "{" consequent "}")
-                (string-append " " (c-if-statement test consequent)))))))))
-
   (define sc-default-load-paths
     (map ensure-trailing-slash
       (if-pass (getenv "SC_LOAD_PATH") (l (a) (string-split a #\:)) (list))))
@@ -178,7 +119,7 @@
             (tail a))))
       ((sc-include) (sc-include-sc load-paths (tail a)))
       ((sc-include-once) (sc-include-sc-once load-paths (tail a)))
-      ( (struct-pointer-get)
+      ( (struct-pointer-get :)
         (match (tail a)
           ( (identifier fields ...)
             (qq (struct-get (pointer-get (unquote identifier)) (unquote-splicing fields))))))
