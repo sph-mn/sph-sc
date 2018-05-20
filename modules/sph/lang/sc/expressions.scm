@@ -49,6 +49,8 @@
       string-join
       string-prefix?
       string-null?
+      string-index
+      string-skip
       string-split
       string-suffix?
       string-trim-right)
@@ -81,8 +83,20 @@
       (if (= 1 (length a)) (first a)
         (fold (l (field result) (c-struct-get (c-pointer-deref result) field)) (first a) (tail a)))))
 
+  (define sc-identifier-prefixes (list #\& #\*))
+  (define sc-identifier-infixes (list #\. #\:))
+
   (define (translate-identifier a)
-    (sc-identifier-struct-pointer-get (regexp-match-replace a identifier-replacements)))
+    (let
+      ( (a (regexp-match-replace a identifier-replacements))
+        (contains-infix (any (l (char) (string-index a char)) sc-identifier-infixes)))
+      (if contains-infix
+        (let (after-prefix-index (string-skip a (l (a) (containsq? sc-identifier-prefixes a))))
+          (if (or (not after-prefix-index) (zero? after-prefix-index))
+            (sc-identifier-struct-pointer-get a)
+            (string-append (substring a 0 after-prefix-index) "("
+              (sc-identifier-struct-pointer-get (substring a after-prefix-index)) ")")))
+        a)))
 
   (define (sc-identifier a)
     (if (symbol? a) (translate-identifier (symbol->string a))

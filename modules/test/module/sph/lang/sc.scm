@@ -7,6 +7,14 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (begin *a.field)
+      "*(a.field);"
+      (begin &*a.field)
+      "&*(a.field);"
+      (begin &*a:b:c)
+      "&*((*(*a).b).c);"
+      (for ((set index 0) (< index len) (set index (+ 1 index))) #t)
+      "for(index=0;(index<len);index=(1+index)){1;}"
       (: ab cd)
       "(*ab).cd"
       (= 1 2 3)

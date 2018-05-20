@@ -52,7 +52,7 @@ multiple macros can be defined at once
 ```
 
 ## structs, addresses, pointers, types
-* struct pointers: aa:bb:cc or (: aa bb cc)
+* struct pointers: ``aa:bb:cc`` _or_ ``(: aa bb cc)``
 * structs: ``aa.bb`` _or_ ``(struct-get aa bb)``
 * addresses: ``&aa`` _or_ ``(address-of aa)``
 * pointers: ``*aa`` _or_ ``(pointer-get aa 2)``
@@ -151,6 +151,7 @@ options
 * clang-format is a recommended auto formatter that also handles macro code well
 * sc only outputs valid c syntax
 * finding the source of c errors is usually not more difficult compared to plain c, especially when the c code is formatted before compilation. particularly because modern c compilers indicate run-time errors with context
+* a benefit of using sc is that editor modes for scheme syntax and structural editing can be used
 * example code from projects using sc
   * [sph-db](http://files.sph.mn/sourcecode/sph-db/source)
   * [sph-sc-lib](http://files.sph.mn/sourcecode/sph-sc-lib)
