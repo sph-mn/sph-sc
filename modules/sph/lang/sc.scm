@@ -119,7 +119,7 @@
             (tail a))))
       ((sc-include) (sc-include-sc load-paths (tail a)))
       ((sc-include-once) (sc-include-sc-once load-paths (tail a)))
-      ( (struct-pointer-get :)
+      ( (: struct-pointer-get)
         (match (tail a)
           ( (identifier fields ...)
             (qq (struct-get (pointer-get (unquote identifier)) (unquote-splicing fields))))))
@@ -133,6 +133,9 @@
             (map-slice 2 (l (field value) (list (q set) (list (q struct-get) struct field) value))
               (tail (tail a))))))
       (else #f)))
+
+  (define (c-for init test update body)
+    (string-append "for(" init ";" test ";" update "){" body "}"))
 
   (define (descend-expr->c a compile)
     "list procedure -> string
@@ -149,6 +152,10 @@
             (string-append "do" (c-compound (compile (pair (q begin) body)))
               "while" (parenthesise (compile test))))))
       ((enum) (sc-enum (tail a)))
+      ( (for)
+        (match (tail a)
+          ( ( (init test update) body ...)
+            (c-for (compile init) (compile test) (compile update) (compile (pair (q begin) body))))))
       ((function-pointer) (apply sc-function-pointer compile "" (tail a)))
       ( (if)
         (apply c-if-statement (compile (first (tail a)))
