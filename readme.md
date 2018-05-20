@@ -5,14 +5,14 @@
 * command line application and scheme library
 * possibly also useful as an intermediate language for applications that want to compile to c
 * status: should work, been around for a while, easy to maintain and extend
-* license: gpl3+ (does not apply to generated code. generated code has your license)
+* license: gpl3+. does not apply to generated code. generated code has your license
 * [homepage](http://sph.mn/c/view/me)
 
 # syntax highlights
-see the syntax reference further below for all features
+see the [syntax reference](#syntax-reference) further below for all features
 
 ## declarations
-c supports declarations for variables, arrays, structs, types and enums and they all have a different syntax. sc has declare:
+c supports declarations for variables, arrays, structs, types and enums and they all have a different syntax. sc has declare
 
 ```
 (declare
@@ -25,7 +25,7 @@ c supports declarations for variables, arrays, structs, types and enums and they
 ```
 
 ## macros
-macros are defined like variables and functions and dont need special formatting or escaped newlines
+macros are defined like variables and functions and dont need escaped newlines or special formatting
 ```
 (pre-define is-included #t)
 ```
@@ -52,16 +52,11 @@ multiple macros can be defined at once
 ```
 
 ## structs, addresses, pointers, types
-    for struct pointers, instead of ->, sc uses a colon
-```
-aa:bb:cc
-(: aa bb cc)
-```
-
-* structs: aa.bb \(emphasis or) (struct-get aa bb)
-* addresses: &aa \(emphasis or) (address-of aa)
-* pointers: *aa \(emphasis or) (pointer-get aa 2)
-* types: (convert-type aa uint8_t)
+* struct pointers: aa:bb:cc or (: aa bb cc)
+* structs: ``aa.bb`` _or_ ``(struct-get aa bb)``
+* addresses: ``&aa`` _or_ ``(address-of aa)``
+* pointers: ``*aa`` _or_ ``(pointer-get aa 2)``
+* types: ``(convert-type aa uint8_t)``
 
 ## function pointers
 function pointer syntax is
@@ -69,7 +64,6 @@ function pointer syntax is
 (function-pointer output-type input-types ...)
 ```
 in declarations this syntax can be used in place of type names - instead of wrapping the identifier like with c.
-
 an "int" variable would be declared like this
 ```
 (declare b int)
@@ -89,21 +83,18 @@ int(*(*(*b)(long long int))(double))(float)
 
 ## identifiers
 the characters "-", "->", "?", "!", which are often used in scheme, are allowed and replaced in identifiers.
-the replacements are done like guile does it. for example "?" becomes "_p" (predicate), "!" becomes "_x"
+the replacements are done like guile does it. for example "-" becomes "_", "?" becomes "_p" (predicate) and "!" becomes "_x"
 
-## more
-if expressions
-```
-(set a (if* b 1 2))
-```
-```
-"a = (b ? 1 : 2)"
-```
-goto labels
+## if expressions
+``(set a (if* b 1 2))`` -> ``a = (b ? 1 : 2)``
+
+## goto labels
 ```
 (label exit
   (return status))
 ```
+
+## string insertion
 ```
 (quote "// free c code string to be included as is")
 ```
@@ -140,10 +131,7 @@ in most cases the installer only copies files.
 the install script might have a "--help" option that will list more install options
 
 ## pacman
-using [aurget](https://github.com/pbrisbin/aurget):
-```
-aurget -S --deps sph-sc-git
-```
+with [aurget](https://github.com/pbrisbin/aurget): ``aurget -S --deps sph-sc-git``
 
 # command-line application
 $ sc --help
@@ -158,7 +146,7 @@ options
 ```
 
 # other
-* filename extension for source files: .sc
+* filename extension for source files: ``.sc``
 * "sc-include" relative-paths are source-file relative unless they start with a slash
 * clang-format is a recommended auto formatter that also handles macro code well
 * sc only outputs valid c syntax
@@ -710,8 +698,8 @@ while(1){1;2;3;}
 ```
 
 # possible enhancements and ideas
-* translate scheme comments. function and macro docstrings are translated as expected but other inline scheme comments dont appear in c unless (sc-comment "comment string") is used
-* shorter, descriptive error messages for common sc syntax errors (for example uneven number of arguments to "set")
-* add "for"-loops
-* dont replace "+" with "and" but something different or dont replace it at all
+* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c unless ``(sc-comment "comment string")`` is used
+* shorter, descriptive error messages for sc syntax errors. for example uneven number of arguments to "set"
+* add for-loops
+* dont replace "+" with "and" but something else or dont replace it at all
 * "scx", an extension that supports hygienic macros and a scheme like module system
