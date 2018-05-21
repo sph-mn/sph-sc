@@ -26,6 +26,7 @@
     sc-pre-include
     sc-pre-include-define
     sc-pre-include-variable
+    sc-set
     sc-struct-or-union
     sc-struct-or-union-body
     sc-value
@@ -56,6 +57,10 @@
       string-trim-right)
     (only (sph two) alist->regexp-match-replacements))
 
+  (define sph-lang-sc-expressions-description
+    "bindings for creating c strings from sc specific expressions.
+     error handling: return false for syntax error")
+
   (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
   (define not-preprocessor-keyword? (negate preprocessor-keyword?))
   (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
@@ -66,9 +71,9 @@
   (define identifier-replacements
     (alist->regexp-match-replacements
       ;(regexp search-string . replacement)
-      ;replaced in order
-      ;mostly equivalent to the c identifier conversion rules used in guile
-      ;https://www.gnu.org/software/guile/manual/html_node/API-Overview.html#API-Overview
+      ; replaced in order
+      ; mostly equivalent to the c identifier conversion rules used in guile
+      ; https://www.gnu.org/software/guile/manual/html_node/API-Overview.html#API-Overview
       (alist "->" "_to_"
         ".-" (pair "-" "_")
         ".!" (pair "!" "_x")
@@ -78,13 +83,13 @@
         ".<" (pair "<" "_less")
         ".>" (pair ">" "_gr") ".<=" (pair "<=" "_leq") ".>=" (pair ">=" "_geq"))))
 
+  (define sc-identifier-prefixes (list #\& #\*))
+  (define sc-identifier-infixes (list #\. #\:))
+
   (define (sc-identifier-struct-pointer-get a)
     (let (a (string-split a #\:))
       (if (= 1 (length a)) (first a)
         (fold (l (field result) (c-struct-get (c-pointer-deref result) field)) (first a) (tail a)))))
-
-  (define sc-identifier-prefixes (list #\& #\*))
-  (define sc-identifier-infixes (list #\. #\:))
 
   (define (translate-identifier a)
     (let
@@ -125,12 +130,6 @@
         (list) (remove string-null? a))
       expression-separator))
 
-  (define* (sc-define-function compile name type #:optional value) "any [any] -> string"
-    (let ((name (compile name)) (value (if value (compile value) value)))
-      (if (sc-function-pointer? type)
-        (let (r (apply sc-function-pointer compile name (tail type))) (if value (c-set r value) r))
-        (c-define name (sc-compile-type type compile) value))))
-
   (define* (sc-define-type compile name value) "any any -> string"
     (let (name (compile name))
       (if (sc-function-pointer? value)
@@ -155,6 +154,7 @@
     (and (list? a) (not (null? a)) (eq? (q function-pointer) (first a))))
 
   (define (sc-function-pointer compile inner type-output . type-input)
+    "procedure string ? ? ... -> string"
     (if (sc-function-pointer? type-output)
       (apply sc-function-pointer compile
         (string-append (parenthesise (string-append "*" inner))
@@ -328,16 +328,17 @@
             (if (null? values) #f (map compile values)))))))
 
   (define (sc-define a compile)
+    "(argument ...) procedure -> string/false
+     if the first argument is a preprocessor command, it is a variable declaration"
     (match a
       ( ( ( (? not-preprocessor-keyword? name) parameter ...)
           ((? not-function-pointer-symbol? return-type) types ...) body ...)
         (sc-function compile name return-type body parameter types))
       ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
         (sc-function compile name return-type body (list) (list)))
-      ( (name-1 type-1 name-2 type-2 rest ...)
-        (sc-join-expressions (map-slice 2 (l a (apply sc-define-function compile a)) a)))
-      ( (name type value ...)
-        (sc-define-function compile name type (if (null? value) #f (first value))))))
+      ; todo: shouldnt lead to define-function
+      ((name type value) (c-define (compile name) (sc-compile-type type compile) (compile value)))
+      (_ #f)))
 
   (define (sc-struct-or-union keyword a compile) "symbol/false ? procedure -> string"
     (let (keyword-string (symbol->string keyword))
@@ -346,17 +347,29 @@
           (list (string-append keyword-string " " (sc-identifier (first a))) (tail a))
           (list keyword-string a)))))
 
+  (define (sc-declare-variable name type compile)
+    (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
+      (c-variable (compile name) (sc-compile-type type compile))))
+
   (define (sc-declare a compile)
-    (sc-join-expressions
-      (map-slice 2
-        (l (id type)
-          (match type (((quote array) a ...) (sc-define-array (pair id a) compile))
-            (((quote enum) a ...) (sc-enum a))
-            ( ( (or (quote struct) (quote union)) _ ...)
-              (sc-struct-or-union (first type) (pair id (tail type)) compile))
-            (((quote type) type) (sc-define-type compile id type))
-            (_ (sc-define (list id type) compile))))
-        a)))
+    (and (even? (length a))
+      (sc-join-expressions
+        (map-slice 2
+          (l (id type)
+            (match type (((quote array) a ...) (sc-define-array (pair id a) compile))
+              (((quote enum) a ...) (sc-enum a))
+              ( ( (or (quote struct) (quote union)) _ ...)
+                (sc-struct-or-union (first type) (pair id (tail type)) compile))
+              (((quote type) type) (sc-define-type compile id type))
+              (_ (or (sc-define (list id type) compile) (sc-declare-variable id type compile)))))
+          a))))
+
+  (define (sc-set a compile)
+    (and (even? (length a))
+      (match a
+        ( (name-1 value-1 name-2 value-2 rest ...)
+          (sc-join-expressions (map-slice 2 c-set (map compile a))))
+        ((name value) (c-set (compile name) (compile value))) (_ #f))))
 
   (define (sc-cond a compile)
     (match a

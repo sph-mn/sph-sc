@@ -6,6 +6,7 @@
     c-convert-type
     c-define
     c-define-array
+    c-for
     c-function
     c-function-pointer
     c-identifier
@@ -23,6 +24,7 @@
     c-typedef
     c-typedef-function
     c-value
+    c-variable
     c-vector
     cp-concat
     cp-if
@@ -74,6 +76,9 @@
         a)
       "}"))
 
+  (define (c-for init test update body)
+    (string-append "for(" init ";" test ";" update "){" body "}"))
+
   (define (c-typedef name a) (c-line "typedef" a name))
 
   (define (c-typedef-function name return-type . types)
@@ -101,8 +106,10 @@
       name (apply string-append (map (l (a) (string-append "[" a "]")) sizes))
       (if values (string-append "={" (string-join values ",") "}") "")))
 
-  (define (c-define name type value) "string string -> string"
-    (string-append type " " name (if value (string-append "=" value) "")))
+  (define (c-variable name type) "string string -> string" (string-append type " " name))
+
+  (define (c-define name type value) "string string [string] -> string"
+    (string-append (c-variable name type) (if value (string-append "=" value) "")))
 
   (define (c-identifier a)
     (string-append

@@ -2,11 +2,14 @@
   (export
     sc->c
     sc-default-load-paths
+    sc-syntax-error
+    sc-syntax-error?
     sph-lang-sc-description)
   (import
     (ice-9 match)
     (rnrs exceptions)
     (sph)
+    (sph alist)
     (sph conditional)
     (sph filesystem)
     (sph lang c expressions)
@@ -30,6 +33,30 @@
      main algorithm: source code is parsed using scheme read, resulting in a list of expressions / syntax tree.
        the syntax tree is traversed top to bottom and eventually bottom to top and matching elements are
        mapped to strings which are joined to the result in the end")
+
+  (define-as syntax-examples alist-q
+    ; these are used in error messages as examples of what is allowed
+    define
+    (list-q (name type value) ((name parameters ...) (return-type ...) body ...)
+      ((name parameters ...) return-type body ...))
+    set (list-q (variable value) (variable value variable value variable/value ...)))
+
+  (define (syntax-examples-get name) "prepend the prefix symbol to example argument patterns"
+    (and-let* ((examples (alist-ref syntax-examples name)))
+      (map (l (a) (if (list? a) (pair name a) a)) examples)))
+
+  (define (sc-syntax-error? a) (and (list? a) (not (null? a)) (eq? (q sc-syntax-error) (first a))))
+
+  (define* (sc-syntax-error #:optional irritant syntax-name expected)
+    "false/any false/symbol false/(any ...) | exception"
+    (raise
+      (pair (q sc-syntax-error)
+        (compact
+          (list (and irritant (pair (q irritant) irritant))
+            (or (and expected (pair (q expected) expected))
+              (and syntax-name
+                (and-let* ((examples (syntax-examples-get syntax-name)))
+                  (pair (q expected) examples)))))))))
 
   (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
   (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
@@ -134,9 +161,6 @@
               (tail (tail a))))))
       (else #f)))
 
-  (define (c-for init test update body)
-    (string-append "for(" init ";" test ";" update "){" body "}"))
-
   (define (descend-expr->c a compile)
     "list procedure -> string
      handles expressions that are processed when descending the tree. the result is not parsed again.
@@ -144,8 +168,8 @@
     (case (first a)
       ((array-literal) (c-compound (map compile (tail a))))
       ((cond) (sc-cond (tail a) compile))
-      ((declare) (sc-declare (tail a) compile))
-      ((define) (sc-define (tail a) compile))
+      ((declare) (or (sc-declare (tail a) compile) (sc-syntax-error a (q declare))))
+      ((define) (or (sc-define (tail a) compile) (sc-syntax-error a (q define))))
       ( (do-while)
         (match (tail a)
           ( (test body ...)
@@ -222,11 +246,7 @@
       ((pre-if-not-defined) (scp-if (q ifndef) (tail a) compile))
       ((quote) (list-ref a 1))
       ((sc-comment) (string-append "\n/* " (second a) " */\n"))
-      ( (set)
-        (match (tail a)
-          ( (name-1 value-1 name-2 value-2 rest ...)
-            (sc-join-expressions (map-slice 2 c-set (map compile (tail a)))))
-          ((name value) (c-set (compile name) (compile value)))))
+      ((set) (or (sc-set (tail a) compile) (sc-syntax-error a (q set))))
       ( (while)
         (match (tail a)
           ( (test body ...)
