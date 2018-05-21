@@ -63,7 +63,7 @@
       "-1;"
       (begin 1 (begin 2 3))
       "1;2;3;"
-      (begin (enum (a b c d e)) (define a int))
+      (begin (enum (a b c d e)) (declare a int))
       "enum{a,b,c,d,e};int a;"
       (begin ab:cd:ef)
       "(*(*ab).cd).ef;"
@@ -115,13 +115,11 @@
       "uint32_t h##i;"
       (define a uint32_t 1)
       "uint32_t a=1"
-      (define a uint32_t b+2 b16 c-3 void)
-      "uint32_t a;b16 b_and_2;void c_3;"
-      (define a (function-pointer (function-pointer (unsigned int) float) double))
-      "unsigned int(*(*a)(double))(float)"
-      (define a
+      (declare a (function-pointer (function-pointer (unsigned int) float) double))
+      "unsigned int(*(*a)(double))(float);"
+      (declare a
         (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
-      "int(*(*(*a)(long long int))(double))(float)"
+      "int(*(*(*a)(long long int))(double))(float);"
       (define (a) (function-pointer uint32_t uint64_t) #t)
       "uint32_t(*a())(uint64_t){1;}"
       (define (a b) ((function-pointer uint32-t uint64_t) (function-pointer uint32-t uint64_t)) #t)
