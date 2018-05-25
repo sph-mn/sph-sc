@@ -18,7 +18,7 @@
       (: ab cd)
       "(*ab).cd"
       (= 1 2 3)
-      "(1==2==3)"
+      "(1==2)&&(2==3)"
       (address-of a-b)
       "&a_b"
       (and 1 2 3)
@@ -81,11 +81,11 @@
       "((((3==myvalue))||((2==myvalue)))?1:((4==myvalue)?0:((((\"a\"==myvalue))||((\"b\"==myvalue)))?(1,1):(0,0))))"
       (cond ((= a 1) #t))
       "if((a==1)){1;}"
-      (cond ((= a 1) (equal? b 2)) ((equal? c 3) #t))
+      (cond ((= a 1) (= b 2)) ((= c 3) #t))
       "if((a==1)){(b==2);}else if((c==3)){1;}"
-      (cond ((= a 1) (equal? b 2)) ((equal? c 3) #t) (else 4))
+      (cond ((= a 1) (= b 2)) ((= c 3) #t) (else 4))
       "if((a==1)){(b==2);}else if((c==3)){1;}else{4;}"
-      (cond* ((= a 1) (equal? b 2)) ((equal? c 3) #f #t) (else #t #f))
+      (cond* ((= a 1) (= b 2)) ((= c 3) #f #t) (else #t #f))
       "((a==1)?(b==2):((c==3)?(0,1):(1,0)))"
       (convert-type abc int)
       "((int)(abc))"
@@ -146,7 +146,7 @@
       "enum{a,b,c=3,d,e=4}"
       (enum test (a b c d e))
       "enum test{a,b,c,d,e}"
-      (equal? a 1)
+      (= a 1)
       "(a==1)"
       (function-pointer void vo-id*)
       "void(*)(vo_id*)"
@@ -196,7 +196,7 @@
       "#define _to_test(a,b) c"
       (pre-define-if-not-defined abc 3 def 4)
       "#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
-      (pre-if (equal? a b) (begin c d e) (begin f g))
+      (pre-if (= a b) (begin c d e) (begin f g))
       "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif"
       (pre-if-not-defined a b c)
       "#ifndef a\nb;\n#else\nc;\n#endif"

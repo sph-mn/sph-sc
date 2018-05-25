@@ -65,18 +65,15 @@
     (map ensure-trailing-slash
       (if-pass (getenv "SC_LOAD_PATH") (l (a) (string-split a #\:)) (list))))
 
-  (define-as identical-infix-token list "+" "-" "<" ">" "<=" ">=" "*" "/")
-
-  (define-as translated-infix-token list
-    "equal_p" "or"
-    "and" "=" "bit_or" "bit_and" "bit_xor" "modulo" "bit_shift_right" "bit_shift_left" "eqv_p" "eq_p")
-
   (define (translate-infix-token a)
-    (string-case a (("=" "equal_p" "eqv_p" "eq_p") "==")
-      ("and" "&&") ("bit_or" "|")
-      ("bit_and" "&") ("or" "||")
-      ("modulo" "%") ("bit_shift_right" ">>")
-      ("bit_shift_left" "<<") ("bit_xor" "^") (else (raise (q fail-translate-infix-token)))))
+    (string-case a ("and" "&&")
+      ("bit_or" "|") ("bit_and" "&")
+      ("or" "||") ("modulo" "%")
+      ("bit_shift_right" ">>") ("bit_shift_left" "<<")
+      ("bit_xor" "^") (else (raise (q fail-translate-infix-token)))))
+
+  (define (prefix->infix-string prefix arguments) "string string ... -> string"
+    (parenthesise (string-join arguments prefix)))
 
   (define (ascend-expr->c a)
     "any -> string
@@ -90,16 +87,17 @@
       ("goto" (string-join a " "))
       ("label" (string-append (first (tail a)) ":" (sc-join-expressions (tail (tail a)))))
       ("signed" (string-trim-right (first (tail a)) #\u))
-      (identical-infix-token (parenthesise (string-join (tail a) (first a))))
-      (translated-infix-token
-        (parenthesise
-          (string-append
-            (string-join
-              ;the map is for cases like a&&b=c where a lvalue error would occur for b=c
-              (map (l (a) (if (string-contains a "=") (parenthesise a) a)) (tail a))
-              (translate-infix-token (first a))))))
-      ("bit_not" (string-append "~" (first (tail a))))
-      ("pre_stringify" (c-stringify (first (tail a))))
+      ( ("=" "<" ">" "<=" ">=")
+        (let* ((prefix (first a)) (prefix (if (string-equal? "=" prefix) "==" prefix)))
+          (string-join (map-segments 2 (l (a b) (string-append "(" a prefix b ")")) (tail a)) "&&")))
+      (("+" "-" "*" "/") (prefix->infix-string (first a) (tail a)))
+      ( ("or" "and" "bit_or" "bit_and" "bit_xor" "modulo" "bit_shift_right" "bit_shift_left")
+        (prefix->infix-string (translate-infix-token (first a))
+          (map
+            (l (a) "map cases like a&&b=c where a lvalue error would occur for b=c"
+              (if (string-contains a "=") (parenthesise a) a))
+            (tail a))))
+      ("bit_not" (string-append "~" (second a))) ("pre_stringify" (c-stringify (second a)))
       ("pre_string_concat" (string-join (tail a) " "))
       ("compound_statement" (c-compound (sc-join-expressions (tail a))))
       (else (if (list? a) (sc-apply (first a) (tail a)) a))))
