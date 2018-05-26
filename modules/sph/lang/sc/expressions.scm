@@ -19,10 +19,13 @@
     sc-function-pointer?
     sc-identifier
     sc-identifier-list
+    sc-if
+    sc-if*
     sc-include-sc
     sc-include-sc-once
     sc-join-expressions
     sc-macro-function
+    sc-pointer-set
     sc-pre-include
     sc-pre-include-define
     sc-pre-include-variable
@@ -55,12 +58,14 @@
       string-split
       string-suffix?
       string-trim-right)
+    (only (sph tree) tree-contains?)
     (only (sph two) alist->regexp-match-replacements))
 
   (define sph-lang-sc-expressions-description
     "bindings for creating c strings from sc specific expressions.
      error handling: return false for syntax error")
 
+  (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
   (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
   (define not-preprocessor-keyword? (negate preprocessor-keyword?))
   (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
@@ -106,6 +111,32 @@
   (define (sc-identifier a)
     (if (symbol? a) (translate-identifier (symbol->string a))
       (if (list? a) (string-join (map sc-identifier a) " ") (any->string a))))
+
+  (define (sc-if a compile)
+    (match a
+      ( (test consequent alternate)
+        (c-if-statement (compile test) (compile (list (q begin) consequent))
+          (compile (list (q begin) alternate))))
+      ((test consequent) (c-if-statement (compile test) (compile (list (q begin) consequent))))))
+
+  (define (sc-if* a compile)
+    (apply c-if
+      (map
+        (l (e)
+          (match e
+            ( ( (quote begin) body ...)
+              (parenthesise
+                (string-join
+                  (map
+                    (l (e)
+                      (if (and (list? e) (contains-set? e)) (parenthesise (compile e)) (compile e)))
+                    body)
+                  ",")))
+            (_ (if (and (list? e) (contains-set? e)) (parenthesise (compile e)) (compile e)))))
+        a)))
+
+  (define (sc-pointer-set a compile)
+    (match a ((pointer value) (qq (set (pointer-get (unquote pointer)) (unquote value)))) (_ #f)))
 
   (define (sc-apply name a) (c-apply (sc-identifier name) (string-join (map sc-identifier a) ",")))
 
@@ -233,16 +264,17 @@
         (cp-if type (compile test) (compile (add-begin consequent)) (compile (add-begin alternate))))
       ((test consequent) (cp-if type (compile test) (compile (add-begin consequent)) #f))))
 
-  (define (sc-case cond-name predicate subject . clauses)
-    "symbol:cond/cond* symbol any any ...-> list:sc"
-    (pair cond-name
-      (map
-        (l (a)
-          (match a (((quote else) _ ...) a)
-            ( ( (objects ...) body ...)
-              (pair (pair (q or) (map (l (b) (list predicate b subject)) objects)) body))
-            ((object body ...) (pair (list predicate object subject) body))))
-        clauses)))
+  (define (sc-case cond*? a compile) "symbol:cond/cond* symbol any any ...-> list:sc"
+    (match a
+      ( (predicate subject clauses ..1)
+        (pair (if cond*? (q cond*) (q cond))
+          (map
+            (l (a)
+              (match a (((quote else) _ ...) a)
+                ( ( (objects ...) body ...)
+                  (pair (pair (q or) (map (l (b) (list predicate b subject)) objects)) body))
+                ((object body ...) (pair (list predicate object subject) body))))
+            clauses)))))
 
   (define (sc-pre-include paths)
     "(string ...) -> string
@@ -336,7 +368,6 @@
         (sc-function compile name return-type body parameter types))
       ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
         (sc-function compile name return-type body (list) (list)))
-      ; todo: shouldnt lead to define-function
       ((name type value) (c-define (compile name) (sc-compile-type type compile) (compile value)))
       (_ #f)))
 
@@ -352,24 +383,22 @@
       (c-variable (compile name) (sc-compile-type type compile))))
 
   (define (sc-declare a compile)
-    (and (even? (length a))
-      (sc-join-expressions
-        (map-slice 2
-          (l (id type)
-            (match type (((quote array) a ...) (sc-define-array (pair id a) compile))
-              (((quote enum) a ...) (sc-enum a))
-              ( ( (or (quote struct) (quote union)) _ ...)
-                (sc-struct-or-union (first type) (pair id (tail type)) compile))
-              (((quote type) type) (sc-define-type compile id type))
-              (_ (or (sc-define (list id type) compile) (sc-declare-variable id type compile)))))
-          a))))
+    (sc-join-expressions
+      (map-slice 2
+        (l (id type)
+          (match type (((quote array) a ...) (sc-define-array (pair id a) compile))
+            (((quote enum) a ...) (sc-enum a))
+            ( ( (or (quote struct) (quote union)) _ ...)
+              (sc-struct-or-union (first type) (pair id (tail type)) compile))
+            (((quote type) type) (sc-define-type compile id type))
+            (_ (or (sc-define (list id type) compile) (sc-declare-variable id type compile)))))
+        a)))
 
   (define (sc-set a compile)
-    (and (even? (length a))
-      (match a
-        ( (name-1 value-1 name-2 value-2 rest ...)
-          (sc-join-expressions (map-slice 2 c-set (map compile a))))
-        ((name value) (c-set (compile name) (compile value))) (_ #f))))
+    (match a
+      ( (name-1 value-1 name-2 value-2 rest ...)
+        (sc-join-expressions (map-slice 2 c-set (map compile a))))
+      ((name value) (c-set (compile name) (compile value))) (_ #f)))
 
   (define (sc-cond a compile)
     (match a
