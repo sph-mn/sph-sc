@@ -58,11 +58,6 @@
       ( (array-set)
         (let (array (first a))
           (pair (q begin)
-            (map-with-index (l (index value) (list (q set) (list (q array-get) array index) value))
-              (tail a)))))
-      ( (array-set-index)
-        (let (array (first a))
-          (pair (q begin)
             (map-slice 2 (l (index value) (list (q set) (list (q array-get) array index) value))
               (tail a)))))
       ((case case*) (sc-case (equal? (q case*) prefix) a compile))
@@ -137,9 +132,15 @@
               "while" (parenthesise (compile test))))))
       ((enum) (sc-enum a))
       ( (for)
-        (match a
-          ( ( (init test update) body ...)
-            (c-for (compile init) (compile test) (compile update) (compile (pair (q begin) body))))))
+        (let
+          (comma-join
+            (l (a)
+              (match a (((quote begin) a ...) (string-join (map compile a) ","))
+                (((? symbol?) _ ...) (compile a)) (_ (string-join (map compile a) ",")))))
+          (match a
+            ( ( (init test update) body ...)
+              (c-for (comma-join init) (compile test)
+                (comma-join update) (compile (pair (q begin) body)))))))
       ((function-pointer) (apply sc-function-pointer compile "" a))
       ((goto) (string-append "goto " (compile (first a))))
       ((if) (sc-if a compile))

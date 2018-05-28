@@ -98,7 +98,7 @@ the replacements are done like guile does it. for example "-" becomes "_", "?" b
 
 ## string insertion
 ```
-(quote "// free c code string to be included as is")
+(sc-insert "// free c code string to be included as is")
 ```
 
 # dependencies
