@@ -381,7 +381,7 @@
         (l (id type)
           (match type (((quote array) a ...) (sc-define-array (pair id a) compile))
             (((quote enum) a ...) (sc-enum a))
-            ( ( (or (quote struct) (quote union)) _ ...)
+            ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
               (sc-struct-or-union (first type) (pair id (tail type)) compile))
             (((quote type) type) (sc-define-type compile id type))
             (_ (or (sc-define (list id type) compile) (sc-declare-variable id type compile)))))

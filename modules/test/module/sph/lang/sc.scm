@@ -13,10 +13,10 @@
       "&*(a.field);"
       (begin &*a:b:c)
       "&*(a->b->c);"
-      (for ((set index 0) (< index len) (set index (+ 1 index))) #t)
-      "for(index=0;(index<len);index=(1+index)){1;}"
       (: ab cd)
       "ab->cd"
+      (= a 1)
+      "(a==1)"
       (= 1 2 3)
       "(1==2)&&(2==3)"
       (address-of a-b)
@@ -31,9 +31,7 @@
       "aaa[3][4][5]"
       (array-literal 1 "2" 3 4)
       "{1,\"2\",3,4}"
-      (array-set aa 11 22 33)
-      "aa[0]=11;aa[1]=22;aa[2]=33;"
-      (array-set-index aa 0 11 1 22 3 33)
+      (array-set aa 0 11 1 22 3 33)
       "aa[0]=11;aa[1]=22;aa[3]=33;"
       (begin "\"\"")
       "\"\\\"\\\"\";"
@@ -95,6 +93,10 @@
       "size_t aa[b_b];"
       (declare aa (array size-t (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8))))
       "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}};"
+      (declare a (struct test))
+      "struct test a;"
+      (declare a (struct (test int)))
+      "struct a{int test;};"
       (declare type-name (type (function-pointer type-return type-argument-1 type-argument-2)))
       "typedef type_return(*type_name)(type_argument_1,type_argument_2);"
       (declare test-t (type (enum (a b c))))
@@ -144,8 +146,12 @@
       "enum{a,b,c=3,d,e=4}"
       (enum test (a b c d e))
       "enum test{a,b,c,d,e}"
-      (= a 1)
-      "(a==1)"
+      (for ((set index 0) (< index len) (set index (+ 1 index))) #t)
+      "for(index=0;(index<len);index=(1+index)){1;}"
+      (for (((set a 0) (set b 1)) (< index len) ((set a (+ 1 a)) (set b (+ 2 b)))) #t)
+      "for(a=0,b=1;(index<len);a=(1+a),b=(2+b)){1;}"
+      (for ((begin a b) (< c d) (begin e f)) #t)
+      "for(a,b;(c<d);e,f){1;}"
       (function-pointer void vo-id*)
       "void(*)(vo_id*)"
       (if (= a 3) (exit 1) (return (bit-or b c)))

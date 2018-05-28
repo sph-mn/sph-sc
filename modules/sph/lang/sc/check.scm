@@ -62,6 +62,7 @@
       ((if if*) (match a ((test consequent) #t) ((test consequent alternate) #t) (_ #f)))
       ((pointer-get) (= 1 (length a)))
       ((array-get) (<= 1 (length a)))
+      ((array-set) (<= 3 (length a)))
       ( (set)
         (and (even? (length a))
           (match a ((name-1 value-1 name-2 value-2 rest ...) #t) ((name value) #t) (_ #f))))
