@@ -12,11 +12,11 @@
       (begin &*a.field)
       "&*(a.field);"
       (begin &*a:b:c)
-      "&*((*(*a).b).c);"
+      "&*(a->b->c);"
       (for ((set index 0) (< index len) (set index (+ 1 index))) #t)
       "for(index=0;(index<len);index=(1+index)){1;}"
       (: ab cd)
-      "(*ab).cd"
+      "ab->cd"
       (= 1 2 3)
       "(1==2)&&(2==3)"
       (address-of a-b)
@@ -26,15 +26,15 @@
       (and a (set b (c d)))
       "(a&&(b=c(d)))"
       (array-get aaa 3)
-      "(*(aaa+3))"
+      "aaa[3]"
       (array-get aaa 3 4 5)
-      "(*(aaa+((3*4)+5)))"
+      "aaa[3][4][5]"
       (array-literal 1 "2" 3 4)
       "{1,\"2\",3,4}"
       (array-set aa 11 22 33)
-      "(*(aa+0))=11;(*(aa+1))=22;(*(aa+2))=33;"
+      "aa[0]=11;aa[1]=22;aa[2]=33;"
       (array-set-index aa 0 11 1 22 3 33)
-      "(*(aa+0))=11;(*(aa+1))=22;(*(aa+3))=33;"
+      "aa[0]=11;aa[1]=22;aa[3]=33;"
       (begin "\"\"")
       "\"\\\"\\\"\";"
       (begin "")
@@ -45,8 +45,6 @@
       "a_p;"
       (begin a-b)
       "a_b;"
-      (begin a+b)
-      "a_and_b;"
       (begin a->b)
       "a_to_b;"
       (begin a!)
@@ -66,9 +64,9 @@
       (begin (enum (a b c d e)) (declare a int))
       "enum{a,b,c,d,e};int a;"
       (begin ab:cd:ef)
-      "(*(*ab).cd).ef;"
+      "ab->cd->ef;"
       (begin ab:cd)
-      "(*ab).cd;"
+      "ab->cd;"
       (bit-shift-right 1 2)
       "(1>>2)"
       (bit-shift-left 1 2)
@@ -158,8 +156,8 @@
       "(a?(b?c:d):e)"
       (if* a (if* (if* b c) d) e)
       "(a?((b?c:0)?d:0):e)"
-      (if* (= a 3) (begin (set b+c 4) (myproc a b+c)) a)
-      "((a==3)?((b_and_c=4),myproc(a,b_and_c)):a)"
+      (if* (= a 3) (begin (set b-c 4) (myproc a b-c)) a)
+      "((a==3)?((b_c=4),myproc(a,b_c)):a)"
       (if* (not a) #t #f)
       "(!a?1:0)"
       (if* (not 1) a b)
@@ -170,10 +168,10 @@
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}"
       (not 1)
       "!1"
-      (pointer-get a 1)
-      "(*(a+1))"
-      (pointer-get (pointer-get a 1) 2)
-      "(*((*(a+1))+2))"
+      (array-get a 1)
+      "a[1]"
+      (array-get (array-get a 1) 2)
+      "(a[1])[2]"
       (pointer-get a-b)
       "(*a_b)"
       (pre-concat a b cd e)
@@ -226,7 +224,7 @@
       "#abc"
       (pre-undefine my-macro)
       "#undef my_macro\n"
-      (quote "var a = 3")
+      (sc-insert "var a = 3")
       "var a = 3"
       (return)
       "return"
@@ -234,8 +232,8 @@
       "return(1,2)"
       (set a 1)
       "a=1"
-      (set a 1 b+2 2 c-3 3)
-      "a=1;b_and_2=2;c_3=3;"
+      (set a 1 b-2 2 c-3 3)
+      "a=1;b_2=2;c_3=3;"
       (struct-get a b)
       "a.b"
       (struct-get a b c d e)
@@ -255,13 +253,13 @@
       (struct-set a b 1 c 2)
       "a.b=1;a.c=2;"
       (struct-pointer-get a b)
-      "(*a).b"
+      "a->b"
       (struct-pointer-get a b c d)
-      "(*a).b.c.d"
-      (struct-pointer-set a b 1 c 2)
-      "(*a).b=1;(*a).c=2;"
+      "a->b->c->d"
       (union (a (unsigned int)) (b (unsigned char) 3))
       "union{unsigned int a;unsigned char b:3;}"
       (while #t 1 2 3)
       "while(1){1;2;3;}"
+      (sc-comment "abc")
+      "/* abc */\n"
       )))

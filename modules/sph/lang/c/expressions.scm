@@ -2,6 +2,8 @@
   (export
     c-address-of
     c-apply
+    c-array-get
+    c-bit-not
     c-compound
     c-convert-type
     c-define
@@ -13,14 +15,16 @@
     c-if
     c-if-statement
     c-line
+    c-not
     c-parameter
     c-pointer
-    c-pointer-deref
+    c-pointer-get
     c-set
     c-statement
     c-string
     c-stringify
     c-struct-get
+    c-struct-pointer-get
     c-typedef
     c-typedef-function
     c-value
@@ -35,13 +39,13 @@
     cp-undef)
   (import
     (guile)
+    (ice-9 regex)
     (sph)
     (sph alist)
     (sph list)
     (sph string))
 
   (define sph-lang-c-expressions-description "generating c expressions as strings")
-  (define (c-stringify a) (string-append "#" a))
   (define (cp-undef a) (string-append "#undef " a))
   (define (cp-include-path path) (string-append "#include " (c-string path)))
   (define (cp-include path) (string-append "#include <" path ">"))
@@ -155,12 +159,22 @@
     (string-append "if(" test
       "){" consequent "}" (if alternate (string-append "else{" alternate "}") "")))
 
-  (define* (c-pointer-deref a #:optional index)
-    (if index (string-append "(*(" a "+" index "))") (string-append "(*" a ")")))
+  (define identifier-regexp (make-regexp "^[a-zA-Z0-9_]+$"))
 
+  (define (parenthesise-unless-identifier a)
+    (if (regexp-exec identifier-regexp a) a (string-append "(" a ")")))
+
+  (define (c-array-get a . indices)
+    (apply string-append (parenthesise-unless-identifier a)
+      (map (l (a) (string-append "[" a "]")) indices)))
+
+  (define (c-struct-pointer-get a . fields) (string-append a (string-join fields "->" (q prefix))))
+  (define (c-pointer-get a) (string-append "(*" (parenthesise-unless-identifier a) ")"))
   (define (c-set name value) (string-append name "=" value))
   (define (c-pointer type) (string-append type " * "))
   (define (c-address-of a) (string-append "&" a))
+  (define (c-not a) (string-append "!" a))
+  (define (c-bit-not a) (string-append "~" a))
 
   (define (c-function-pointer inner type-output . type-input)
     (string-append type-output "(*" inner ")(" (string-join type-input ",") ")"))

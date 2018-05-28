@@ -14,13 +14,14 @@
 
   (define-as syntax-examples alist-q
     ; these are used in error messages as examples of what is allowed
+    address-of (list-q (variable))
     declare (list-q (name type) (name type name type name/type ...))
     define
     (list-q (name type value) ((name parameters ...) (return-type ...) body ...)
       ((name parameters ...) return-type body ...))
     set (list-q (variable value) (variable value variable value variable/value ...))
-    pointer-get (list-q (variable) (variable offset))
-    pointer-set (list-q (variable value))
+    pointer-get (list-q (variable))
+    array-get (list-q (variable indices ...))
     convert-type (list-q (variable new-type))
     if (list-q (condition consequent) (condition consequent alternate))
     case
@@ -47,6 +48,7 @@
 
   (define (sc-syntax-check-prefix-list prefix a load-paths) "list list -> boolean | exception"
     (case prefix
+      ((address-of) (= 1 (length a)))
       ((case case*) (match a ((predicate subject clauses ..1) #t) (_ #f)))
       ((convert-type) (= 2 (length a)))
       ((declare) (even? (length a)))
@@ -58,8 +60,8 @@
           ((((? not-preprocessor-keyword? name)) return-type body ...) #t) ((name type value) #t)
           (_ #f)))
       ((if if*) (match a ((test consequent) #t) ((test consequent alternate) #t) (_ #f)))
-      ((pointer-get) (or (= 1 (length a)) (= 2 (length a))))
-      ((pointer-set) (= 2 (length a)))
+      ((pointer-get) (= 1 (length a)))
+      ((array-get) (<= 1 (length a)))
       ( (set)
         (and (even? (length a))
           (match a ((name-1 value-1 name-2 value-2 rest ...) #t) ((name value) #t) (_ #f))))
