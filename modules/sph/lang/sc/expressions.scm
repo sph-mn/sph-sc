@@ -25,7 +25,6 @@
     sc-include-sc-once
     sc-join-expressions
     sc-macro-function
-    sc-pointer-set
     sc-pre-include
     sc-pre-include-define
     sc-pre-include-variable
@@ -83,7 +82,6 @@
         ".-" (pair "-" "_")
         ".!" (pair "!" "_x")
         "\\?" "_p"
-        ".\\+." (pair "+" "_and_")
         "./." (pair "/" "_or_")
         ".<" (pair "<" "_less")
         ".>" (pair ">" "_gr") ".<=" (pair "<=" "_leq") ".>=" (pair ">=" "_geq"))))
@@ -92,9 +90,7 @@
   (define sc-identifier-infixes (list #\. #\:))
 
   (define (sc-identifier-struct-pointer-get a)
-    (let (a (string-split a #\:))
-      (if (= 1 (length a)) (first a)
-        (fold (l (field result) (c-struct-get (c-pointer-deref result) field)) (first a) (tail a)))))
+    (let (a (string-split a #\:)) (if (= 1 (length a)) (first a) (apply c-struct-pointer-get a))))
 
   (define (translate-identifier a)
     (let
@@ -134,9 +130,6 @@
                   ",")))
             (_ (if (and (list? e) (contains-set? e)) (parenthesise (compile e)) (compile e)))))
         a)))
-
-  (define (sc-pointer-set a compile)
-    (match a ((pointer value) (qq (set (pointer-get (unquote pointer)) (unquote value)))) (_ #f)))
 
   (define (sc-apply name a) (c-apply (sc-identifier name) (string-join (map sc-identifier a) ",")))
 

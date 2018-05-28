@@ -52,11 +52,13 @@ multiple macros can be defined at once
 ```
 
 ## structs, addresses, pointers, types
-* struct pointers: ``aa:bb:cc`` _or_ ``(: aa bb cc)``
 * structs: ``aa.bb`` _or_ ``(struct-get aa bb)``
+* struct pointers: ``aa:bb:cc`` _or_ ``(: aa bb cc)``
 * addresses: ``&aa`` _or_ ``(address-of aa)``
 * pointers: ``*aa`` _or_ ``(pointer-get aa 2)``
 * types: ``(convert-type aa uint8_t)``
+
+in sc prefixes apply consistently to the whole following expression. in sc "*aa.bb" means *(aa.bb), in c that would mean (*aa).bb
 
 ## function pointers
 function pointer syntax is
@@ -148,9 +150,9 @@ options
 # other
 * filename extension for source files: ``.sc``
 * "sc-include" relative-paths are source-file relative unless they start with a slash
-* clang-format is a recommended auto formatter that also handles macro code well
+* clang-format is a recommended auto formatter for c that also handles macro code well
 * sc only outputs valid c syntax
-* finding the source of c errors is usually not more difficult compared to plain c, especially when the c code is formatted before compilation. particularly because modern c compilers indicate run-time errors with context
+* finding the source of c errors is usually not more difficult compared to plain c, especially when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the c code is available
 * a benefit of using sc is that editor modes for scheme syntax and structural editing can be used
 * example code from projects using sc
   * [sph-db](http://files.sph.mn/sourcecode/sph-db/source)
@@ -160,13 +162,29 @@ options
 # syntax reference
 sc expression and the c result. taken from the automated tests
 ```
+(begin *a.field)
+->
+*(a.field);
+
+(begin &*a.field)
+->
+&*(a.field);
+
+(begin &*a:b:c)
+->
+&*(a->b->c);
+
+(for ((set index 0) (< index len) (set index (+ 1 index))) #t)
+->
+for(index=0;(index<len);index=(1+index)){1;}
+
 (: ab cd)
 ->
-(*ab).cd
+ab->cd
 
 (= 1 2 3)
 ->
-(1==2==3)
+(1==2)&&(2==3)
 
 (address-of a-b)
 ->
@@ -182,11 +200,11 @@ sc expression and the c result. taken from the automated tests
 
 (array-get aaa 3)
 ->
-(*(aaa+3))
+aaa[3]
 
 (array-get aaa 3 4 5)
 ->
-(*(aaa+((3*4)+5)))
+aaa[3][4][5]
 
 (array-literal 1 "2" 3 4)
 ->
@@ -194,11 +212,11 @@ sc expression and the c result. taken from the automated tests
 
 (array-set aa 11 22 33)
 ->
-(*(aa+0))=11;(*(aa+1))=22;(*(aa+2))=33;
+aa[0]=11;aa[1]=22;aa[2]=33;
 
 (array-set-index aa 0 11 1 22 3 33)
 ->
-(*(aa+0))=11;(*(aa+1))=22;(*(aa+3))=33;
+aa[0]=11;aa[1]=22;aa[3]=33;
 
 (begin "\"\"")
 ->
@@ -219,10 +237,6 @@ a_p;
 (begin a-b)
 ->
 a_b;
-
-(begin a+b)
-->
-a_and_b;
 
 (begin a->b)
 ->
@@ -256,17 +270,17 @@ a_x_p_less_to_;
 ->
 1;2;3;
 
-(begin (enum (a b c d e)) (define a int))
+(begin (enum (a b c d e)) (declare a int))
 ->
 enum{a,b,c,d,e};int a;
 
 (begin ab:cd:ef)
 ->
-(*(*ab).cd).ef;
+ab->cd->ef;
 
 (begin ab:cd)
 ->
-(*ab).cd;
+ab->cd;
 
 (bit-shift-right 1 2)
 ->
@@ -292,15 +306,15 @@ if((((3==myvalue))||((2==myvalue)))){1;}else if((4==myvalue)){0;}else if(((("a"=
 ->
 if((a==1)){1;}
 
-(cond ((= a 1) (equal? b 2)) ((equal? c 3) #t))
+(cond ((= a 1) (= b 2)) ((= c 3) #t))
 ->
 if((a==1)){(b==2);}else if((c==3)){1;}
 
-(cond ((= a 1) (equal? b 2)) ((equal? c 3) #t) (else 4))
+(cond ((= a 1) (= b 2)) ((= c 3) #t) (else 4))
 ->
 if((a==1)){(b==2);}else if((c==3)){1;}else{4;}
 
-(cond* ((= a 1) (equal? b 2)) ((equal? c 3) #f #t) (else #t #f))
+(cond* ((= a 1) (= b 2)) ((= c 3) #f #t) (else #t #f))
 ->
 ((a==1)?(b==2):((c==3)?(0,1):(1,0)))
 
@@ -360,17 +374,13 @@ uint32_t h##i;
 ->
 uint32_t a=1
 
-(define a uint32_t b+2 b16 c-3 void)
+(declare a (function-pointer (function-pointer (unsigned int) float) double))
 ->
-uint32_t a;b16 b_and_2;void c_3;
+unsigned int(*(*a)(double))(float);
 
-(define a (function-pointer (function-pointer (unsigned int) float) double))
+(declare a (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
 ->
-unsigned int(*(*a)(double))(float)
-
-(define a (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
-->
-int(*(*(*a)(long long int))(double))(float)
+int(*(*(*a)(long long int))(double))(float);
 
 (define (a) (function-pointer uint32_t uint64_t) #t)
 ->
@@ -426,7 +436,7 @@ enum{a,b,c=3,d,e=4}
 ->
 enum test{a,b,c,d,e}
 
-(equal? a 1)
+(= a 1)
 ->
 (a==1)
 
@@ -450,9 +460,9 @@ if(1){2;}else{3;4;return(1);}
 ->
 (a?((b?c:0)?d:0):e)
 
-(if* (= a 3) (begin (set b+c 4) (myproc a b+c)) a)
+(if* (= a 3) (begin (set b-c 4) (myproc a b-c)) a)
 ->
-((a==3)?((b_and_c=4),myproc(a,b_and_c)):a)
+((a==3)?((b_c=4),myproc(a,b_c)):a)
 
 (if* (not a) #t #f)
 ->
@@ -474,13 +484,13 @@ abc:uint32_t a=3;(a+b);
 ->
 !1
 
-(pointer-get a 1)
+(array-get a 1)
 ->
-(*(a+1))
+a[1]
 
-(pointer-get (pointer-get a 1) 2)
+(array-get (array-get a 1) 2)
 ->
-(*((*(a+1))+2))
+(a[1])[2]
 
 (pointer-get a-b)
 ->
@@ -535,7 +545,7 @@ a##b##cd##e
 #define def 4
 #endif
 
-(pre-if (equal? a b) (begin c d e) (begin f g))
+(pre-if (= a b) (begin c d e) (begin f g))
 ->
 #if (a==b)
 c;d;e;
@@ -621,7 +631,7 @@ a;
 ->
 #undef my_macro
 
-(quote "var a = 3")
+(sc-insert "var a = 3")
 ->
 var a = 3
 
@@ -637,9 +647,9 @@ return(1,2)
 ->
 a=1
 
-(set a 1 b+2 2 c-3 3)
+(set a 1 b-2 2 c-3 3)
 ->
-a=1;b_and_2=2;c_3=3;
+a=1;b_2=2;c_3=3;
 
 (struct-get a b)
 ->
@@ -679,15 +689,11 @@ a.b=1;a.c=2;
 
 (struct-pointer-get a b)
 ->
-(*a).b
+a->b
 
 (struct-pointer-get a b c d)
 ->
-(*a).b.c.d
-
-(struct-pointer-set a b 1 c 2)
-->
-(*a).b=1;(*a).c=2;
+a->b->c->d
 
 (union (a (unsigned int)) (b (unsigned char) 3))
 ->
@@ -696,11 +702,14 @@ union{unsigned int a;unsigned char b:3;}
 (while #t 1 2 3)
 ->
 while(1){1;2;3;}
+
+(sc-comment "abc")
+->
+/* abc */
 ```
 
 # possible enhancements and ideas
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c unless ``(sc-comment "comment string")`` is used
-* shorter, descriptive error messages for sc syntax errors. for example uneven number of arguments to "set"
-* add for-loops
+* more syntax checks
 * dont replace "+" with "and" but something else or dont replace it at all
-* "scx", an extension that supports hygienic macros and a scheme like module system
+* "scx": an extension that supports hygienic macros and a scheme like module system. implement do-while as an example
