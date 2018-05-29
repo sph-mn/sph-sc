@@ -172,7 +172,7 @@
       ((pre-string-concat) (string-join (map compile a) " "))
       ((return) (if (null? a) "return" (sc-apply "return" (map compile a))))
       ((sc-insert) (first a))
-      ((sc-comment) (string-append "\n/* " (first a) " */\n"))
+      ((sc-comment) (string-append "\n/* " (string-join a " ") " */\n"))
       ((set) (sc-set a compile))
       ((struct union) (sc-struct-or-union prefix a compile))
       ((struct-get) (apply c-struct-get (map compile a)))
