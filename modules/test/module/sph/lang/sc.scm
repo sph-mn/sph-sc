@@ -72,9 +72,9 @@
       (bit-not a-b)
       "~a_b"
       (case = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-      "if((((3==myvalue))||((2==myvalue)))){1;}else if((4==myvalue)){0;}else if((((\"a\"==myvalue))||((\"b\"==myvalue)))){1;1;}else{0;0;}"
+      "if(((3==myvalue)||(2==myvalue))){1;}else if((4==myvalue)){0;}else if(((\"a\"==myvalue)||(\"b\"==myvalue))){1;1;}else{0;0;}"
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-      "((((3==myvalue))||((2==myvalue)))?1:((4==myvalue)?0:((((\"a\"==myvalue))||((\"b\"==myvalue)))?(1,1):(0,0))))"
+      "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
       (cond ((= a 1) #t))
       "if((a==1)){1;}"
       (cond ((= a 1) (= b 2)) ((= c 3) #t))
@@ -266,6 +266,8 @@
       "union{unsigned int a;unsigned char b:3;}"
       (while #t 1 2 3)
       "while(1){1;2;3;}"
+      (while (not (= 0 (set a (b c)))) #t)
+      "while(!(0==(a=b(c)))){1;}"
       (sc-comment "abc")
       "/* abc */\n"
       )))

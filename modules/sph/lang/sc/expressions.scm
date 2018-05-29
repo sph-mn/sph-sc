@@ -1,5 +1,7 @@
 (library (sph lang sc expressions)
   (export
+    add-begin-if-multiple
+    contains-set?
     not-function-pointer-symbol?
     not-preprocessor-keyword?
     preprocessor-keyword?
@@ -25,6 +27,8 @@
     sc-include-sc-once
     sc-join-expressions
     sc-macro-function
+    sc-numeric-boolean
+    sc-pre-if
     sc-pre-include
     sc-pre-include-define
     sc-pre-include-variable
@@ -32,7 +36,7 @@
     sc-struct-or-union
     sc-struct-or-union-body
     sc-value
-    scp-if)
+    sc-while)
   (import
     (ice-9 match)
     (ice-9 regex)
@@ -64,7 +68,8 @@
     "bindings for creating c strings from sc specific expressions.
      error handling: return false for syntax error")
 
-  (define (contains-set? a) "list -> boolean" (tree-contains? a (q set)))
+  (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
+  (define (contains-set? a) "list -> boolean" (and (list? a) (tree-contains? a (q set))))
   (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
   (define not-preprocessor-keyword? (negate preprocessor-keyword?))
   (define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
@@ -108,6 +113,13 @@
     (if (symbol? a) (translate-identifier (symbol->string a))
       (if (list? a) (string-join (map sc-identifier a) " ") (any->string a))))
 
+  (define (sc-numeric-boolean prefix a compile)
+    (let (operator (if (eq? (q =) prefix) "==" (symbol->string prefix)))
+      (string-join
+        (map-segments 2 (l (a b) (parenthesise (string-append a operator b)))
+          (map (l (a) (if (contains-set? a) (parenthesise (compile a)) (compile a))) a))
+        "&&")))
+
   (define (sc-if a compile)
     (match a
       ( (test consequent alternate)
@@ -123,12 +135,9 @@
             ( ( (quote begin) body ...)
               (parenthesise
                 (string-join
-                  (map
-                    (l (e)
-                      (if (and (list? e) (contains-set? e)) (parenthesise (compile e)) (compile e)))
-                    body)
+                  (map (l (e) (if (contains-set? e) (parenthesise (compile e)) (compile e))) body)
                   ",")))
-            (_ (if (and (list? e) (contains-set? e)) (parenthesise (compile e)) (compile e)))))
+            (_ (if (contains-set? e) (parenthesise (compile e)) (compile e)))))
         a)))
 
   (define (sc-apply name a) (c-apply (sc-identifier name) (string-join (map sc-identifier a) ",")))
@@ -251,7 +260,7 @@
       ((boolean? a) (if a "1" "0"))
       (else (c-value a))))
 
-  (define (scp-if type a compile)
+  (define (sc-pre-if type a compile)
     (match a
       ( (test consequent alternate)
         (cp-if type (compile test) (compile (add-begin consequent)) (compile (add-begin alternate))))
@@ -411,4 +420,10 @@
               (consequent (compile (pair (q begin) (tail last-cond)))))
             (string-append "else"
               (if (eq? (q else) (first last-cond)) (string-append "{" consequent "}")
-                (string-append " " (c-if-statement test consequent))))))))))
+                (string-append " " (c-if-statement test consequent)))))))))
+
+  (define (sc-while a compile)
+    (match a
+      ( (test body ...)
+        (string-append "while" (parenthesise (compile test))
+          (c-compound (compile (pair (q begin) body))))))))
