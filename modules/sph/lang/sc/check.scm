@@ -2,7 +2,9 @@
   (export
     sc-syntax-check
     sc-syntax-error
-    sc-syntax-error?)
+    sc-syntax-error?
+    sc-syntax-examples
+    sph-lang-sc-check-description)
   (import
     (ice-9 match)
     (rnrs exceptions)
@@ -12,9 +14,11 @@
     (sph list)
     (only (sph tree) tree-every))
 
-  (define (syntax-examples-get name) "prepend the prefix symbol to example argument patterns"
+  (define sph-lang-sc-check-description "syntax checks, examples and error handling")
+
+  (define (sc-syntax-examples-get name) "prepend the prefix symbol to example argument patterns"
     "symbol -> false/list"
-    (and-let* ((examples (alist-ref syntax-examples name)))
+    (and-let* ((examples (alist-ref sc-syntax-examples name)))
       (map (l (a) (if (list? a) (pair name a) a)) examples)))
 
   (define (sc-syntax-error? a) (and (list? a) (not (null? a)) (eq? (q sc-syntax-error) (first a))))
@@ -27,13 +31,13 @@
           (list (and irritant (pair (q irritant) irritant))
             (or (and expected (pair (q expected) expected))
               (and syntax-name
-                (and-let* ((examples (syntax-examples-get syntax-name)))
+                (and-let* ((examples (sc-syntax-examples-get syntax-name)))
                   (pair (q expected) examples)))))))))
 
   (define* (acount? a min #:optional max)
     (let (b (length a)) (and (if min (<= min b) #t) (if max (>= max b) #t))))
 
-  (define-as syntax-examples (list->alist list-q)
+  (define-as sc-syntax-examples (list->alist list-q)
     ; these are used in error messages as examples of what is allowed
     address-of ((variable))
     case
@@ -52,7 +56,7 @@
     if ((condition consequent) (condition consequent alternate))
     set ((variable value) (variable value variable value variable/value ...)))
 
-  (define (sc-syntax-check-prefix-list prefix a load-paths) "list list -> boolean | exception"
+  (define (sc-syntax-check-prefix-list prefix a load-paths) "list list -> boolean"
     (case prefix
       ; only arity checks
       ( (+ -* /
