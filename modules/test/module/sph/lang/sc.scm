@@ -7,6 +7,18 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (*a b)
+      "(*a)(b)"
+      (pointer-get (a b))
+      "*a(b)"
+      (set *a *b.c)
+      "*a=*(b.c)"
+      (pointer-get b)
+      "*b"
+      (set a:b (: *a b))
+      "a->b=(*a)->b"
+      (pointer-get b.c)
+      "*(b.c)"
       (begin *a.field)
       "*(a.field);"
       (begin &*a.field)
@@ -29,6 +41,8 @@
       "aaa[3]"
       (array-get aaa 3 4 5)
       "aaa[3][4][5]"
+      (array-get *a 3)
+      "(*a)[3]"
       (array-literal 1 "2" 3 4)
       "{1,\"2\",3,4}"
       (array-set aa 0 11 1 22 3 33)
@@ -72,15 +86,15 @@
       (bit-not a-b)
       "~a_b"
       (case = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-      "if(((3==myvalue)||(2==myvalue))){1;}else if((4==myvalue)){0;}else if(((\"a\"==myvalue)||(\"b\"==myvalue))){1;1;}else{0;0;}"
+      "if((3==myvalue)||(2==myvalue)){1;}else if(4==myvalue){0;}else if((\"a\"==myvalue)||(\"b\"==myvalue)){1;1;}else{0;0;}"
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
       "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
       (cond ((= a 1) #t))
-      "if((a==1)){1;}"
+      "if(a==1){1;}"
       (cond ((= a 1) (= b 2)) ((= c 3) #t))
-      "if((a==1)){(b==2);}else if((c==3)){1;}"
+      "if(a==1){(b==2);}else if(c==3){1;}"
       (cond ((= a 1) (= b 2)) ((= c 3) #t) (else 4))
-      "if((a==1)){(b==2);}else if((c==3)){1;}else{4;}"
+      "if(a==1){(b==2);}else if(c==3){1;}else{4;}"
       (cond* ((= a 1) (= b 2)) ((= c 3) #f #t) (else #t #f))
       "((a==1)?(b==2):((c==3)?(0,1):(1,0)))"
       (convert-type abc int)
@@ -155,7 +169,7 @@
       (function-pointer void vo-id*)
       "void(*)(vo_id*)"
       (if (= a 3) (exit 1) (return (bit-or b c)))
-      "if((a==3)){exit(1);}else{return((b|c));}"
+      "if(a==3){exit(1);}else{return((b|c));}"
       (if 1 2 (begin 3 4 (return #t)))
       "if(1){2;}else{3;4;return(1);}"
       (if* a (if* b c d) e)
@@ -179,7 +193,7 @@
       (array-get (array-get a 1) 2)
       "(a[1])[2]"
       (pointer-get a-b)
-      "(*a_b)"
+      "*a_b"
       (pre-concat a b cd e)
       "a##b##cd##e"
       (pre-define a)
@@ -246,6 +260,8 @@
       "a.b.c.d.e"
       (struct-get (pointer-get a) b)
       "(*a).b"
+      (struct-get **a b)
+      "(**a).b"
       (struct (a (unsigned int)) (b (unsigned char) 3))
       "struct{unsigned int a;unsigned char b:3;}"
       (struct testname (a (uns-igned int)) (b (unsigned char) 3))
