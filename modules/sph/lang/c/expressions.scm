@@ -36,7 +36,8 @@
     cp-include-path
     cp-pre-define
     cp-stringify
-    cp-undef)
+    cp-undef
+    parenthesise-ambiguous)
   (import
     (guile)
     (ice-9 regex)
@@ -46,6 +47,12 @@
     (sph string))
 
   (define sph-lang-c-expressions-description "generating c expressions as strings")
+  (define ambiguous-regexp (make-regexp "^(\\*|&)+|\\.|->|\\["))
+
+  (define (parenthesise-ambiguous a)
+    (if (or (parenthesised? a) (not (regexp-exec ambiguous-regexp a))) a (parenthesise a)))
+
+  (define (parenthesise-ensure a) (if (parenthesised? a) a (parenthesise a)))
   (define (cp-undef a) (string-append "#undef " a))
   (define (cp-include-path path) (string-append "#include " (c-string path)))
   (define (cp-include path) (string-append "#include <" path ">"))
@@ -146,7 +153,8 @@
         (l (key . data) (apply throw key name data)))
       (if body (string-append "{" body "}") "")))
 
-  (define* (c-apply proc-name #:optional (args "")) (string-append proc-name "(" args ")"))
+  (define* (c-apply proc-name #:optional (args ""))
+    (string-append (parenthesise-ambiguous proc-name) (parenthesise args)))
 
   (define* (c-if test consequent #:optional alternate)
     "string string [string] -> string
@@ -156,30 +164,26 @@
   (define* (c-if-statement test consequent #:optional alternate)
     "string string [string] -> string
      create an if statement"
-    (string-append "if(" test
-      "){" consequent "}" (if alternate (string-append "else{" alternate "}") "")))
-
-  (define identifier-regexp (make-regexp "^[a-zA-Z0-9_]+$"))
-
-  (define (parenthesise-unless-identifier a)
-    (if (regexp-exec identifier-regexp a) a (string-append "(" a ")")))
+    (string-append "if" (parenthesise-ensure test)
+      "{" consequent "}" (if alternate (string-append "else{" alternate "}") "")))
 
   (define (c-array-get a . indices)
-    (apply string-append (parenthesise-unless-identifier a)
-      (map (l (a) (string-append "[" a "]")) indices)))
+    (apply string-append (parenthesise-ambiguous a) (map (l (a) (string-append "[" a "]")) indices)))
 
-  (define (c-struct-pointer-get a . fields) (string-append a (string-join fields "->" (q prefix))))
-  (define (c-pointer-get a) (string-append "(*" (parenthesise-unless-identifier a) ")"))
+  (define (c-struct-get a . keys) (string-join (pair (parenthesise-ambiguous a) keys) "."))
+
+  (define (c-struct-pointer-get a . fields)
+    (string-append (parenthesise-ambiguous a) (string-join fields "->" (q prefix))))
+
+  (define (c-pointer-get a) (string-append "*" (parenthesise-ambiguous a)))
   (define (c-set name value) (string-append name "=" value))
   (define (c-pointer type) (string-append type " * "))
-  (define (c-address-of a) (string-append "&" a))
+  (define (c-address-of a) (string-append "&" (parenthesise-ambiguous a)))
   (define (c-not a) (string-append "!" a))
   (define (c-bit-not a) (string-append "~" a))
 
   (define (c-function-pointer inner type-output . type-input)
     (string-append type-output "(*" inner ")(" (string-join type-input ",") ")"))
-
-  (define (c-struct-get a . keys) (string-join (pair a keys) "."))
 
   (define c-escape-single-char
     (alist "\"" "\\\"" "\a" "\\a" "\n" "\\n" "\b" "\\b" "\f" "\\f" "\r" "\\r" "\t" "\\t" "\v" "\\v"))

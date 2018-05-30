@@ -51,12 +51,14 @@
     (sph list)
     (sph string)
     (only (guile)
-      negate
+      compose
       make-regexp
-      string-join
-      string-prefix?
-      string-null?
+      negate
+      string-contains
       string-index
+      string-join
+      string-null?
+      string-prefix?
       string-skip
       string-split
       string-suffix?
@@ -66,7 +68,11 @@
 
   (define sph-lang-sc-expressions-description
     "bindings for creating c strings from sc specific expressions.
-     error handling: return false for syntax error")
+     when to add parentheses
+       returned expressions should always be unambiguosly one expression
+         example: (+ 1 2 3) -> (1+2+3)
+       when received expressions can have undesired meaning, add parentheses
+         (struct-set **a b 1) -> (**a).b=1")
 
   (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
   (define (contains-set? a) "list -> boolean" (and (list? a) (tree-contains? a (q set))))
@@ -79,7 +85,7 @@
 
   (define identifier-replacements
     (alist->regexp-match-replacements
-      ;(regexp search-string . replacement)
+      ; (regexp search-string . replacement)
       ; replaced in order
       ; mostly equivalent to the c identifier conversion rules used in guile
       ; https://www.gnu.org/software/guile/manual/html_node/API-Overview.html#API-Overview
@@ -100,14 +106,14 @@
   (define (translate-identifier a)
     (let
       ( (a (regexp-match-replace a identifier-replacements))
-        (contains-infix (any (l (char) (string-index a char)) sc-identifier-infixes)))
-      (if contains-infix
-        (let (after-prefix-index (string-skip a (l (a) (containsq? sc-identifier-prefixes a))))
-          (if (or (not after-prefix-index) (zero? after-prefix-index))
-            (sc-identifier-struct-pointer-get a)
-            (string-append (substring a 0 after-prefix-index) "("
-              (sc-identifier-struct-pointer-get (substring a after-prefix-index)) ")")))
-        a)))
+        (contains-infix (any (l (char) (string-index a char)) sc-identifier-infixes))
+        (after-prefix-index (string-skip a (l (a) (containsq? sc-identifier-prefixes a)))))
+      (if (and after-prefix-index (not (zero? after-prefix-index)))
+        (if contains-infix
+          (string-append (substring a 0 after-prefix-index)
+            (parenthesise (sc-identifier-struct-pointer-get (substring a after-prefix-index))))
+          a)
+        (if contains-infix (sc-identifier-struct-pointer-get a) a))))
 
   (define (sc-identifier a)
     (if (symbol? a) (translate-identifier (symbol->string a))
@@ -140,7 +146,9 @@
             (_ (if (contains-set? e) (parenthesise (compile e)) (compile e)))))
         a)))
 
-  (define (sc-apply name a) (c-apply (sc-identifier name) (string-join (map sc-identifier a) ",")))
+  (define (sc-apply name a)
+    (c-apply (sc-identifier name)
+      (string-join (map (compose parenthesise-ambiguous sc-identifier) a) ",")))
 
   (define* (sc-join-expressions a #:optional (expression-separator ""))
     "main procedure for the concatenation of toplevel expressions. adds semicolons"
