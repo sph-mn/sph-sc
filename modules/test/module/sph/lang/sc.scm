@@ -7,6 +7,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (pre-define (a) (begin 1 (sc-comment "b") 2 3))
+      "#define a() 1;\\\n/* b */\\\n2;3"
       (*a b)
       "(*a)(b)"
       (pointer-get (a b))
@@ -203,7 +205,7 @@
       (pre-define (a) #t)
       "#define a() 1"
       (pre-define (a b) (begin "test-docstring" (+ b c) 3))
-      "/** test-docstring */\n#define a(b) (b+c);\\\n  3\n"
+      "/** test-docstring */\n#define a(b) (b+c);3\n"
       (pre-define ob-ject 3)
       "#define ob_ject 3"
       (pre-define a 1 (id a b) (= a b))

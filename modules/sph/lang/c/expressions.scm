@@ -31,10 +31,10 @@
     c-variable
     c-vector
     cp-concat
+    cp-define
     cp-if
     cp-include
     cp-include-path
-    cp-pre-define
     cp-stringify
     cp-undef
     parenthesise-ambiguous)
@@ -59,7 +59,7 @@
   (define (cp-concat a) "(string ...) -> string" (string-join a "##"))
   (define (cp-stringify a) "string -> string" (string-append "#" a))
 
-  (define (cp-pre-define name body parameters) "string false/string false/string -> string"
+  (define* (cp-define name #:optional body parameters) "string false/string false/string -> string"
     (string-append "#define " name
       (if parameters parameters "") (if body (string-append " " body) "")))
 

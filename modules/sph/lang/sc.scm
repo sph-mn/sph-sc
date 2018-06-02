@@ -112,16 +112,7 @@
             (string-append "do" (c-compound (compile (pair (q begin) body)))
               "while" (parenthesise (compile test))))))
       ((enum) (sc-enum a))
-      ( (for)
-        (let
-          (comma-join
-            (l (a)
-              (match a (((quote begin) a ...) (string-join (map compile a) ","))
-                (((? symbol?) _ ...) (compile a)) (_ (string-join (map compile a) ",")))))
-          (match a
-            ( ( (init test update) body ...)
-              (c-for (comma-join init) (compile test)
-                (comma-join update) (compile (pair (q begin) body)))))))
+      ((for) (sc-for a compile))
       ((function-pointer) (apply sc-function-pointer compile "" a))
       ((goto) (string-append "goto " (compile (first a))))
       ((if) (sc-if a compile))
@@ -138,16 +129,7 @@
                     body)))))))
       ((not) (c-not (compile (first a))))
       ((pointer-get) (apply c-pointer-get (map compile a)))
-      ( (pre-define)
-        (if (= 1 (length a)) (cp-pre-define (sc-identifier (first a)) #f #f)
-          (string-join
-            (map-slice 2
-              (l (name value)
-                (match name
-                  ((name parameter ...) (sc-macro-function name parameter (list value) compile))
-                  (_ (cp-pre-define (sc-identifier name) (compile value) #f))))
-              a)
-            "\n")))
+      ((pre-define) (sc-pre-define a compile))
       ((pre-pragma) (string-append "#pragma " (string-join (map sc-identifier a) " ") "\n"))
       ((pre-undefine) (string-join (map (compose cp-undef sc-identifier) a) "\n" (q suffix)))
       ( (pre-let)
