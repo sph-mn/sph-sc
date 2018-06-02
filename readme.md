@@ -147,6 +147,26 @@ options
   --parents  treat target as directory and recreate the directory structure of source files for compiled files
 ```
 
+# usage from scheme
+```
+(import (sph lang sc))
+```
+
+examples
+```
+(define result-c-string (sc->c (quote (begin (declare a int) (set a 1)))))
+
+(define scheme-value 8)
+
+(define code
+  (quasiquote
+    (begin
+      (declare a int)
+      (set a (unquote scheme-value)))))
+
+(sc-c code)
+```
+
 # other
 * filename extension for source files: ``.sc``
 * "sc-include" relative-paths are source-file relative unless they start with a slash
@@ -727,5 +747,4 @@ while(!(0==(a=b(c)))){1;}
 # possible enhancements and ideas
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c unless ``(sc-comment "comment string")`` is used
 * more syntax checks
-* dont replace "+" with "and" but something else or dont replace it at all
 * "scx": an extension that supports hygienic macros and a scheme like module system. implement do-while as an example

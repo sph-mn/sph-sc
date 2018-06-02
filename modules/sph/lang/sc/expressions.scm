@@ -16,6 +16,7 @@
     sc-define-function
     sc-define-type
     sc-enum
+    sc-for
     sc-function
     sc-function-pointer
     sc-function-pointer?
@@ -28,6 +29,7 @@
     sc-join-expressions
     sc-macro-function
     sc-numeric-boolean
+    sc-pre-define
     sc-pre-if
     sc-pre-include
     sc-pre-include-define
@@ -118,6 +120,17 @@
   (define (sc-identifier a)
     (if (symbol? a) (translate-identifier (symbol->string a))
       (if (list? a) (string-join (map sc-identifier a) " ") (any->string a))))
+
+  (define (sc-for a compile)
+    (let
+      (comma-join
+        (l (a)
+          (match a (((quote begin) a ...) (string-join (map compile a) ","))
+            (((? symbol?) _ ...) (compile a)) (_ (string-join (map compile a) ",")))))
+      (match a
+        ( ( (init test update) body ...)
+          (c-for (comma-join init) (compile test)
+            (comma-join update) (compile (pair (q begin) body)))))))
 
   (define (sc-numeric-boolean prefix a compile)
     (let (operator (if (eq? (q =) prefix) "==" (symbol->string prefix)))
@@ -210,8 +223,7 @@
       (apply
         (l (docstring body)
           (c docstring
-            (if macro-function?
-              (string-trim-right (sc-join-expressions (map compile body) "\\\n  ") #\;)
+            (if macro-function? (string-trim-right (sc-join-expressions (map compile body)) #\;)
               (string-append "{" (sc-join-expressions (map compile body)) "}"))))
         (if macro-function?
           (match (first body)
@@ -243,7 +255,8 @@
       #t
       (l (docstring body-string)
         (string-append (or docstring "")
-          (cp-pre-define (sc-identifier name) body-string (sc-identifier-list parameter))
+          (string-replace-string
+            (cp-define (sc-identifier name) body-string (sc-identifier-list parameter)) "\n" "\\\n")
           (if docstring "\n" "")))))
 
   (define (sc-function-parameter compile name type)
@@ -285,6 +298,18 @@
                   (pair (pair (q or) (map (l (b) (list predicate b subject)) objects)) body))
                 ((object body ...) (pair (list predicate object subject) body))))
             clauses)))))
+
+  (define (sc-pre-define a compile)
+    (if (= 1 (length a)) (cp-define (apply sc-identifier a))
+      (string-join
+        (map-slice 2
+          (l (name value)
+            (match name
+              ((name parameter ...) (sc-macro-function name parameter (list value) compile))
+              (_
+                (string-replace-string (cp-define (sc-identifier name) (compile value)) "\n" "\\\n"))))
+          a)
+        "\n")))
 
   (define (sc-pre-include paths)
     "(string ...) -> string
