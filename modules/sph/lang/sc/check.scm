@@ -79,8 +79,8 @@
       ( (define)
         (match a
           ( ( ( (? not-preprocessor-keyword? name) parameter ...)
-              ((? not-function-pointer-symbol? return-type) types ...) body ...)
-            #t)
+              ((? not-function-pointer-symbol? return-type) parameter-types ...) body ...)
+            (equal? (length parameter) (length parameter-types)))
           ((((? not-preprocessor-keyword? name)) return-type body ...) #t) ((name type value) #t)
           (_ #f)))
       ((for) (match a (((init test update) body ...) #t) (_ #f)))

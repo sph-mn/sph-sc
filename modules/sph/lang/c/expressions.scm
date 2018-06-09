@@ -4,8 +4,10 @@
     c-apply
     c-array-get
     c-bit-not
+    c-comma-join
     c-compound
     c-convert-type
+    c-curly-brackets
     c-define
     c-define-array
     c-for
@@ -53,6 +55,8 @@
     (if (or (parenthesised? a) (not (regexp-exec ambiguous-regexp a))) a (parenthesise a)))
 
   (define (parenthesise-ensure a) (if (parenthesised? a) a (parenthesise a)))
+  (define (c-comma-join a) (string-join a ","))
+  (define (c-curly-brackets a) (string-append "{" a "}"))
   (define (cp-undef a) (string-append "#undef " a))
   (define (cp-include-path path) (string-append "#include " (c-string path)))
   (define (cp-include path) (string-append "#include <" path ">"))
