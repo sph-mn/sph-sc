@@ -219,12 +219,12 @@
 
   (define (get-body-and-docstring& body compile macro-function? c)
     "list procedure:{string:docstring string:body -> any} -> any"
-    (if (null? body) (c #f "")
+    (if (null? body) (c #f #f)
       (apply
         (l (docstring body)
           (c docstring
             (if macro-function? (string-trim-right (sc-join-expressions (map compile body)) #\;)
-              (string-append "{" (sc-join-expressions (map compile body)) "}"))))
+              (if (null? body) #f (sc-join-expressions (map compile body))))))
         (if macro-function?
           (match (first body)
             ( ( (quote begin) (? string? docstring) body ...)
@@ -242,13 +242,15 @@
       (get-body-and-docstring& body compile
         #f
         (l (docstring body-string)
-          (string-append (or docstring "")
-            (if (sc-function-pointer? return-type)
-              (string-append
-                (apply sc-function-pointer compile
-                  (string-append name parameters) (tail return-type))
-                body-string)
-              (string-append (sc-compile-type return-type compile) " " name parameters body-string)))))))
+          (let (body-string (if body-string (c-curly-brackets body-string) ""))
+            (string-append (or docstring "")
+              (if (sc-function-pointer? return-type)
+                (string-append
+                  (apply sc-function-pointer compile
+                    (string-append name parameters) (tail return-type))
+                  body-string)
+                (string-append (sc-compile-type return-type compile) " "
+                  name parameters body-string))))))))
 
   (define (sc-macro-function name parameter body compile)
     (get-body-and-docstring& body compile
@@ -266,9 +268,7 @@
   (define (sc-function-parameters compile names types function-name)
     (parenthesise
       (if (list? names)
-        (if (equal? (length names) (length types))
-          (string-join (map (l a (apply sc-function-parameter compile a)) names types) ",")
-          (raise (list (q type-and-parameter-list-length-mismatch) function-name names)))
+        (string-join (map (l a (apply sc-function-parameter compile a)) names types) ",")
         (if (or (symbol? names) (string? names))
           (string-append (compile types) " " (compile names))
           (raise (q cannot-convert-to-c-parameter))))))
@@ -402,7 +402,7 @@
           ((? not-function-pointer-symbol? return-type) types ...) body ...)
         (sc-function compile name return-type body parameter types))
       ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
-        (sc-function compile name return-type body (list) (list)))
+        (sc-function compile name return-type body null null))
       ((name type value) (c-define (compile name) (sc-compile-type type compile) (compile value)))
       (_ #f)))
 

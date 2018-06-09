@@ -7,26 +7,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
-      (pre-define (a) (begin 1 (sc-comment "b") 2 3))
-      "#define a() 1;\\\n/* b */\\\n2;3"
       (*a b)
       "(*a)(b)"
-      (pointer-get (a b))
-      "*a(b)"
-      (set *a *b.c)
-      "*a=*(b.c)"
-      (pointer-get b)
-      "*b"
-      (set a:b (: *a b))
-      "a->b=(*a)->b"
-      (pointer-get b.c)
-      "*(b.c)"
-      (begin *a.field)
-      "*(a.field);"
-      (begin &*a.field)
-      "&*(a.field);"
-      (begin &*a:b:c)
-      "&*(a->b->c);"
       (: ab cd)
       "ab->cd"
       (= a 1)
@@ -39,6 +21,10 @@
       "(1&&2&&3)"
       (and a (set b (c d)))
       "(a&&(b=c(d)))"
+      (array-get a 1)
+      "a[1]"
+      (array-get (array-get a 1) 2)
+      "(a[1])[2]"
       (array-get aaa 3)
       "aaa[3]"
       (array-get aaa 3 4 5)
@@ -73,6 +59,12 @@
       "1;"
       (begin -1)
       "-1;"
+      (begin *a.field)
+      "*(a.field);"
+      (begin &*a.field)
+      "&*(a.field);"
+      (begin &*a:b:c)
+      "&*(a->b->c);"
       (begin 1 (begin 2 3))
       "1;2;3;"
       (begin (enum (a b c d e)) (declare a int))
@@ -151,7 +143,9 @@
       (define (abc d e) (uint32_t (pre-concat b 64) b16) (return 0))
       "uint32_t abc(b##64 d,b16 e){return(0);}"
       (define (a) void "test-docstring")
-      "/** test-docstring */\nvoid a(){}"
+      "/** test-docstring */\nvoid a()"
+      (define (a b) (c d) "e")
+      "/** e */\nc a(d b)"
       (define (a b c) (void void void) "test-docstring" (+ b c))
       "/** test-docstring */\nvoid a(void b,void c){(b+c);}"
       (do-while #t 1 2 3)
@@ -190,14 +184,18 @@
       "{size_t a=1;size_t b=2;c=3;c=7;return((4?5:6));}"
       (not 1)
       "!1"
-      (array-get a 1)
-      "a[1]"
-      (array-get (array-get a 1) 2)
-      "(a[1])[2]"
       (pointer-get a-b)
       "*a_b"
+      (pointer-get (a b))
+      "*a(b)"
+      (pointer-get b)
+      "*b"
+      (pointer-get b.c)
+      "*(b.c)"
       (pre-concat a b cd e)
       "a##b##cd##e"
+      (pre-define (a) (begin 1 (sc-comment "b") 2 3))
+      "#define a() 1;\\\n/* b */\\\n2;3"
       (pre-define a)
       "#define a"
       (pre-define (my-macro a b) (if* a #t #f))
@@ -246,16 +244,20 @@
       "#abc"
       (pre-undefine my-macro)
       "#undef my_macro\n"
-      (sc-insert "var a = 3")
-      "var a = 3"
       (return)
       "return"
       (return 1 2)
       "return(1,2)"
+      (sc-insert "var a = 3")
+      "var a = 3"
+      (set *a *b.c)
+      "*a=*(b.c)"
       (set a 1)
       "a=1"
       (set a 1 b-2 2 c-3 3)
       "a=1;b_2=2;c_3=3;"
+      (set a:b (: *a b))
+      "a->b=(*a)->b"
       (struct-get a b)
       "a.b"
       (struct-get a b c d e)
