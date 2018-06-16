@@ -2,7 +2,7 @@
 * a simpler c syntax. c written as scheme-like s-expressions
 * the output, after formatting, is supposed to be as if originally written in c
 * supports all c and its preprocessor
-* command line application and scheme library
+* command-line application and scheme library
 * possibly also useful as an intermediate language for applications that want to compile to c
 * status: should work, been around for a while, easy to maintain and extend
 * license: gpl3+. does not apply to generated code. generated code has your license
@@ -58,7 +58,7 @@ multiple macros can be defined at once
 * pointers: ``*aa`` _or_ ``(pointer-get aa 2)``
 * types: ``(convert-type aa uint8_t)``
 
-in sc prefixes apply consistently to the whole following expression. in sc "*aa.bb" means *(aa.bb), in c that would mean (*aa).bb
+in sc prefixes apply consistently to the whole following expression. in sc "*aa.bb" means *(aa.bb)
 
 ## function pointers
 function pointer syntax is
@@ -176,8 +176,6 @@ examples
 * a benefit of using sc is that editor modes for scheme syntax and structural editing can be used
 * example code from projects using sc
   * [sph-db](http://files.sph.mn/sourcecode/sph-db/source)
-  * [sph-sc-lib](http://files.sph.mn/sourcecode/sph-sc-lib)
-  * [sph-sp](http://files.sph.mn/sourcecode/sph-sp/source)
 
 # syntax reference
 sc expression and the c result. taken from the automated tests
@@ -746,5 +744,6 @@ while(!(0==(a=b(c)))){1;}
 
 # possible enhancements and ideas
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c unless ``(sc-comment "comment string")`` is used
-* more syntax checks
+* allow users to add syntax like [sescript](https://github.com/sph-mn/sescript)
 * "scx": an extension that supports hygienic macros and a scheme like module system. implement do-while as an example
+* more syntax checks
