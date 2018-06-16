@@ -744,6 +744,6 @@ while(!(0==(a=b(c)))){1;}
 
 # possible enhancements and ideas
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c unless ``(sc-comment "comment string")`` is used
-* allow users to add syntax like [sescript](https://github.com/sph-mn/sescript)
+* allow users to extend syntax like with [sescript](https://github.com/sph-mn/sescript)
 * "scx": an extension that supports hygienic macros and a scheme like module system. implement do-while as an example
 * more syntax checks
