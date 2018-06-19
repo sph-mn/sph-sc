@@ -2,8 +2,11 @@
 !#
 
 (define sph-sc-documentor-description
-  "lists types, functions, macros and variables in c format defined in files.
-  todo: doesnt support the \"declare\" form yet")
+  "reads sc files, extracts and displays defined types, functions, macros and variables as c declarations.
+   command-line interface: sc-documentor --help.
+   # data structures
+   sc-doc-elements: (sc-doc-element ...)
+   sc-doc-element: (symbol:type any ...)")
 
 (import (sph) (sph stream)
   (ice-9 match) (sph lang sc expressions)
@@ -27,6 +30,20 @@
       (map-slice 2 (l (name value) (list (q macro) name null)) a))
     ((name body ...) (list (list (q macro) name null))) (else #f)))
 
+
+(define (sc-pre-define a compile)
+    (if (= 1 (length a)) (cp-define (apply sc-identifier a))
+      (string-join
+        (map-slice 2
+          (l (name value)
+            (match name
+              ((name parameter ...) (sc-macro-function name parameter (list value) compile))
+              (_
+                (string-replace-string (cp-define (sc-identifier name) (compile value)) "\n" "\\\n"))))
+          a)
+      "\n")))
+
+
 (define (extract-define-type a) "-> ((type symbol:other/struct/union/function name [value]) ...)"
   (match a
     ((name ((quote function-pointer) body ...)) (list (list (q type) (q function) name (second a))))
@@ -37,35 +54,46 @@
 (define (extract-enum a) "-> ((enum names ...) ...)" (list (pair (q enum) a)))
 
 (define-as extractors alist-q
-  enum extract-enum
-  define extract-define pre-define extract-pre-define define-type extract-define-type)
+  ;declare extract-declare
+  pre-define extract-pre-define
+  )
 
 (define (extract-one a)
+  "list -> sc-doc-elements
+   take an sc expression and try to extract documentation relevant information
+   using prefixes and procedures defined in \"extractors\""
   (any
     (l (extractor)
       (and (not (null? a)) (eq? (first extractor) (first a)) ((tail extractor) (tail a))))
     extractors))
 
-(define (extract-from-file path) "string -> (element ...)"
+(define (extract-from-file path) "string -> sc-doc-elements"
   (stream-fold
     (l (result a) (let (matched (extract-one a)) (if matched (append result matched) result))) null
     (file->stream path read)))
 
-(define (extract-from-files-combined paths) (append-map extract-from-file paths))
+(define (extract-from-files-combined paths)
+  "extract from multiple files and display a merged result" (append-map extract-from-file paths))
+
 (define-as group-order list-q type enum routine macro variable)
 
 (define (group-title id)
-  (case id ((type) "# types")
-    ((enum) "# enum") ((routine) "# routines") ((macro) "# macros") ((variable) "# variables")))
+  (case id
+    ((type) "# types")
+    ((enum) "# enum")
+    ((routine) "# routines")
+    ((macro) "# macros")
+    ((variable) "# variables")))
 
-(define (format-group-type a)
+(define (format-group-type a) "format an sc-doc-element group for declared c types"
   (apply append
     (filter-map
       (l (sub-type)
         (and-let* ((sub-group (alist-ref a sub-type)))
           (map
             (l (a)
-              (case sub-type ((other) (sc-identifier (first a)))
+              (case sub-type
+                ((other) (sc-identifier (first a)))
                 ( (function)
                   (let
                     (a
@@ -121,8 +149,8 @@
                 ",\n"))))
         a))))
 
-(define generated null)
-(define excluded null)
+(define additions null)
+(define exclusions null)
 (define identifier-replacements null)
 
 (define (extracted-identifier-replace a identifier-replacements)
@@ -166,18 +194,20 @@
           (else a)))
       a)))
 
-(define (extracted-exclude a excluded) "(string:regexp-pattern)"
+(define (extracted-exclude a exclusions) "(string:regexp-pattern)"
   (let
-    (excluded?
-      (let (excluded (map make-regexp excluded))
-        (l (a) "string -> booloean" (any (l (b) (regexp-exec b a)) excluded))))
+    (exclusions?
+      (let (exclusions (map make-regexp exclusions))
+        (l (a) "string -> booloean" (any (l (b) (regexp-exec b a)) exclusions))))
     (filter
       (l (a)
         (let
           (name
-            (case (first a) ((macro variable routine) (symbol->string (second a)))
-              ((type) (symbol->string (list-ref a 2))) (else #f)))
-          (not (and name (excluded? name)))))
+            (case (first a)
+              ((macro variable routine) (symbol->string (second a)))
+              ((type) (symbol->string (list-ref a 2)))
+              (else #f)))
+          (not (and name (exclusions? name)))))
       a)))
 
 (define (sc-documentor-cli)
@@ -185,15 +215,15 @@
     ( (options
         ( (cli-create #:options
             (list-q ((sc-file-path ...) #:required? #t #:value-required? #t)
-              (extra #:value-required? #t))
+              (config #:value-required? #t))
             #:description sph-sc-documentor-description)))
       (extracted
         ; -> ((extracted-element-type _ ...) ...)
-        (begin (and-let* ((extra (alist-ref-q options extra))) (load extra))
-          (append (apply append (filter-map extract-one generated))
+        (begin (and-let* ((config (alist-ref-q options config))) (load config))
+          (append (apply append (filter-map extract-one additions))
             (extract-from-files-combined (alist-ref-q options sc-file-path)))))
       (extracted
-        (extracted-identifier-replace (extracted-exclude extracted excluded)
+        (extracted-identifier-replace (extracted-exclude extracted exclusions)
           identifier-replacements))
       (grouped (group extracted first)))
     (display-line

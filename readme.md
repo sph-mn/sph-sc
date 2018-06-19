@@ -167,14 +167,19 @@ examples
 (sc->c code)
 ```
 
+# utilities
+using s-expressions makes it easy to write utilities that work with the code. included with sc are
+* an auto formatter with the same dependencies, "sc-format"
+* a documentation extractor, "sc-documentor", that displays an overview of all declared types, enums, routines, macros and variables in c syntax. (not yet compatible with the current sc version, work in progress)
+* an emacs mode "sph-sc-mode.el". can be loaded with "load-library" in emacs configuration and activated with "sph-sc-mode"
+
 # other
 * filename extension for source files: ``.sc``
 * clang-format is a recommended auto formatter for c that also handles macro code well
 * sc only outputs valid c syntax
-* finding the source of c errors is usually not more difficult compared to plain c, especially when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the c code is available
-* a benefit of using sc is that editor modes for scheme syntax and structural editing can be used
-* "sc-include" relative-paths are source-file relative unless they start with a slash
-* an emacs mode can be found [here](https://github.com/sph-mn/sph-other/tree/master/emacs/mode) and an auto formatter with the same dependencies as sph-sc [here](https://github.com/sph-mn/sph-script/tree/master/1/other)
+* a benefit of using sc is that editor modes for scheme and structural editing can be used
+* finding the source of c errors is usually not more difficult compared to plain c, especially when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the like-handwritten c code is available
+* "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
 * example code from projects using sc
   * [sph-db](http://files.sph.mn/sourcecode/sph-db/source)
 
