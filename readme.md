@@ -41,7 +41,7 @@ multiple macros can be defined at once
 (pre-define
   is-included #t
   id-size 4
-  (mymacro b c) (set b 1))
+  (mymacro a b) (set a 1 b 2))
 ```
 
 ## functions
@@ -55,10 +55,10 @@ multiple macros can be defined at once
 * structs: ``aa.bb`` _or_ ``(struct-get aa bb)``
 * struct pointers: ``aa:bb:cc`` _or_ ``(: aa bb cc)``
 * addresses: ``&aa`` _or_ ``(address-of aa)``
-* pointers: ``*aa`` _or_ ``(pointer-get aa 2)``
+* pointers: ``*aa`` _or_ ``(pointer-get aa)``
 * types: ``(convert-type aa uint8_t)``
 
-in sc prefixes apply consistently to the whole following expression. in sc "*aa.bb" means *(aa.bb)
+in sc, prefixes apply consistently to the whole following expression. for example, "*aa.bb" means *(aa.bb)
 
 ## function pointers
 function pointer syntax is
@@ -66,7 +66,7 @@ function pointer syntax is
 (function-pointer output-type input-types ...)
 ```
 in declarations this syntax can be used in place of type names - instead of wrapping the identifier like with c.
-an "int" variable would be declared like this
+an int variable would be declared like this
 ```
 (declare b int)
 ```
@@ -107,7 +107,7 @@ the replacements are done like guile does it. for example "-" becomes "_", "?" b
 
 # installation
 ## manual
-install all dependencies if there are some
+install all dependencies
 
 ### download
 * [download](http://sph.mn/git/download/sph-sc.stable.tgz)
@@ -129,8 +129,8 @@ su root
 ./exe/install
 ```
 
-in most cases the installer only copies files.
-the install script might have a "--help" option that will list more install options
+the install script has a "--help" and a "--dry-run" option for more information.
+the installer should only copy files and set permissions for non-root users.
 
 ## pacman
 with [aurget](https://github.com/pbrisbin/aurget): ``aurget -S --deps sph-sc-git``
@@ -144,7 +144,7 @@ parameters
 options
   --help | -h
   --interface
-  --parents  treat target as directory and recreate the directory structure of source files for compiled files
+  --parents  treat target as directory and recreate the directory structure of source files
 ```
 
 # usage from scheme
@@ -745,6 +745,7 @@ while(!(0==(a=b(c)))){1;}
 
 # possible enhancements and ideas
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c unless ``(sc-comment "comment string")`` is used
-* allow users to extend syntax like with [sescript](https://github.com/sph-mn/sescript)
-* "scx": an extension that supports hygienic macros and a scheme like module system. implement do-while as an example
+* allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
+* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. implement do-while as an example
+* "scx": an extension with a module system.
 * more syntax checks
