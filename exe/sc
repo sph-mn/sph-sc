@@ -68,7 +68,7 @@
         #:options
         (list-q ((source-path ... target-path)) ((source-path))
           (parents #:description
-            "treat target as directory and recreate the directory structure of source files for compiled files")
+            "treat target as directory and recreate the directory structure of source files")
           (check #:names #\c #:description "only validate syntax"))))
     (l (arguments)
       (alist-bind (cli arguments) (source-path target-path parents check)

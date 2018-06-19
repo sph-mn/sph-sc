@@ -1,0 +1,11 @@
+#!/usr/bin/guile
+!#
+
+(import (sph) (sph cli) (sph lang sc-format) (sph lang scheme) (sph system reader))
+(define-as cli cli-create)
+
+(define (sc-format-cli)
+  (let (options (cli))
+    (display (sc-format (port->datums (current-input-port) read-for-formatting)))))
+
+(sc-format-cli)

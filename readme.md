@@ -41,7 +41,7 @@ multiple macros can be defined at once
 (pre-define
   is-included #t
   id-size 4
-  (mymacro b c) (set b 1))
+  (mymacro a b) (set a 1 b 2))
 ```
 
 ## functions
@@ -55,10 +55,10 @@ multiple macros can be defined at once
 * structs: ``aa.bb`` _or_ ``(struct-get aa bb)``
 * struct pointers: ``aa:bb:cc`` _or_ ``(: aa bb cc)``
 * addresses: ``&aa`` _or_ ``(address-of aa)``
-* pointers: ``*aa`` _or_ ``(pointer-get aa 2)``
+* pointers: ``*aa`` _or_ ``(pointer-get aa)``
 * types: ``(convert-type aa uint8_t)``
 
-in sc prefixes apply consistently to the whole following expression. in sc "*aa.bb" means *(aa.bb)
+in sc, prefixes apply consistently to the whole following expression. for example, "*aa.bb" means *(aa.bb)
 
 ## function pointers
 function pointer syntax is
@@ -66,7 +66,7 @@ function pointer syntax is
 (function-pointer output-type input-types ...)
 ```
 in declarations this syntax can be used in place of type names - instead of wrapping the identifier like with c.
-an "int" variable would be declared like this
+an int variable would be declared like this
 ```
 (declare b int)
 ```
@@ -107,7 +107,7 @@ the replacements are done like guile does it. for example "-" becomes "_", "?" b
 
 # installation
 ## manual
-install all dependencies if there are some
+install all dependencies
 
 ### download
 * [download](http://sph.mn/git/download/sph-sc.stable.tgz)
@@ -129,8 +129,8 @@ su root
 ./exe/install
 ```
 
-in most cases the installer only copies files.
-the install script might have a "--help" option that will list more install options
+the install script has a "--help" and a "--dry-run" option for more information.
+the installer should only copy files and set permissions for non-root users.
 
 ## pacman
 with [aurget](https://github.com/pbrisbin/aurget): ``aurget -S --deps sph-sc-git``
@@ -144,7 +144,7 @@ parameters
 options
   --help | -h
   --interface
-  --parents  treat target as directory and recreate the directory structure of source files for compiled files
+  --parents  treat target as directory and recreate the directory structure of source files
 ```
 
 # usage from scheme
@@ -167,14 +167,19 @@ examples
 (sc->c code)
 ```
 
+# utilities
+because using s-expressions makes it easy to write utilities that work with the code, sc includes
+* an auto formatter with the same dependencies, "sc-format"
+* a documentation extractor, "sc-documentor", that displays an overview of all declared types, enums, routines, macros and variables in c syntax. (not yet compatible with the current sc version, work in progress)
+* an emacs mode "sph-sc-mode.el". can be loaded with "load-library" in emacs configuration and activated with "sph-sc-mode"
+
 # other
 * filename extension for source files: ``.sc``
 * clang-format is a recommended auto formatter for c that also handles macro code well
 * sc only outputs valid c syntax
-* finding the source of c errors is usually not more difficult compared to plain c, especially when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the c code is available
-* a benefit of using sc is that editor modes for scheme syntax and structural editing can be used
-* "sc-include" relative-paths are source-file relative unless they start with a slash
-* an emacs mode can be found [here](https://github.com/sph-mn/sph-other/tree/master/emacs/mode) and an auto formatter with the same dependencies as sph-sc [here](https://github.com/sph-mn/sph-script/tree/master/1/other)
+* a benefit of using sc is that editor modes for scheme and structural editing can be used
+* finding the source of c errors is usually not more difficult compared to plain c, especially when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the like-handwritten c code is available
+* "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
 * example code from projects using sc
   * [sph-db](http://files.sph.mn/sourcecode/sph-db/source)
 
@@ -745,6 +750,7 @@ while(!(0==(a=b(c)))){1;}
 
 # possible enhancements and ideas
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c unless ``(sc-comment "comment string")`` is used
-* allow users to extend syntax like with [sescript](https://github.com/sph-mn/sescript)
-* "scx": an extension that supports hygienic macros and a scheme like module system. implement do-while as an example
+* allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
+* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. implement do-while as an example
+* "scx": an extension with a module system.
 * more syntax checks
