@@ -168,7 +168,7 @@ examples
 ```
 
 # utilities
-because using s-expressions makes it easy to write utilities that work with the code, sc includes
+because using s-expressions makes it easy to write utilities that work with the code, this repository includes under other/
 * an auto formatter with the same dependencies, "sc-format"
 * a documentation extractor, "sc-documentor", that displays an overview of all declared types, enums, routines, macros and variables in c syntax. (not yet compatible with the current sc version, work in progress)
 * an emacs mode "sph-sc-mode.el". can be loaded with "load-library" in emacs configuration and activated with "sph-sc-mode"
