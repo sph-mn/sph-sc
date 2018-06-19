@@ -1,62 +1,75 @@
 #!/usr/bin/guile
 !#
 
+(define sph-sc-documentor-cli-description
+  "extracts declarations for types, functions, macros and variables from sc files and
+   displays elements as c declarations in an overview in markdown format")
+
 (define sph-sc-documentor-description
-  "reads sc files, extracts and displays defined types, functions, macros and variables as c declarations.
-   command-line interface: sc-documentor --help.
+  "command-line interface: sc-documentor --help
    # data structures
    sc-doc-elements: (sc-doc-element ...)
-   sc-doc-element: (symbol:type any ...)")
+   sc-doc-element: (symbol:type any ...)
+   # extractors
+   extractors match sc expression list-prefixes and return an sc-doc-element,
+   for example \"(routine name parameters output-type input-type)\".
+   there is no user extension mechanism yet. new extractors must be added to \"extractors\".
+   new sc-doc-element types can be used but sc-format-group would
+   have to be extended to recognise them")
 
 (import (sph) (sph stream)
   (ice-9 match) (sph lang sc expressions)
   (sph alist) (sph list) (sph cli) (sph list one) (sph lang sc) (sph string) (rnrs sorting))
 
-(define (extract-define a)
-  "-> ((routine name parameters output-type input-type)/(variable name output-type) ...)"
+(define (extract-enum a) (list (pair (q enum) a)))
+
+(define (extract-define a) "-> (routine name parameters output-type input-type)"
   (match a
     ( ( ( (? not-preprocessor-keyword? name) parameter ...)
         ((? not-function-pointer-symbol? return-type) types ...) body ...)
       (list (list (q routine) name parameter return-type types)))
     ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
       (list (list (q routine) name null return-type null)))
-    ( (name-1 type-1 name-2 type-2 rest ...)
-      (map-slice 2 (l (name type) (list (q variable) name type)) a))
-    ((name type value ...) (list (list (q variable) name type))) (else #f)))
+    ((name type value) (list (list (q variable) name type))) (else #f)))
 
-(define (extract-pre-define a) "-> ((macro name parameters) ...)"
-  (match a (((name parameter ...) body ...) (list (list (q macro) name parameter)))
-    ( (name-1 value-1 name-2 value-2 rest ...)
-      (map-slice 2 (l (name value) (list (q macro) name null)) a))
-    ((name body ...) (list (list (q macro) name null))) (else #f)))
-
-
-(define (sc-pre-define a compile)
-    (if (= 1 (length a)) (cp-define (apply sc-identifier a))
-      (string-join
-        (map-slice 2
-          (l (name value)
-            (match name
-              ((name parameter ...) (sc-macro-function name parameter (list value) compile))
-              (_
-                (string-replace-string (cp-define (sc-identifier name) (compile value)) "\n" "\\\n"))))
-          a)
-      "\n")))
-
-
-(define (extract-define-type a) "-> ((type symbol:other/struct/union/function name [value]) ...)"
+(define (extract-declare-type a) "-> (type symbol:other/struct/union/function name [value])"
   (match a
-    ((name ((quote function-pointer) body ...)) (list (list (q type) (q function) name (second a))))
-    ((name ((quote struct) body ...)) (list (list (q type) (q struct) name (second a))))
-    ((name ((quote union) body ...)) (list (list (q type) (q union) name (second a))))
-    ((name _ ...) (list (list (q type) (q other) name))) (else #f)))
+    ((name ((quote function-pointer) body ...)) (list (q type) (q function) name (second a)))
+    ((name ((quote struct) body ...)) (list (q type) (q struct) name (second a)))
+    ((name ((quote union) body ...)) (list (q type) (q union) name (second a)))
+    ((name _ ...) (list (q type) (q other) name))))
 
-(define (extract-enum a) "-> ((enum names ...) ...)" (list (pair (q enum) a)))
+(define (extract-declare-array a) "-> (array name type (integer ...))"
+  (match a
+    ((name type size values ...) (let (size (any->list size)) (list (q array) name type size)))))
+
+(define (extract-declare a)
+  "-> sc-doc-elements
+   sc-doc-elements contains any of the following sc-doc-element types
+     routine, type, (variable name output-type), (enum names ...),
+     (struct name fields), (union name fields)"
+  (map-slice 2
+    (l (id type)
+      (match type (((quote array) a ...) (extract-declare-array (pair id a)))
+        (((quote enum) a ...) (first (extract-enum a)))
+        ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
+          (list (first type) id (second type)))
+        (((quote type) type) (extract-declare-type (pair id type)))
+        (_ (let (b (extract-define (list id type))) (if b (first b) (list (q variable) id type))))))
+    a))
+
+(define (extract-pre-define a) "-> ((macro name list:parameters) ...)"
+  (if (= 1 (length a)) (list (list (q macro) a null))
+    (map-slice 2
+      (l (name value)
+        (match name ((name parameter ...) (list (q macro) name parameter))
+          (_ (list (q macro) name null))))
+      a)))
 
 (define-as extractors alist-q
-  ;declare extract-declare
-  pre-define extract-pre-define
-  )
+  ;pre-define extract-pre-define
+  ;define extract-define enum extract-enum
+  declare extract-declare)
 
 (define (extract-one a)
   "list -> sc-doc-elements
@@ -216,7 +229,7 @@
         ( (cli-create #:options
             (list-q ((sc-file-path ...) #:required? #t #:value-required? #t)
               (config #:value-required? #t))
-            #:description sph-sc-documentor-description)))
+            #:description sph-sc-documentor-cli-description)))
       (extracted
         ; -> ((extracted-element-type _ ...) ...)
         (begin (and-let* ((config (alist-ref-q options config))) (load config))
