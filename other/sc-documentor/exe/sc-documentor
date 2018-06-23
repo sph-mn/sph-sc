@@ -6,7 +6,9 @@
    displays elements as c declarations in an overview in markdown format")
 
 (define sph-sc-documentor-description
-  "command-line interface: sc-documentor --help
+  "command-line interface: sc-documentor --help.
+   # caveats
+   preprocessor concatenated identifiers are ignored, for example a##b
    # data structures
    sc-doc-elements: (sc-doc-element ...)
    sc-doc-element: (symbol:type any ...)
@@ -30,7 +32,7 @@
       (list (list (q routine) name parameter return-type types)))
     ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
       (list (list (q routine) name null return-type null)))
-    ((name type value) (list (list (q variable) name type))) (else #f)))
+    (((? symbol? name) type value) (list (list (q variable) name type))) (else #f)))
 
 (define (extract-declare-type a) "-> (type symbol:other/struct/union/function name [value])"
   (match a
@@ -43,23 +45,29 @@
   (match a
     ((name type size values ...) (let (size (any->list size)) (list (q array) name type size)))))
 
+(define (extract-declare-variable id type) (if (symbol? id) (list (q variable) id type) #f))
+
 (define (extract-declare a)
   "-> sc-doc-elements
    sc-doc-elements contains any of the following sc-doc-element types
      routine, type, (variable name output-type), (enum names ...),
      (struct name fields), (union name fields)"
-  (map-slice 2
-    (l (id type)
-      (match type (((quote array) a ...) (extract-declare-array (pair id a)))
-        (((quote enum) a ...) (first (extract-enum a)))
-        ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
-          (list (first type) id (second type)))
-        (((quote type) type) (extract-declare-type (pair id type)))
-        (_ (let (b (extract-define (list id type))) (if b (first b) (list (q variable) id type))))))
-    a))
+  (compact
+    (map-slice 2
+      (l (id type)
+        (match type (((quote array) a ...) (extract-declare-array (pair id a)))
+          (((quote enum) a ...) (first (extract-enum a)))
+          ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
+            (list (first type) id (second type)))
+          (((quote type) type) (extract-declare-type (list id type)))
+          ((quote struct) (list (q struct) id #f))
+          (_
+            (let (b (extract-define (list id type)))
+              (if b (first b) (extract-declare-variable id type))))))
+      a)))
 
 (define (extract-pre-define a) "-> ((macro name list:parameters) ...)"
-  (if (= 1 (length a)) (list (list (q macro) a null))
+  (if (= 1 (length a)) (list (list (q macro) (first a) null))
     (map-slice 2
       (l (name value)
         (match name ((name parameter ...) (list (q macro) name parameter))
@@ -67,9 +75,7 @@
       a)))
 
 (define-as extractors alist-q
-  ;pre-define extract-pre-define
-  ;define extract-define enum extract-enum
-  declare extract-declare)
+  enum extract-enum pre-define extract-pre-define define extract-define declare extract-declare)
 
 (define (extract-one a)
   "list -> sc-doc-elements
@@ -107,24 +113,30 @@
             (l (a)
               (case sub-type
                 ((other) (sc-identifier (first a)))
-                ( (function)
-                  (let
-                    (a
-                      (string-split
-                        (string-drop-prefix "typedef " (sc->c (pair (q define-type) a))) #\())
-                    (string-append (first a) " (" (string-join (tail a) "("))))
+                ((function) (sc->c (pair (q declare) a)))
                 ( (struct union)
-                  (string-append (sc-identifier (first a)) " "
-                    (let
-                      ((a (sc->c (second a))) (type (if (eq? (q union) sub-type) "union" "struct")))
-                      (string-trim-right
-                        (string-append type "\n  "
-                          (string-join
-                            (string-split
-                              (string-trim-both (string-trim-both (string-drop-prefix type a) #\{)
-                                #\})
-                              #\;)
-                            ";\n  "))))))))
+                  (let*
+                    ( (id (first a))
+                      (name-and-fields
+                        (match (tail (second a)) (((? symbol? name) field ...) (pair name field))
+                          (a (pair #f a))))
+                      (name (first name-and-fields)) (fields (tail name-and-fields)))
+                    (string-append (sc-identifier id) " "
+                      (let
+                        ( (a (sc->c (pair (first (second a)) fields)))
+                          (type (if (eq? (q union) sub-type) "union" "struct")))
+                        (string-trim-right
+                          (string-append type (if name (string-append " " (sc->c name)) "")
+                            "\n  "
+                            (string-join
+                              (string-split
+                                (string-replace-string
+                                  (string-trim
+                                    (string-trim-right
+                                      (string-trim (string-drop-prefix type a) #\{) #\}))
+                                  "{" " {")
+                                #\;)
+                              "\n  ")))))))))
             (list-sort-with-accessor string<? (compose symbol->string first)
               (map (compose tail tail) sub-group)))))
       (list-q other function union struct))))
@@ -155,11 +167,8 @@
                       (string-append "(" (string-join (map sc-identifier parameters) ", ") ")"))))
                 (tail a)))
             ( (variable)
-              (apply (l (name type) (string-append (sc-identifier type) " " (sc-identifier name)))
-                (tail a)))
-            ( (enum)
-              (string-join (map-slice 3 (l a (string-join (map sc-identifier a) ", ")) (second a))
-                ",\n"))))
+              (apply (l (name type) (string-append (sc->c type) " " (sc->c name))) (tail a)))
+            ((enum) (sc->c a))))
         a))))
 
 (define additions null)
@@ -201,7 +210,10 @@
                 ( ( (quote struct) name ((quote struct) struct-body ...))
                   (list (q struct) name
                     (pair (q struct)
-                      (map (l (a) (pairs (first a) (replace (second a)) (tail (tail a))))
+                      (map
+                        (l (a)
+                          (if (symbol? a) (replace a)
+                            (pairs (first a) (replace (second a)) (tail (tail a)))))
                         struct-body))))
                 (else (tail a)))))
           (else a)))
