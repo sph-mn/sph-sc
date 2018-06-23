@@ -168,10 +168,10 @@ examples
 ```
 
 # utilities
-because using s-expressions makes it easy to write utilities that work with the code, this repository includes under other/
-* an auto formatter with the same dependencies, "sc-format"
-* a documentation extractor, "sc-documentor", that displays an overview of all declared types, enums, routines, macros and variables in c syntax. (not yet compatible with the current sc version, work in progress)
-* an emacs mode "sph-sc-mode.el". can be loaded with "load-library" in emacs configuration and activated with "sph-sc-mode"
+this repository includes under other/
+* an auto formatter "sc-format"
+* a documentation extractor "sc-documentor". it displays a list of declared types, enums, routines, macros and variables in markdown
+* an emacs mode "sph-sc-mode.el". example config in other/emacs
 
 # other
 * filename extension for source files: ``.sc``
@@ -754,3 +754,4 @@ while(!(0==(a=b(c)))){1;}
 * sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. implement do-while as an example
 * "scx": an extension with a module system.
 * more syntax checks
+* format "set" and "pre-define" better. it can happen that sc-format makes keys stand right

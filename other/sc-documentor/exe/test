@@ -1,0 +1,20 @@
+#!/usr/bin/guile
+!#
+
+; extract all expressions from sc tests and write them to a file, then call sc-documentor for this file.
+(import (ice-9 match) (sph) (sph tree) (sph list) (sph lang scheme))
+
+(let
+  ( (code
+      (tree-extract
+        (l (a)
+          (match a
+            ( ( (quote test-execute-procedures-lambda) tests ...)
+              (apply append
+                (filter-map (l (test) (and (list? test) (map-slice 2 (l (a b) a) (tail test))))
+                  tests)))
+            (_ #f)))
+        (file->datums "../../modules/test/module/sph/lang/sc.scm")))
+    (filename "/tmp/sc-documentor-test.sc"))
+  (call-with-output-file filename (l (port) (each (l (a) (display-line a port)) code)))
+  (display-line filename) (system* "exe/sc-documentor" filename))
