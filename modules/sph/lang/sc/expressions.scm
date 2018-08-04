@@ -146,17 +146,26 @@
           (compile (list (q begin) alternate))))
       ((test consequent) (c-if-statement (compile test) (compile (list (q begin) consequent))))))
 
+  (define (sc-semicolon-list-to-comma-list a)
+    "this would not work with string or character literals that contain semicolons.
+     if these literals can occur anywhere other than definitions this needs to be changed"
+    (parenthesise (string-replace-string (string-trim-right a #\;) ";" ",")))
+
   (define (sc-if* a compile)
     (apply c-if
       (map
-        (l (e)
-          (match e
+        (l (b)
+          (match b
             ( ( (quote begin) body ...)
               (parenthesise
                 (string-join
-                  (map (l (e) (if (contains-set? e) (parenthesise (compile e)) (compile e))) body)
+                  (map
+                    (l (b)
+                      (if (contains-set? b) (sc-semicolon-list-to-comma-list (compile b))
+                        (compile b)))
+                    body)
                   ",")))
-            (_ (if (contains-set? e) (parenthesise (compile e)) (compile e)))))
+            (_ (if (contains-set? b) (sc-semicolon-list-to-comma-list (compile b)) (compile b)))))
         a)))
 
   (define (sc-apply name a)

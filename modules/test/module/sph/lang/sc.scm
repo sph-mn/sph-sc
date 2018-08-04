@@ -7,6 +7,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (if* #t (set a 1 b 2) 0)
+      "(1?(a=1,b=2):0)"
       (*a b)
       "(*a)(b)"
       (: ab cd)
