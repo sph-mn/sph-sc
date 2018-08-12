@@ -94,7 +94,7 @@
 (define (extract-from-files-combined paths)
   "extract from multiple files and display a merged result" (append-map extract-from-file paths))
 
-(define-as group-order list-q type enum routine macro variable)
+(define-as group-order list-q routine macro variable type enum)
 
 (define (group-title id)
   (case id
@@ -168,7 +168,7 @@
                 (tail a)))
             ( (variable)
               (apply (l (name type) (string-append (sc->c type) " " (sc->c name))) (tail a)))
-            ((enum) (sc->c a))))
+            ((enum) (string-replace-string (sc->c a) "," ", "))))
         a))))
 
 (define additions null)

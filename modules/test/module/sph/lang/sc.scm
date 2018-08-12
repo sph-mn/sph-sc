@@ -292,4 +292,6 @@
       "while(!(0==(a=b(c)))){1;}"
       (sc-comment "abc")
       "/* abc */\n"
+      (sc-comment "abc" "def" "ghi")
+      "/* abc\ndef\nghi */\n"
       )))
