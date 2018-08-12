@@ -75,6 +75,7 @@
       a)))
 
 (define-as extractors alist-q
+  ; commenting them here removes them from output
   enum extract-enum pre-define extract-pre-define define extract-define declare extract-declare)
 
 (define (extract-one a)
@@ -104,6 +105,53 @@
     ((macro) "# macros")
     ((variable) "# variables")))
 
+(define (format-group-element id a)
+  (case id
+    ( (macro)
+      (apply
+        (l (name parameters)
+          (string-append (sc-identifier name)
+            (if (null? parameters) ""
+              (string-append "(" (string-join (map sc-identifier parameters) ", ") ")"))))
+        (tail a)))
+    ( (routine)
+      (apply
+        (l (name parameters type-out type-in)
+          (string-append (sc-identifier name) " ::"
+            (if (null? parameters) ""
+              (string-join
+                (map
+                  (l (arg-type arg-name)
+                    (string-append (sc-identifier arg-type) ":" (sc-identifier arg-name)))
+                  type-in parameters)
+                " " (q prefix)))
+            " -> " (sc-identifier type-out)))
+        (tail a)))
+    ((variable) (apply (l (name type) (string-append (sc->c type) " " (sc->c name))) (tail a)))
+    ( (enum)
+      (let*
+        ( (a (tail a)) (name (and (symbol? (first a)) (symbol->string (first a))))
+          (fields (if (symbol? (first a)) (second a) (first a))))
+        (string-append (if name (string-append name ": ") "")
+          (string-join (map-slice 3 (l a (string-join (map sc-identifier a) " ")) fields) "\n  "))))
+    ( (function-pointer)
+      (match (tail a)
+        ( (output-type input-types ...)
+          (string-append (string-join (map sc-identifier input-types) " ") " -> "
+            (sc-identifier output-type)))))
+    ( (struct union)
+      (let*
+        ( (name-and-fields
+            (match (tail a) (((? symbol? name) field ...) (pair name field)) (a (pair #f a))))
+          (name (first name-and-fields)) (fields (tail name-and-fields)))
+        (apply string-append (symbol->string id)
+          (if name (string-append " " (sc-identifier name)) "")
+          (map-apply
+            (l (field-name field-type)
+              (string-append "\n  " (sc-identifier field-name) ": " (sc-identifier field-type)))
+            fields))))
+    (else "")))
+
 (define (format-group-type a) "format an sc-doc-element group for declared c types"
   (apply append
     (filter-map
@@ -111,65 +159,26 @@
         (and-let* ((sub-group (alist-ref a sub-type)))
           (map
             (l (a)
-              (case sub-type
-                ((other) (sc-identifier (first a)))
-                ((function) (sc->c (pair (q declare) a)))
-                ( (struct union)
-                  (let*
-                    ( (id (first a))
-                      (name-and-fields
-                        (match (tail (second a)) (((? symbol? name) field ...) (pair name field))
-                          (a (pair #f a))))
-                      (name (first name-and-fields)) (fields (tail name-and-fields)))
-                    (string-append (sc-identifier id) " "
-                      (let
-                        ( (a (sc->c (pair (first (second a)) fields)))
-                          (type (if (eq? (q union) sub-type) "union" "struct")))
-                        (string-trim-right
-                          (string-append type (if name (string-append " " (sc->c name)) "")
-                            "\n  "
-                            (string-join
-                              (string-split
-                                (string-replace-string
-                                  (string-trim
-                                    (string-trim-right
-                                      (string-trim (string-drop-prefix type a) #\{) #\}))
-                                  "{" " {")
-                                #\;)
-                              "\n  ")))))))))
+              (let (id-string (sc-identifier (first a)))
+                (case sub-type
+                  ( (struct union)
+                    (string-append id-string ": " (format-group-element sub-type (second a))))
+                  ( (function)
+                    (string-append id-string ": "
+                      (format-group-element (q function-pointer) (second a))))
+                  (else id-string))))
             (list-sort-with-accessor string<? (compose symbol->string first)
               (map (compose tail tail) sub-group)))))
       (list-q other function union struct))))
 
 (define (format-group id a)
-  (if (eq? (q type) id) (format-group-type a)
-    (list-sort string<?
-      (map
-        (l (a)
-          (case id
-            ( (routine)
-              (apply
-                (l (name parameters type-out type-in)
-                  (string-append (sc-identifier type-out) " "
-                    (sc-identifier name) "("
-                    (if (null? parameters) ""
-                      (string-join
-                        (map (l (a b) (string-append (sc-identifier a) " " (sc-identifier b)))
-                          type-in parameters)
-                        ", "))
-                    ")"))
-                (tail a)))
-            ( (macro)
-              (apply
-                (l (name parameters)
-                  (string-append (sc-identifier name)
-                    (if (null? parameters) ""
-                      (string-append "(" (string-join (map sc-identifier parameters) ", ") ")"))))
-                (tail a)))
-            ( (variable)
-              (apply (l (name type) (string-append (sc->c type) " " (sc->c name))) (tail a)))
-            ((enum) (string-replace-string (sc->c a) "," ", "))))
-        a))))
+  (case id
+    ((type) (format-group-type a))
+    ( (routine)
+      (map (l (a) (format-group-element id a))
+        ; sort by name. a: ((routine db-status-name (a) uint8_t* (status-t)) ...)
+        (list-sort-with-accessor string<? (compose symbol->string second) a)))
+    (else (list-sort string<? (map (l (a) (format-group-element id a)) a)))))
 
 (define additions null)
 (define exclusions null)
