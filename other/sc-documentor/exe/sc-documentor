@@ -2,13 +2,12 @@
 !#
 
 (define sph-sc-documentor-cli-description
-  "extracts declarations for types, functions, macros and variables from sc files and
-   displays elements as c declarations in an overview in markdown format")
+  "extracts declarations from sc files and displays an overview in markdown format")
 
 (define sph-sc-documentor-description
   "command-line interface: sc-documentor --help.
-   # caveats
-   preprocessor concatenated identifiers are ignored, for example a##b
+   identifiers created through preprocessor concatenatation are not included.
+   it is possible to add them using a configuration file with --config.
    # data structures
    sc-doc-elements: (sc-doc-element ...)
    sc-doc-element: (symbol:type any ...)
@@ -21,6 +20,7 @@
 
 (import (sph) (sph stream)
   (ice-9 match) (sph lang sc expressions)
+  (sph lang scheme) (only (sph filesystem) path->full-path ensure-trailing-slash)
   (sph alist) (sph list) (sph cli) (sph list one) (sph lang sc) (sph string) (rnrs sorting))
 
 (define (extract-enum a) (list (pair (q enum) a)))
@@ -39,7 +39,7 @@
     ((name ((quote function-pointer) body ...)) (list (q type) (q function) name (second a)))
     ((name ((quote struct) body ...)) (list (q type) (q struct) name (second a)))
     ((name ((quote union) body ...)) (list (q type) (q union) name (second a)))
-    ((name _ ...) (list (q type) (q other) name))))
+    ((name _ ...) (list (q type) (q other) name (second a)))))
 
 (define (extract-declare-array a) "-> (array name type (integer ...))"
   (match a
@@ -87,23 +87,37 @@
       (and (not (null? a)) (eq? (first extractor) (first a)) ((tail extractor) (tail a))))
     extractors))
 
+(define (remove-begin a) (match a (((quote begin) a ...) a) (else (list a))))
+
 (define (extract-from-file path) "string -> sc-doc-elements"
   (stream-fold
-    (l (result a) (let (matched (extract-one a)) (if matched (append result matched) result))) null
-    (file->stream path read)))
+    (l (result a)
+      (let
+        (a
+          (match a
+            ( ( (quote sc-include) paths ...)
+              (let
+                (load-paths
+                  (pair (ensure-trailing-slash (dirname (path->full-path path)))
+                    (sc-default-load-paths)))
+                (append-map (l (b) (extract-from-file (sc-path->full-path load-paths b))) paths)))
+            (else (let (matched (extract-one a)) (or matched null)))))
+        (append result a)))
+    null (file->stream path read)))
 
 (define (extract-from-files-combined paths)
   "extract from multiple files and display a merged result" (append-map extract-from-file paths))
 
 (define-as group-order list-q routine macro variable type enum)
 
-(define (group-title id)
-  (case id
-    ((type) "# types")
-    ((enum) "# enum")
-    ((routine) "# routines")
-    ((macro) "# macros")
-    ((variable) "# variables")))
+(define (group-title id md-level)
+  (string-append (if (< 0 md-level) (string-append (string-multiply "#" md-level) " ") "")
+    (case id
+      ((type) "types")
+      ((enum) "enum")
+      ((routine) "routines")
+      ((macro) "macros")
+      ((variable) "variables"))))
 
 (define (format-group-element id a)
   (case id
@@ -166,6 +180,7 @@
                   ( (function)
                     (string-append id-string ": "
                       (format-group-element (q function-pointer) (second a))))
+                  ((other) (string-append id-string ": " (sc-identifier (second a))))
                   (else id-string))))
             (list-sort-with-accessor string<? (compose symbol->string first)
               (map (compose tail tail) sub-group)))))
@@ -179,10 +194,6 @@
         ; sort by name. a: ((routine db-status-name (a) uint8_t* (status-t)) ...)
         (list-sort-with-accessor string<? (compose symbol->string second) a)))
     (else (list-sort string<? (map (l (a) (format-group-element id a)) a)))))
-
-(define additions null)
-(define exclusions null)
-(define identifier-replacements null)
 
 (define (extracted-identifier-replace a identifier-replacements)
   "(string:regexppattern string:replacement [string:pattern string:replacement] ...)
@@ -214,17 +225,22 @@
             (apply (l (name type-out) (list (q variable) (replace name) (replace type-out)))
               (tail a)))
           ( (type)
-            (pair (first a)
-              (match (tail a)
-                ( ( (quote struct) name ((quote struct) struct-body ...))
-                  (list (q struct) name
-                    (pair (q struct)
-                      (map
-                        (l (a)
-                          (if (symbol? a) (replace a)
-                            (pairs (first a) (replace (second a)) (tail (tail a)))))
-                        struct-body))))
-                (else (tail a)))))
+            (let (sub-type (second a))
+              (pair (q type)
+                (case sub-type
+                  ( (struct)
+                    (match (tail a)
+                      ( ( (quote struct) name ((quote struct) struct-body ...))
+                        (list (q struct) name
+                          (pair (q struct)
+                            (map
+                              (l (a)
+                                (if (symbol? a) (replace a)
+                                  (pairs (first a) (replace (second a)) (tail (tail a)))))
+                              struct-body))))
+                      (else a)))
+                  ((other) (apply list sub-type (map replace (tail (tail a)))))
+                  (else (tail a))))))
           (else a)))
       a)))
 
@@ -244,30 +260,42 @@
           (not (and name (exclusions? name)))))
       a)))
 
+(define (get-config path) "string -> alist" (if path (file->datums path) null))
+
+(define (apply-config-add extracted config)
+  (let (a (alist-ref config (q add)))
+    (if a (append extracted (apply append (filter-map extract-one a))) extracted)))
+
+(define (apply-config-remove extracted config)
+  (let (a (alist-ref config (q remove))) (if a (extracted-exclude extracted a) extracted)))
+
+(define (apply-config-replace extracted config)
+  (let (a (alist-ref config (q replace)))
+    (if a (extracted-identifier-replace extracted a) extracted)))
+
 (define (sc-documentor-cli)
   (let*
     ( (options
         ( (cli-create #:options
             (list-q ((sc-file-path ...) #:required? #t #:value-required? #t)
-              (config #:value-required? #t))
+              (config #:value-required? #t)
+              (md-level #:value-required? #t #:description "markdown heading level, 1..n"))
             #:description sph-sc-documentor-cli-description)))
+      (config (get-config (alist-ref options (q config))))
+      (extracted (extract-from-files-combined (alist-ref options (q sc-file-path))))
       (extracted
-        ; -> ((extracted-element-type _ ...) ...)
-        (begin (and-let* ((config (alist-ref-q options config))) (load config))
-          (append (apply append (filter-map extract-one additions))
-            (extract-from-files-combined (alist-ref-q options sc-file-path)))))
-      (extracted
-        (extracted-identifier-replace (extracted-exclude extracted exclusions)
-          identifier-replacements))
-      (grouped (group extracted first)))
+        (apply-config-replace (apply-config-remove (apply-config-add extracted config) config)
+          config))
+      (grouped (group extracted first))
+      (md-level (let (a (alist-ref options (q md-level))) (if a (string->number a) 1))))
     (display-line
       (string-join
         (filter-map
           (l (group-id)
             (and-let*
               ((a (alist-ref grouped group-id)) (a (if (eq? (q type) group-id) (group a second) a)))
-              (string-append (group-title group-id) "\n"
-                "```c\n" (string-join (format-group group-id a) "\n") "\n```")))
+              (string-append (group-title group-id md-level) "\n"
+                "```\n" (string-join (format-group group-id a) "\n") "\n```")))
           group-order)
         "\n\n"))))
 

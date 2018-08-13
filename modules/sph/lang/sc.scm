@@ -32,7 +32,7 @@
        the syntax tree is traversed top to bottom and eventually bottom to top and matching elements are
        mapped to strings which are joined to the result in the end")
 
-  (define sc-default-load-paths
+  (define (sc-default-load-paths)
     (map ensure-trailing-slash
       (if-pass (getenv "SC_LOAD_PATH") (l (a) (string-split a #\:)) (list))))
 
@@ -170,7 +170,7 @@
         (if b (list b #t)
           (let (b (descend-expr->c prefix a compile)) (if b (list b #f) (list #f #t)))))))
 
-  (define* (sc->c a #:optional (load-paths sc-default-load-paths))
+  (define* (sc->c a #:optional (load-paths (sc-default-load-paths)))
     "expression [(string ...)] -> string"
     (and (sc-syntax-check (list a) load-paths)
       (string-trim

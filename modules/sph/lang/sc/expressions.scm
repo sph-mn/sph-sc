@@ -29,6 +29,7 @@
     sc-join-expressions
     sc-macro-function
     sc-numeric-boolean
+    sc-path->full-path
     sc-pre-define
     sc-pre-if
     sc-pre-include
@@ -375,7 +376,7 @@
 
   (define sc-included-paths (ht-create-string))
 
-  (define (sc-path->full-path load-paths path)
+  (define (sc-path->full-path load-paths path) "expects load paths to have a trailing slash"
     (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
       (if path-found (realpath* path-found)
         (raise
