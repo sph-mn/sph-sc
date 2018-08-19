@@ -90,10 +90,11 @@
     (alist->regexp-match-replacements
       ; (regexp search-string . replacement)
       ; replaced in order
-      ; mostly equivalent to the c identifier conversion rules used in guile
+      ; mostly following the c identifier conversion rules used in guile.
       ; https://www.gnu.org/software/guile/manual/html_node/API-Overview.html#API-Overview
       (alist "->" "_to_"
         ".-" (pair "-" "_")
+        "-." (pair "-" "_")
         ".!" (pair "!" "_x")
         "\\?" "_p"
         "./." (pair "/" "_or_")

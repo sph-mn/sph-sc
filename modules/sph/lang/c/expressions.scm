@@ -49,7 +49,7 @@
     (sph string))
 
   (define sph-lang-c-expressions-description "generating c expressions as strings")
-  (define ambiguous-regexp (make-regexp "^(\\*|&)+|\\.|->|\\["))
+  (define ambiguous-regexp (make-regexp "^(\\*|&)+|\\.|->|\\[|\\("))
 
   (define (parenthesise-ambiguous a)
     (if (or (parenthesised? a) (not (regexp-exec ambiguous-regexp a))) a (parenthesise a)))

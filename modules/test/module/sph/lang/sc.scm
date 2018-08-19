@@ -7,6 +7,14 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (begin a--b)
+      "a__b;"
+      (begin *a.b)
+      "*(a.b);"
+      (struct-get (pointer-get a) b)
+      "(*a).b"
+      (struct-get (a b) c)
+      "(a(b)).c"
       (if* #t (set a 1 b 2) 0)
       "(1?(a=1,b=2):0)"
       (*a b)
@@ -189,7 +197,7 @@
       (pointer-get a-b)
       "*a_b"
       (pointer-get (a b))
-      "*a(b)"
+      "*(a(b))"
       (pointer-get b)
       "*b"
       (pointer-get b.c)
