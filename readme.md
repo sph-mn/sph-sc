@@ -76,7 +76,7 @@ a pointer to a function that takes one char argument and returns an int
 ```
 a pointer to a function that returns a pointer to a function that returns a pointer to a function
 ```
-(define b (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
+(declare b (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
 ```
 in c it looks like this, shorter but not necessarily easier to read (notice how it is wrapped outside in)
 ```

@@ -29,6 +29,7 @@
     sc-join-expressions
     sc-macro-function
     sc-numeric-boolean
+    sc-path->full-path
     sc-pre-define
     sc-pre-if
     sc-pre-include
@@ -89,10 +90,11 @@
     (alist->regexp-match-replacements
       ; (regexp search-string . replacement)
       ; replaced in order
-      ; mostly equivalent to the c identifier conversion rules used in guile
+      ; mostly following the c identifier conversion rules used in guile.
       ; https://www.gnu.org/software/guile/manual/html_node/API-Overview.html#API-Overview
       (alist "->" "_to_"
         ".-" (pair "-" "_")
+        "-." (pair "-" "_")
         ".!" (pair "!" "_x")
         "\\?" "_p"
         "./." (pair "/" "_or_")
@@ -146,17 +148,26 @@
           (compile (list (q begin) alternate))))
       ((test consequent) (c-if-statement (compile test) (compile (list (q begin) consequent))))))
 
+  (define (sc-semicolon-list-to-comma-list a)
+    "this would not work with string or character literals that contain semicolons.
+     if these literals can occur anywhere other than definitions this needs to be changed"
+    (parenthesise (string-replace-string (string-trim-right a #\;) ";" ",")))
+
   (define (sc-if* a compile)
     (apply c-if
       (map
-        (l (e)
-          (match e
+        (l (b)
+          (match b
             ( ( (quote begin) body ...)
               (parenthesise
                 (string-join
-                  (map (l (e) (if (contains-set? e) (parenthesise (compile e)) (compile e))) body)
+                  (map
+                    (l (b)
+                      (if (contains-set? b) (sc-semicolon-list-to-comma-list (compile b))
+                        (compile b)))
+                    body)
                   ",")))
-            (_ (if (contains-set? e) (parenthesise (compile e)) (compile e)))))
+            (_ (if (contains-set? b) (sc-semicolon-list-to-comma-list (compile b)) (compile b)))))
         a)))
 
   (define (sc-apply name a)
@@ -366,7 +377,7 @@
 
   (define sc-included-paths (ht-create-string))
 
-  (define (sc-path->full-path load-paths path)
+  (define (sc-path->full-path load-paths path) "expects load paths to have a trailing slash"
     (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
       (if path-found (realpath* path-found)
         (raise

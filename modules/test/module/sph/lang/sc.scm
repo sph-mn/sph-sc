@@ -7,6 +7,16 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (begin a--b)
+      "a__b;"
+      (begin *a.b)
+      "*(a.b);"
+      (struct-get (pointer-get a) b)
+      "(*a).b"
+      (struct-get (a b) c)
+      "(a(b)).c"
+      (if* #t (set a 1 b 2) 0)
+      "(1?(a=1,b=2):0)"
       (*a b)
       "(*a)(b)"
       (: ab cd)
@@ -187,7 +197,7 @@
       (pointer-get a-b)
       "*a_b"
       (pointer-get (a b))
-      "*a(b)"
+      "*(a(b))"
       (pointer-get b)
       "*b"
       (pointer-get b.c)
@@ -290,4 +300,6 @@
       "while(!(0==(a=b(c)))){1;}"
       (sc-comment "abc")
       "/* abc */\n"
+      (sc-comment "abc" "def" "ghi")
+      "/* abc\ndef\nghi */\n"
       )))

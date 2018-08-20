@@ -8,7 +8,8 @@
     (sph lang scm-format)
     (sph lang scm-format format)
     (sph string)
-    (only (guile) inf))
+    (only (guile) inf string-join)
+    (only (sph list) map-slice))
 
   ; formatter for sc (sph-sc) source code. also serves as an example of how custom formatters can be defined
   (define-syntax-rule (map-recurse recurse a indent) (map (l (a) (first (recurse a indent))) a))
@@ -23,7 +24,29 @@
 
   (define (format-set a recurse config indent)
     (match a ((_ name value) ((sc-f 2 1 0) a recurse config indent))
-      ((_ name/type ...) ((sc-f 1 2 2) a recurse config indent))))
+      ((_ name/type ...) ((sc-f 1 2 2) a recurse config indent))
+      ; todo: consider comments
+      #;( (_ name/type ...)
+        (let*
+          ( (max (ht-ref-q config max-chars-per-line))
+            (indent-string (ht-ref-q config indent-string))
+            (indent-length (* indent (string-length indent-string))))
+          (list
+            (string-join
+              (map-slice 2
+                (l (b c)
+                  (let*
+                    ( (b-string (any->string (first (recurse b indent))))
+                      (c-string (any->string (first (recurse c indent))))
+                      (line-length
+                        (+ 1 indent-length (string-length b-string) (string-length c-string))))
+                    (apply string-append indent-string
+                      b-string
+                      (if (< max line-length) (list "\n" indent-string c-string)
+                        (list " " c-string)))))
+                name/type)
+              "\n")
+            #f)))))
 
   #;(define (format-begin a recurse config indent)
     (match a ((_ name value) ((sc-f 2 0 0) a recurse config indent))

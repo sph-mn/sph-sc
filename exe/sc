@@ -18,7 +18,7 @@
           (pair
             (ensure-trailing-slash
               (if-pass (port-filename input-port) (l (a) (path->full-path (dirname a))) (getcwd)))
-            sc-default-load-paths)))
+            (sc-default-load-paths))))
       (if check (debug-log (sc-syntax-check expressions load-paths))
         (display (sc->c expressions load-paths) output-port)))))
 

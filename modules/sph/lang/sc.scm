@@ -32,7 +32,7 @@
        the syntax tree is traversed top to bottom and eventually bottom to top and matching elements are
        mapped to strings which are joined to the result in the end")
 
-  (define sc-default-load-paths
+  (define (sc-default-load-paths)
     (map ensure-trailing-slash
       (if-pass (getenv "SC_LOAD_PATH") (l (a) (string-split a #\:)) (list))))
 
@@ -154,7 +154,7 @@
       ((pre-string-concat) (string-join (map compile a) " "))
       ((return) (if (null? a) "return" (sc-apply "return" (map compile a))))
       ((sc-insert) (first a))
-      ((sc-comment) (string-append "\n/* " (string-join a " ") " */\n"))
+      ((sc-comment) (string-append "\n/* " (string-join a "\n") " */\n"))
       ((set) (sc-set a compile))
       ((struct union) (sc-struct-or-union prefix a compile))
       ((struct-get) (apply c-struct-get (map compile a)))
@@ -170,7 +170,7 @@
         (if b (list b #t)
           (let (b (descend-expr->c prefix a compile)) (if b (list b #f) (list #f #t)))))))
 
-  (define* (sc->c a #:optional (load-paths sc-default-load-paths))
+  (define* (sc->c a #:optional (load-paths (sc-default-load-paths)))
     "expression [(string ...)] -> string"
     (and (sc-syntax-check (list a) load-paths)
       (string-trim
