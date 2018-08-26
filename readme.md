@@ -752,6 +752,6 @@ while(!(0==(a=b(c)))){1;}
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c unless ``(sc-comment "comment string")`` is used
 * allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
 * sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. implement do-while as an example
-* "scx": an extension with a module system.
+* "scx": an extension with a module system
 * more syntax checks
 * format "set" and "pre-define" better. it can happen that sc-format makes keys stand right
