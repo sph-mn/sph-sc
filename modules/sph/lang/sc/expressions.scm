@@ -311,7 +311,7 @@
             clauses)))))
 
   (define (sc-pre-define a compile)
-    (if (= 1 (length a)) (cp-define (apply sc-identifier a))
+    (if (= 1 (length a)) (string-append (cp-define (apply sc-identifier a)) "\n")
       (string-join
         (map-slice 2
           (l (name value)

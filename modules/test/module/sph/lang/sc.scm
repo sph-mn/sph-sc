@@ -212,7 +212,7 @@
       (pre-define (a) (begin 1 (sc-comment "b") 2 3))
       "#define a() 1;\\\n/* b */\\\n2;3\n"
       (pre-define a)
-      "#define a"
+      "#define a\n"
       (pre-define (my-macro a b) (if* a #t #f))
       "#define my_macro(a,b) (a?1:0)\n"
       (pre-define (a) #t)
