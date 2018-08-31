@@ -188,7 +188,7 @@
               ((string-prefix? "\n#" b) b)
               (else
                 (cond
-                  ((or (string-suffix? ";" b) (string-suffix? "*/" b) (string-suffix? "*/\n" b)) b)
+                  ((or (string-suffix? ";" b) (string-suffix? "\n" b) (string-suffix? "*/" b)) b)
                   ((string-suffix? ":" b) (string-append b "\n"))
                   (else (string-append b ";")))))
             prev))
@@ -320,7 +320,7 @@
               (_
                 (string-replace-string (cp-define (sc-identifier name) (compile value)) "\n" "\\\n"))))
           a)
-        "\n")))
+        "\n" (q suffix))))
 
   (define (sc-pre-include paths)
     "(string ...) -> string
