@@ -188,7 +188,7 @@
               ((string-prefix? "\n#" b) b)
               (else
                 (cond
-                  ((or (string-suffix? ";" b) (string-suffix? "\n" b) (string-suffix? "*/" b)) b)
+                  ((or (string-suffix? ";" b) (string-suffix? "*/" b) (string-suffix? "\n" b)) b)
                   ((string-suffix? ":" b) (string-append b "\n"))
                   (else (string-append b ";")))))
             prev))
