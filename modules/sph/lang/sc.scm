@@ -45,27 +45,13 @@
           (pair (q begin)
             (map-slice 2 (l (index value) (list (q set) (list (q array-get) array index) value))
               (tail a)))))
-      ((case case*) (sc-case (equal? (q case*) prefix) a compile))
-      ( (cond*)
-        (let (conditions (reverse a))
-          (fold
-            (l (condition alternate)
-              (list (q if*) (first condition) (add-begin-if-multiple (tail condition)) alternate))
-            (match (first conditions) (((quote else) body ...) (add-begin-if-multiple body))
-              ((test consequent ...) (list (q if*) test (add-begin-if-multiple consequent))))
-            (tail conditions))))
-      ( (pre-define-if-not-defined)
-        (pair (q begin)
-          (map-slice 2
-            (l (name value)
-              (let
-                (identifier (match name (((? not-preprocessor-keyword? name) _ ...) name) (_ name)))
-                (qq
-                  (pre-if-not-defined (unquote identifier)
-                    (pre-define (unquote name) (unquote value))))))
-            a)))
-      ((sc-include) (sc-include-sc load-paths a))
-      ((sc-include-once) (sc-include-sc-once load-paths a))
+      ((case case*) (sc-case (eq? (q case*) prefix) a compile (l (a) (sc->sc a null))))
+      ((cond*) (sc-cond* a compile))
+      ((pre-define-if-not-defined) (sc-pre-define-if-not-defined a compile))
+      ((pre-define) (sc-pre-define-multiple a compile))
+      ((sc-include) (sc-include-sc load-paths a (l (a) (sc->sc a null))))
+      ((sc-include-once) (sc-include-sc-once load-paths a (l (a) (sc->sc a null))))
+      ((set) (sc-set-multiple a compile))
       ( (struct-set)
         (let (struct (first a))
           (pair (q begin)
@@ -106,11 +92,7 @@
       ((convert-type) (apply c-convert-type (map compile a)))
       ((declare) (sc-declare a compile))
       ((define) (sc-define a compile))
-      ( (do-while)
-        (match a
-          ( (test body ...)
-            (string-append "do" (c-compound (compile (pair (q begin) body)))
-              "while" (parenthesise (compile test))))))
+      ((do-while) (sc-do-while a compile))
       ((enum) (sc-enum a))
       ((for) (sc-for a compile))
       ((function-pointer) (apply sc-function-pointer compile "" a))
@@ -118,33 +100,13 @@
       ((if) (sc-if a compile))
       ((if*) (sc-if* a compile))
       ((label) (string-append (compile (first a)) ":" (sc-join-expressions (map compile (tail a)))))
-      ( (let*)
-        (c-compound
-          (match a
-            ( ( ( (names values ...) ...) body ...)
-              (compile
-                (pair (q begin)
-                  (append
-                    (map (l (n v) (pairs (if (length-one? v) (q set) (q define)) n v)) names values)
-                    body)))))))
+      ((let*) (sc-let* a compile))
       ((not) (c-not (compile (first a))))
       ((pointer-get) (apply c-pointer-get (map compile a)))
       ((pre-define) (sc-pre-define a compile))
       ((pre-pragma) (string-append "#pragma " (string-join (map sc-identifier a) " ") "\n"))
       ((pre-undefine) (string-join (map (compose cp-undef sc-identifier) a) "\n" (q suffix)))
-      ( (pre-let)
-        ; descend-expr->sc currently would add an uneccessary semicolon at the end
-        (match a
-          ( ( (names+values ...) body ...)
-            (string-append
-              (string-join (map-slice 2 (l (n v) (compile (list (q pre-define) n v))) names+values)
-                "\n" (q suffix))
-              (compile (pair (q begin) body))
-              (string-join
-                (map-slice 2 (l (n v) (compile (list (q pre-undefine) (if (pair? n) (first n) n))))
-                  names+values)
-                "\n" (q prefix))))
-          (_ (raise (q syntax-error-for-pre-let)))))
+      ((pre-let*) (sc-pre-let* a compile))
       ((pre-include) (sc-pre-include a))
       ((pre-concat) (cp-concat (map sc-identifier a)))
       ((pre-if) (sc-pre-if (q if) a compile))
@@ -154,7 +116,7 @@
       ((pre-string-concat) (string-join (map compile a) " "))
       ((return) (if (null? a) "return" (sc-apply "return" (map compile a))))
       ((sc-insert) (first a))
-      ((sc-comment) (string-append "\n/* " (string-join a "\n") " */\n"))
+      ((sc-comment) (string-append "/* " (string-join a "\n") " */\n"))
       ((set) (sc-set a compile))
       ((struct union) (sc-struct-or-union prefix a compile))
       ((struct-get) (apply c-struct-get (map compile a)))
@@ -164,14 +126,21 @@
       ((while) (sc-while a compile))
       (else (sc-apply (compile prefix) (map compile a)))))
 
-  (define (descend-proc load-paths)
-    (l (a compile)
-      (let* ((prefix (first a)) (a (tail a)) (b (descend-expr->sc prefix a compile load-paths)))
-        (if b (list b #t)
-          (let (b (descend-expr->c prefix a compile)) (if b (list b #f) (list #f #t)))))))
+  (define (sc->sc a load-paths) "expand only sc->sc expressions"
+    (tree-transform a
+      (l (a compile)
+        (let* ((prefix (first a)) (a (tail a)) (b (descend-expr->sc prefix a compile load-paths)))
+          (if b (list b #f) (list #f #t))))
+      identity identity))
 
   (define* (sc->c a #:optional (load-paths (sc-default-load-paths)))
     "expression [(string ...)] -> string"
     (and (sc-syntax-check (list a) load-paths)
       (string-trim
-        (regexp-replace (tree-transform a (descend-proc load-paths) identity sc-value) "\n\n+" "\n")))))
+        (regexp-replace
+          (tree-transform (sc->sc a load-paths)
+            (l (a compile)
+              (let* ((prefix (first a)) (a (tail a)) (b (descend-expr->c prefix a compile)))
+                (if b (list b #f) (list #f #t))))
+            identity sc-value)
+          "\n\n+" "\n")))))
