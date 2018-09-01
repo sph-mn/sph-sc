@@ -7,6 +7,15 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (pre-define-if-not-defined abc 3 def 4)
+      "#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
+      (pre-define (a) (begin 1 (sc-comment "b") 2 3))
+      "#define a() 1;\\\n/* b */\\\n2;3"
+      (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
+      "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
+      ; bundled expressions comma delimited in context
+      (for ( (set a 1 b 2) #t (set c 3 d 4)) #t)
+      "for(a=1,b=2;1;c=3,d=4){1;}"
       ; bug with missing newline after pre-define
       (begin
         (pre-define (a) (begin "test" b) c d)
@@ -21,7 +30,7 @@
       (struct-get (a b) c)
       "(a(b)).c"
       (if* #t (set a 1 b 2) 0)
-      "(1?(a=1,b=2):0)"
+      "(1?((a=1),(b=2)):0)"
       (*a b)
       "(*a)(b)"
       (: ab cd)
@@ -96,8 +105,6 @@
       "~a_b"
       (case = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
       "if((3==myvalue)||(2==myvalue)){1;}else if(4==myvalue){0;}else if((\"a\"==myvalue)||(\"b\"==myvalue)){1;1;}else{0;0;}"
-      (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-      "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
       (cond ((= a 1) #t))
       "if(a==1){1;}"
       (cond ((= a 1) (= b 2)) ((= c 3) #t))
@@ -209,26 +216,22 @@
       "*(b.c)"
       (pre-concat a b cd e)
       "a##b##cd##e"
-      (pre-define (a) (begin 1 (sc-comment "b") 2 3))
-      "#define a() 1;\\\n/* b */\\\n2;3\n"
       (pre-define a)
-      "#define a\n"
+      "#define a"
       (pre-define (my-macro a b) (if* a #t #f))
-      "#define my_macro(a,b) (a?1:0)\n"
+      "#define my_macro(a,b) (a?1:0)"
       (pre-define (a) #t)
-      "#define a() 1\n"
+      "#define a() 1"
       (pre-define (a b) (begin "test-docstring" (+ b c) 3))
       "/** test-docstring */\n#define a(b) (b+c);3\n"
       (pre-define ob-ject 3)
-      "#define ob_ject 3\n"
+      "#define ob_ject 3"
       (pre-define a 1 (id a b) (= a b))
       "#define a 1\n#define id(a,b) (a==b)\n"
       (pre-define a 1 (id) b)
       "#define a 1\n#define id() b\n"
       (pre-define (->test a b) c)
-      "#define _to_test(a,b) c\n"
-      (pre-define-if-not-defined abc 3 def 4)
-      "#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
+      "#define _to_test(a,b) c"
       (pre-if (= a b) (begin c d e) (begin f g))
       "#if (a==b)\nc;d;e;\n#else\nf;g;\n#endif"
       (pre-if-not-defined a b c)
@@ -236,22 +239,22 @@
       (pre-if-defined a b c)
       "#ifdef a\nb;\n#else\nc;\n#endif"
       (pre-include "./a/b.c")
-      "#include \"./a/b.c\"\n"
+      "#include \"./a/b.c\""
       (pre-include "../a/b.c")
-      "#include \"../a/b.c\"\n"
+      "#include \"../a/b.c\""
       (pre-include "a/b.c")
-      "#include <a/b.c>\n"
+      "#include <a/b.c>"
       (pre-include "bb.h")
-      "#include <bb.h>\n"
+      "#include <bb.h>"
       (pre-include "a" "b" "./c")
-      "#include <a>\n#include <b>\n#include \"./c\"\n"
-      (pre-let (a 1 b 2) (+ a b))
+      "#include <a>\n#include <b>\n#include \"./c\""
+      (pre-let* (a 1 b 2) (+ a b))
       "#define a 1\n#define b 2\n(a+b);\n#undef a\n#undef b\n"
-      (pre-let (a 1) a)
+      (pre-let* (a 1) a)
       "#define a 1\na;\n#undef a\n"
-      (pre-let ((a b) 1) a)
+      (pre-let* ((a b) 1) a)
       "#define a(b) 1\na;\n#undef a\n"
-      (pre-let ((a b) 1 (c d) 2) a)
+      (pre-let* ((a b) 1 (c d) 2) a)
       "#define a(b) 1\n#define c(d) 2\na;\n#undef a\n#undef c\n"
       (pre-pragma once)
       "#pragma once\n"

@@ -10,11 +10,13 @@
     sc-compile-type
     sc-compile-types
     sc-cond
+    sc-cond*
     sc-declare
     sc-define
     sc-define-array
     sc-define-function
     sc-define-type
+    sc-do-while
     sc-enum
     sc-for
     sc-function
@@ -27,15 +29,20 @@
     sc-include-sc
     sc-include-sc-once
     sc-join-expressions
+    sc-let*
     sc-macro-function
     sc-numeric-boolean
     sc-path->full-path
     sc-pre-define
+    sc-pre-define-if-not-defined
+    sc-pre-define-multiple
     sc-pre-if
     sc-pre-include
     sc-pre-include-define
     sc-pre-include-variable
+    sc-pre-let*
     sc-set
+    sc-set-multiple
     sc-struct-or-union
     sc-struct-or-union-body
     sc-value
@@ -123,6 +130,45 @@
     (if (symbol? a) (translate-identifier (symbol->string a))
       (if (list? a) (string-join (map sc-identifier a) " ") (any->string a))))
 
+  (define (sc-let* a compile)
+    (c-compound
+      (match a
+        ( ( ( (names values ...) ...) body ...)
+          (compile
+            (pair (q begin)
+              (append
+                (map (l (n v) (pairs (if (length-one? v) (q set) (q define)) n v)) names values) body)))))))
+
+  (define (sc-pre-define-if-not-defined a compile)
+    (pair (q begin)
+      (map-slice 2
+        (l (name value)
+          (let (identifier (match name (((? not-preprocessor-keyword? name) _ ...) name) (_ name)))
+            (qq
+              (pre-if-not-defined (unquote identifier) (pre-define (unquote name) (unquote value))))))
+        a)))
+
+  (define (sc-do-while a compile)
+    (match a
+      ( (test body ...)
+        (string-append "do" (c-compound (compile (pair (q begin) body)))
+          "while" (parenthesise (compile test))))))
+
+  (define (sc-pre-let* a compile)
+    (match a
+      ( ( (names+values ...) body ...)
+        (string-replace-string
+          (string-append
+            (string-join (map-slice 2 (l (n v) (compile (list (q pre-define) n v))) names+values)
+              "\n" (q suffix))
+            (compile (pair (q begin) body)) "\n"
+            (string-join
+              (map-slice 2 (l (n v) (compile (list (q pre-undefine) (if (pair? n) (first n) n))))
+                names+values)
+              "\n"))
+          "\n\n" "\n"))
+      (_ (raise (q syntax-error-for-pre-let*)))))
+
   (define (sc-for a compile)
     (let
       (comma-join
@@ -177,22 +223,26 @@
   (define* (sc-join-expressions a #:optional (expression-separator ""))
     "main procedure for the concatenation of toplevel expressions. adds semicolons"
     (string-join
-      (fold-right
-        (l (b prev)
-          (pair
-            ; preprocessor directives need to start on a separate line
-            (cond
-              ( (string-prefix? "#" b)
-                (if (or (null? prev) (not (string-prefix? "\n" (first prev))))
-                  (string-append "\n" b "\n") (string-append "\n" b)))
-              ((string-prefix? "\n#" b) b)
-              (else
-                (cond
-                  ((or (string-suffix? ";" b) (string-suffix? "*/" b) (string-suffix? "\n" b)) b)
-                  ((string-suffix? ":" b) (string-append b "\n"))
-                  (else (string-append b ";")))))
-            prev))
-        (list) (remove string-null? a))
+      (reverse
+        (fold
+          (l (b prev)
+            (pair
+              (cond
+                ( (string-prefix? "#" b)
+                  ; preprocessor directives need to be on a separate line
+                  (if (and (not (null? prev)) (string-suffix? "\n" (first prev)))
+                    (string-append b "\n") (string-append "\n" b "\n")))
+                ( (string-prefix? "/*" b)
+                  (if (and (not (null? prev)) (string-suffix? "\n" (first prev))) b
+                    (string-append "\n" b)))
+                ((string-suffix? "\n" b) b)
+                (else
+                  (cond
+                    ((string-suffix? ";" b) b)
+                    ((string-suffix? ":" b) (string-append b "\n"))
+                    (else (string-append b ";")))))
+              prev))
+          (list) (remove string-null? a)))
       expression-separator))
 
   (define* (sc-define-type compile name value) "any any -> string"
@@ -298,29 +348,33 @@
         (cp-if type (compile test) (compile (add-begin consequent)) (compile (add-begin alternate))))
       ((test consequent) (cp-if type (compile test) (compile (add-begin consequent)) #f))))
 
-  (define (sc-case cond*? a compile) "symbol:cond/cond* symbol any any ...-> list:sc"
-    (match a
-      ( (predicate subject clauses ..1)
-        (pair (if cond*? (q cond*) (q cond))
-          (map
-            (l (a)
-              (match a (((quote else) _ ...) a)
-                ( ( (objects ...) body ...)
-                  (pair (pair (q or) (map (l (b) (list predicate b subject)) objects)) body))
-                ((object body ...) (pair (list predicate object subject) body))))
-            clauses)))))
+  (define (sc-case is-case* a compile compile->sc)
+    "boolean list procedure -> list:sc
+     expands so cond expressions"
+    (compile->sc
+      (match a
+        ( (predicate subject clauses ..1)
+          (pair (if is-case* (q cond*) (q cond))
+            (map
+              (l (a)
+                (match a (((quote else) _ ...) a)
+                  ( ( (objects ...) body ...)
+                    (pair (pair (q or) (map (l (b) (list predicate b subject)) objects)) body))
+                  ((object body ...) (pair (list predicate object subject) body))))
+              clauses))))))
 
-  (define (sc-pre-define a compile)
-    (if (= 1 (length a)) (string-append (cp-define (apply sc-identifier a)) "\n")
-      (string-join
-        (map-slice 2
-          (l (name value)
-            (match name
-              ((name parameter ...) (sc-macro-function name parameter (list value) compile))
-              (_
-                (string-replace-string (cp-define (sc-identifier name) (compile value)) "\n" "\\\n"))))
-          a)
-        "\n" (q suffix))))
+  (define (sc-pre-define-multiple a compile) "-> list"
+    (match a
+      ( (name-1 value-1 name-2 value-2 rest ...)
+        (pair (q begin) (map-slice 2 (l a (pair (q pre-define) a)) (map compile a))))
+      (_ #f)))
+
+  (define (sc-pre-define a compile) "-> string"
+    (match a ((name) (cp-define (sc-identifier name)))
+      ( (name value)
+        (match name ((name parameter ...) (sc-macro-function name parameter (list value) compile))
+          (_ (cp-define (sc-identifier name) (string-replace-string (compile value) "\n" "\\\n")))))
+      (_ #f)))
 
   (define (sc-pre-include paths)
     "(string ...) -> string
@@ -332,7 +386,7 @@
               cp-include-path cp-include)
             a))
         paths)
-      "\n" (q suffix)))
+      "\n"))
 
   (define (sc-pre-include-variable name)
     "symbol -> symbol
@@ -384,18 +438,21 @@
           (list (q file-not-accessible)
             (string-append (any->string path) " not found in " (any->string load-paths)))))))
 
-  (define (sc-include-sc-once load-paths paths) "(string ...) (symbol/string ...) -> list"
-    (pair (q begin)
-      (map
-        (l (path)
-          (let (path (sc-path->full-path load-paths path))
-            (if (ht-ref sc-included-paths path) (q (begin))
-              (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
-        paths)))
+  (define (sc-include-sc-once load-paths paths compile->sc)
+    "(string ...) (symbol/string ...) -> list"
+    (compile->sc
+      (pair (q begin)
+        (map
+          (l (path)
+            (let (path (sc-path->full-path load-paths path))
+              (if (ht-ref sc-included-paths path) (q (begin))
+                (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
+          paths))))
 
-  (define (sc-include-sc load-paths paths) "(string ...) (string ...) -> list"
-    (pair (q begin)
-      (append-map (l (a) (let (a (sc-path->full-path load-paths a)) (file->datums a read))) paths)))
+  (define (sc-include-sc load-paths paths compile->sc) "(string ...) (string ...) -> list"
+    (compile->sc
+      (pair (q begin)
+        (append-map (l (a) (let (a (sc-path->full-path load-paths a)) (file->datums a read))) paths))))
 
   (define (sc-define-array a compile)
     (match a
@@ -440,11 +497,26 @@
             (_ (or (sc-define (list id type) compile) (sc-declare-variable id type compile)))))
         a)))
 
-  (define (sc-set a compile)
+  (define (sc-set a compile) (match a ((name value) (c-set (compile name) (compile value))) (_ #f)))
+
+  (define (sc-set-multiple a compile)
+    "-> list:sc
+     the -multiple version gives the expression joiner a chance to choose the right delimiter in context"
     (match a
       ( (name-1 value-1 name-2 value-2 rest ...)
-        (sc-join-expressions (map-slice 2 c-set (map compile a))))
-      ((name value) (c-set (compile name) (compile value))) (_ #f)))
+        (pair (q begin) (map-slice 2 (l a (pair (q set) a)) a)))
+      (_ #f)))
+
+  (define (sc-cond* a compile)
+    "-> list
+     expands to if* expressions"
+    (let (conditions (reverse a))
+      (fold
+        (l (condition alternate)
+          (list (q if*) (first condition) (add-begin-if-multiple (tail condition)) alternate))
+        (match (first conditions) (((quote else) body ...) (add-begin-if-multiple body))
+          ((test consequent ...) (list (q if*) test (add-begin-if-multiple consequent))))
+        (tail conditions))))
 
   (define (sc-cond a compile)
     (match a
