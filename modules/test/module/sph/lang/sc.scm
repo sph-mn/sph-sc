@@ -310,4 +310,6 @@
       "/* abc */\n"
       (sc-comment "abc" "def" "ghi")
       "/* abc\ndef\nghi */\n"
+      (!= 1 2 3)
+      "(1!=2)&&(2!=3)"
       )))

@@ -65,7 +65,7 @@
      this is for expressions that create syntax that can not be created with other sc syntax"
     (case prefix
       ((+ - * /) (parenthesise (string-join (map compile a) (symbol->string prefix))))
-      ((= < > <= >=) (sc-numeric-boolean prefix a compile))
+      ((!= = < > <= >=) (sc-numeric-boolean prefix a compile))
       ( (and bit-and bit-or bit-shift-right bit-shift-left bit-xor modulo or)
         (parenthesise
           (string-join
