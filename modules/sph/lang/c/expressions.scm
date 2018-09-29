@@ -70,10 +70,11 @@
   (define* (cp-if type test consequent #:optional alternate)
     (string-replace-string
       (string-append "#"
-        (if (equal? (q if) type) "if"
-          (if (equal? (q ifdef) type) "ifdef"
-            (if (equal? (q ifndef) type) "ifndef"
-              (throw (q cannot-convert-to-c) (list (q if) type test consequent alternate)))))
+        (case type
+          ((if) "if")
+          ((ifdef) "ifdef")
+          ((ifndef) "ifndef")
+          (else (raise (list (q sc-syntax-error) (q pre-if) type test consequent alternate))))
         " " test
         "\n" consequent "\n" (if alternate (string-append "#else\n" alternate "\n") "") "#endif")
       "\n\n" "\n"))

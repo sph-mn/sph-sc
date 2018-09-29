@@ -141,6 +141,8 @@
       "enum{ea,eb,ec};struct d{unsigned int da;};"
       (declare f (type uint8_t) g (type (struct (ga (unsigned int)))))
       "typedef uint8_t f;typedef struct{unsigned int ga;} g;"
+      (declare h (struct-variable ha 0 0))
+      "ha h={0,0};"
       (declare (pre-concat h i) uint32_t)
       "uint32_t h##i;"
       (define a uint32_t 1)
@@ -216,6 +218,14 @@
       "*(b.c)"
       (pre-concat a b cd e)
       "a##b##cd##e"
+      (pre-cond ((= a b) 1))
+      "#if (a==b)\n1;\n#endif"
+      (pre-cond ((= a b) 1) (c (pre-define a)) (else 2))
+      "#if (a==b)\n1;\n#elif c\n#define a\n#else\n2;\n#endif"
+      (pre-cond-defined (a 1) (b 2))
+      "#ifdef a\n1;\n#elif b\n2;\n#endif"
+      (pre-cond-not-defined (a 1))
+      "#ifndef a\n1;\n#endif"
       (pre-define a)
       "#define a"
       (pre-define (my-macro a b) (if* a #t #f))

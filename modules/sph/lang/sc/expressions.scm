@@ -33,6 +33,7 @@
     sc-macro-function
     sc-numeric-boolean
     sc-path->full-path
+    sc-pre-cond
     sc-pre-define
     sc-pre-define-if-not-defined
     sc-pre-define-multiple
@@ -43,6 +44,7 @@
     sc-pre-let*
     sc-set
     sc-set-multiple
+    sc-struct-literal
     sc-struct-or-union
     sc-struct-or-union-body
     sc-value
@@ -485,11 +487,17 @@
     (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
       (c-variable (compile name) (sc-compile-type type compile))))
 
+  (define (sc-struct-literal a compile)
+    (string-append (c-compound (map (l (a) (if (list? a) (map compile a) (compile a))) a))))
+
   (define (sc-declare a compile)
     (sc-join-expressions
       (map-slice 2
         (l (id type)
-          (match type (((quote array) a ...) (sc-define-array (pair id a) compile))
+          (match type
+            ( ( (quote struct-variable) type a ...)
+              (sc-define (list id type (pair (q struct-literal) a)) compile))
+            (((quote array) a ...) (sc-define-array (pair id a) compile))
             (((quote enum) a ...) (sc-enum a))
             ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
               (sc-struct-or-union (first type) (pair id (tail type)) compile))
@@ -517,6 +525,41 @@
         (match (first conditions) (((quote else) body ...) (add-begin-if-multiple body))
           ((test consequent ...) (list (q if*) test (add-begin-if-multiple consequent))))
         (tail conditions))))
+
+  (define* (sc-pre-cond-if if-type add-endif test consequent #:optional alternate)
+    (string-replace-string
+      (string-append "#"
+        (case if-type
+          ((elif) "elif")
+          ((if) "if")
+          ((ifdef) "ifdef")
+          ((ifndef) "ifndef"))
+        " " test
+        "\n" consequent
+        "\n" (if alternate (string-append "#else\n" alternate "\n") "") (if add-endif "#endif" ""))
+      "\n\n" "\n"))
+
+  (define (sc-pre-cond if-type a compile)
+    (match a
+      ( (only-cond)
+        (sc-pre-cond-if if-type #t
+          (compile (first only-cond)) (compile (pair (q begin) (tail only-cond)))))
+      ( (first-cond middle-cond ... last-cond)
+        (string-append
+          (sc-pre-cond-if if-type #f
+            (compile (first first-cond)) (compile (pair (q begin) (tail first-cond))))
+          ; middle-cond
+          (apply string-append
+            (map
+              (l (a)
+                (sc-pre-cond-if (q elif) #f (compile (first a)) (compile (pair (q begin) (tail a)))))
+              middle-cond))
+          ; last-cond
+          (let
+            ( (test (compile (first last-cond)))
+              (consequent (compile (pair (q begin) (tail last-cond)))))
+            (if (eq? (q else) (first last-cond)) (string-append "#else\n" consequent "\n#endif")
+              (sc-pre-cond-if (q elif) #t test consequent)))))))
 
   (define (sc-cond a compile)
     (match a
