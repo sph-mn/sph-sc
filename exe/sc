@@ -4,8 +4,7 @@
 (import (sph) (sph lang indent-syntax)
   (sph lang scheme) (rnrs exceptions)
   (sph string) (sph list)
-  (sph filesystem) (sph alist)
-  (sph lang sc) (only (guile) read) (sph stream) (sph conditional) (sph cli))
+  (sph filesystem) (sph alist) (sph lang sc) (only (guile) read) (sph stream) (sph cli))
 
 (define (process input-port output-port check)
   (guard
@@ -17,7 +16,7 @@
         (load-paths
           (pair
             (ensure-trailing-slash
-              (if-pass (port-filename input-port) (l (a) (path->full-path (dirname a))) (getcwd)))
+              (let (a (port-filename input-port)) (if a (path->full-path (dirname a)) (getcwd))))
             (sc-default-load-paths))))
       (if check (debug-log (sc-syntax-check expressions load-paths))
         (display (sc->c expressions load-paths) output-port)))))
@@ -73,6 +72,6 @@
     (l (arguments)
       (alist-bind (cli arguments) (source-path target-path parents check)
         (guard (a ((sc-syntax-error? a) (display-syntax-error a)))
-          (sc (if-pass source-path any->list) target-path parents check))))))
+          (sc (and source-path (any->list source-path)) target-path parents check))))))
 
 (sc-cli (tail (program-arguments)))
