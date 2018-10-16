@@ -75,8 +75,7 @@
       string-split
       string-suffix?
       string-trim-right)
-    (only (sph tree) tree-contains?)
-    (only (sph two) alist->regexp-match-replacements))
+    (only (sph tree) tree-contains?))
 
   (define sph-lang-sc-expressions-description
     "bindings for creating c strings from sc specific expressions.
@@ -94,6 +93,10 @@
 
   (define (add-begin a)
     (if (and (list? a) (not (null? a)) (equal? (q begin) (first a))) a (list (q begin) a)))
+
+  (define (alist->regexp-match-replacements a)
+    "automatically converts strings at the prefix position to regular expressions"
+    (map (l (e) (pair (if (string? (first e)) (make-regexp (first e)) (first e)) (tail e))) a))
 
   (define identifier-replacements
     (alist->regexp-match-replacements

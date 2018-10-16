@@ -22,7 +22,6 @@
       string-trim
       getenv
       compose)
-    (only (sph conditional) if-pass)
     (only (sph filesystem) ensure-trailing-slash)
     (only (sph tree) tree-transform))
 
@@ -33,8 +32,7 @@
        mapped to strings which are joined to the result in the end")
 
   (define (sc-default-load-paths)
-    (map ensure-trailing-slash
-      (if-pass (getenv "SC_LOAD_PATH") (l (a) (string-split a #\:)) (list))))
+    (map ensure-trailing-slash (let (a (getenv "SC_LOAD_PATH")) (if a (string-split a #\:) null))))
 
   (define (descend-expr->sc prefix a compile load-paths)
     "list procedure list -> list
