@@ -11,7 +11,9 @@
     (only (guile) inf string-join)
     (only (sph list) map-slice))
 
-  ; formatter for sc (sph-sc) source code. also serves as an example of how custom formatters can be defined
+  (define sph-lang-sc-format-description
+    "formatter for sc (sph-sc) source code. also serves as an example of how custom formatters can be defined")
+
   (define-syntax-rule (map-recurse recurse a indent) (map (l (a) (first (recurse a indent))) a))
   (define sc-f format-list-f)
 
@@ -52,9 +54,9 @@
     (match a ((_ name value) ((sc-f 2 0 0) a recurse config indent))
       (_ ((sc-f 1 1 1) a recurse config indent))))
 
-  (define-as sc-format-default-config ht-create-symbol
+  (define-as sc-format-default-config ht-create-symbol-q
     descend-prefix->format-f
-    (ht-create-symbol
+    (ht-create-symbol-q
       ; (sc-f 1 1 0) is the default
       begin (sc-f 1 1 1)
       for (sc-f 2 1 1)
@@ -77,7 +79,7 @@
       set format-set
       struct (sc-f 1 1 1) struct-pointer-set (sc-f 2 2 2) struct-set (sc-f 2 2 2) while (sc-f 2 1 1))
     format
-    (ht-create-symbol indent-string (string-multiply " " 2)
+    (ht-create-symbol-q indent-string (string-multiply " " 2)
       max-chars-per-line 100
       max-exprs-per-line-start 1
       max-exprs-per-line-middle 1

@@ -2,7 +2,7 @@
 !#
 
 (import (sph) (sph cli) (sph lang sc-format) (sph lang scheme) (sph system reader))
-(define-as cli cli-create)
+(define cli (cli-create))
 
 (define (sc-format-cli)
   (let (options (cli))
