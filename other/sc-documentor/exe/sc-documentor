@@ -21,7 +21,7 @@
 (import (sph) (sph stream)
   (ice-9 match) (sph lang sc expressions)
   (sph lang scheme) (only (sph filesystem) path->full-path ensure-trailing-slash)
-  (sph alist) (sph list) (sph cli) (sph list one) (sph lang sc) (sph string) (rnrs sorting))
+  (sph alist) (sph list) (sph cli) (sph list other) (sph lang sc) (sph string) (rnrs sorting))
 
 (define (extract-enum a) (list (pair (q enum) a)))
 
