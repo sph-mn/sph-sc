@@ -181,7 +181,7 @@ this repository includes under other/
 * finding the source of c errors is usually not more difficult compared to plain c, especially when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the like-handwritten c code is available
 * "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
 * example code from projects using sc
-  * [sph-db](http://files.sph.mn/sourcecode/sph-db/source)
+  * [sph-db](http://files.sph.mn/u/software/sourcecode/sph-db/source)
 
 # syntax reference
 sc expression and the c result. taken from the automated tests
