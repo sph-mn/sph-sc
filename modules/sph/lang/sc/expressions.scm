@@ -85,7 +85,7 @@
        when received expressions can have undesired meaning, add parentheses
          (struct-set **a b 1) -> (**a).b=1")
 
-  (define-syntax-rule (add-begin-if-multiple a) (if (length-one? a) (first a) (pair (q begin) a)))
+  (define-syntax-rule (add-begin-if-multiple a) (if (= 1 (length a)) (first a) (pair (q begin) a)))
   (define (contains-set? a) "list -> boolean" (and (list? a) (tree-contains? a (q set))))
   (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
   (define not-preprocessor-keyword? (negate preprocessor-keyword?))
@@ -142,7 +142,7 @@
           (compile
             (pair (q begin)
               (append
-                (map (l (n v) (pairs (if (length-one? v) (q set) (q define)) n v)) names values) body)))))))
+                (map (l (n v) (pairs (if (= 1 (length v)) (q set) (q define)) n v)) names values) body)))))))
 
   (define (sc-pre-define-if-not-defined a compile)
     (pair (q begin)
