@@ -1,0 +1,23 @@
+#!/usr/bin/guile
+!#
+
+(import (sph) (sph cli)
+  (only (sph filesystem) ensure-directory-structure) (only (sph string) string-drop-suffix-if-exists)
+  (sph alist) (only (sph process) execute))
+
+(define scc-cli
+  (let*
+    ( (cli
+        (cli-create #:options (list-q ((input gcc ...))) #:description "compile sc files with gcc"))
+      (dir "/tmp/scc"))
+    (nullary
+      (let*
+        ( (options (cli)) (input (alist-ref-q options input))
+          (temp (string-append dir "/" (string-drop-suffix-if-exists ".sc" input) ".c")))
+        (ensure-directory-structure dir) (execute "sc" input temp)
+        (execute "clang-format" "-i"
+          "-style={BasedOnStyle: Mozilla, SortIncludes: false, AlignEscapedNewlines: DontAlign, AlignOperands: false, AlignAfterOpenBracket: DontAlign, BreakBeforeBraces: Attach, AlwaysBreakAfterReturnType: None, AlwaysBreakAfterDefinitionReturnType: None, PenaltyReturnTypeOnItsOwnLine: 0, AllowShortFunctionsOnASingleLine: true, AllowShortIfStatementsOnASingleLine: true, AllowShortLoopsOnASingleLine: true, ContinuationIndentWidth: 2, ColumnLimit: 0}"
+          temp)
+        (apply execute "gcc" temp (alist-ref-q options gcc null))))))
+
+(scc-cli)

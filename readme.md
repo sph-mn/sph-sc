@@ -172,6 +172,7 @@ this repository includes under other/
 * an auto formatter "sc-format"
 * a documentation extractor "sc-documentor". it displays a list of declared types, enums, routines, macros and variables in markdown
 * an emacs mode "sph-sc-mode.el". example config in other/emacs
+* "scc" which compiles sc files directly with gcc
 
 # other
 * filename extension for source files: ``.sc``
