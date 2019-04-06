@@ -86,7 +86,7 @@ int(*(*(*b)(long long int))(double))(float)
 
 ## identifiers
 the characters "-", "->", "?", "!", which are often used in scheme, are allowed and replaced in identifiers.
-the replacements are done like guile does it. for example "-" becomes "_", "?" becomes "_p" (predicate) and "!" becomes "_x"
+the replacements are done like guile does it. for example "-" becomes "_", "->" becomes "_to_", "?" becomes "_p" (predicate) and "!" becomes "_x"
 
 ## if expressions
 ``(set a (if* b 1 2))`` -> ``a = (b ? 1 : 2)``
