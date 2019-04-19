@@ -142,7 +142,8 @@
           (compile
             (pair (q begin)
               (append
-                (map (l (n v) (pairs (if (= 1 (length v)) (q set) (q define)) n v)) names values) body)))))))
+                (map (l (n v) (pairs (if (= 1 (length v)) (q set) (q define)) n v)) names values)
+                body)))))))
 
   (define (sc-pre-define-if-not-defined a compile)
     (pair (q begin)
@@ -430,7 +431,8 @@
             ( (name type)
               (if (sc-function-pointer? type)
                 (apply sc-function-pointer compile (compile name) (tail type))
-                (string-append (sc-compile-type type compile) " " (compile name))))))
+                (match type (((quote array) a ...) (sc-define-array (pair name a) compile))
+                  (else (string-append (sc-compile-type type compile) " " (compile name))))))))
         elements)
       ";" (q suffix)))
 

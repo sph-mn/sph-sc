@@ -7,6 +7,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (declare a (type (struct (b (array int 3)))))
+      "typedef struct{int b[3];} a;"
       (pre-define-if-not-defined abc 3 def 4)
       "#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
       (pre-define (a) (begin 1 (sc-comment "b") 2 3))
