@@ -8,6 +8,7 @@
 * license: gpl3+. does not apply to generated code. generated code has your license
 * you can try it out [here](http://sph.mn/dynamic/syntax/sc/c)
 * [homepage](http://sph.mn/c/view/me)
+* writing in sc is fun  - fast scheme-style structural editing is possible, and the declare and set syntax lets things be grouped nicely
 
 # syntax highlights
 see the [syntax reference](#syntax-reference) further below for all features
@@ -26,7 +27,7 @@ c supports declarations for variables, arrays, structs, types and enums and they
 ```
 
 ## macros
-macros are defined like variables and functions and dont need escaped newlines or special formatting
+preprocessor macros are defined like variables and functions and dont need escaped newlines or special formatting
 ```
 (pre-define is-included #t)
 ```
@@ -184,6 +185,7 @@ this repository includes under other/
 * "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
 * example code from projects using sc
   * [sph-db](http://files.sph.mn/u/software/sourcecode/sph-db/source)
+  * [sph-sp](http://files.sph.mn/u/software/sourcecode/sph-sp/source)
 
 # syntax reference
 sc expression and the c result. taken from the automated tests
@@ -751,9 +753,9 @@ while(!(0==(a=b(c)))){1;}
 ```
 
 # possible enhancements and ideas
-* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c unless ``(sc-comment "comment string")`` is used
+* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used
 * allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
-* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. implement do-while as an example
-* "scx": an extension with a module system
+* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be really useful to have a good scheme-style macro system for generating c
+* "scx": an extension with a module system. for example, automatically create separate c and header files
 * more syntax checks
 * format "set" and "pre-define" better. it can happen that sc-format makes keys stand right
