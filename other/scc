@@ -8,7 +8,8 @@
 (define scc-cli
   (let*
     ( (cli
-        (cli-create #:options (list-q ((input gcc ...))) #:description "compile sc files with gcc"))
+        (cli-create #:options (list-q ((input gcc-option ...)))
+          #:description "compile sc files with gcc"))
       (dir "/tmp/scc"))
     (nullary
       (let*
@@ -18,6 +19,6 @@
         (execute "clang-format" "-i"
           "-style={BasedOnStyle: Mozilla, SortIncludes: false, AlignEscapedNewlines: DontAlign, AlignOperands: false, AlignAfterOpenBracket: DontAlign, BreakBeforeBraces: Attach, AlwaysBreakAfterReturnType: None, AlwaysBreakAfterDefinitionReturnType: None, PenaltyReturnTypeOnItsOwnLine: 0, AllowShortFunctionsOnASingleLine: true, AllowShortIfStatementsOnASingleLine: true, AllowShortLoopsOnASingleLine: true, ContinuationIndentWidth: 2, ColumnLimit: 0}"
           temp)
-        (apply execute "gcc" temp (alist-ref-q options gcc null))))))
+        (apply execute "gcc" (append (alist-ref-q options gcc-option null) (list temp)))))))
 
 (scc-cli)
