@@ -1,6 +1,5 @@
 (library (sph lang sc-format)
-  (export
-    sc-format)
+  (export sc-format)
   (import
     (ice-9 match)
     (sph)
@@ -77,7 +76,9 @@
       scsh-block-comment format-scsh-block-comment
       semicolon-comment format-semicolon-comment
       set format-set
-      struct (sc-f 1 1 1) struct-pointer-set (sc-f 2 2 2) struct-set (sc-f 2 2 2) while (sc-f 2 1 1))
+      struct (sc-f 1 1 1)
+      struct-pointer-set (sc-f 2 2 2)
+      struct-set (sc-f 2 2 2) array-set (sc-f 2 2 2) while (sc-f 2 1 1))
     format
     (ht-create-symbol-q indent-string (string-multiply " " 2)
       max-chars-per-line 100

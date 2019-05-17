@@ -755,7 +755,7 @@ while(!(0==(a=b(c)))){1;}
 # possible enhancements and ideas
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used
 * allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
-* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be really useful to have a good scheme-style macro system for generating c
+* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be really useful to have a good scheme-style macro system for generating c. for example c doesnt have much support for ellipsis which makes some abstractions impossible
 * "scx": an extension with a module system. for example, automatically create separate c and header files
 * more syntax checks
 * format "set" and "pre-define" better. it can happen that sc-format makes keys stand right
