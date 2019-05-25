@@ -765,5 +765,5 @@ while(!(0==(a=b(c)))){1;}
 * indent-syntax (like coffeescript) could be used with a good indent-syntax to s-expression compiler
 
 # similar projects
-* [lispc](https://github.com/eratosthenesia/lispc) "lispsy" lisp(ish) to c converter (designed for clisp)
-* [sxc](https://github.com/busfactor1inc/sxc) sxc is an 's-expression c' transpiler for generating c code using macros written in common lisp
+* [lispc](https://github.com/eratosthenesia/lispc) - lisp(ish) to c converter (designed for clisp)
+* [sxc](https://github.com/busfactor1inc/sxc) - 's-expression c' transpiler for generating c code using macros written in common lisp
