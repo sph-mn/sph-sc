@@ -177,9 +177,9 @@ this repository includes under other/
 
 # other
 * filename extension for source files: ``.sc``
-* clang-format is a recommended auto formatter for c that also handles macro code well. unfortunately, it can not add empty lines between function definitions
+* clang-format is a recommended auto formatter for c that also handles macro code well. unfortunately, it cannot add empty lines between function definitions
 * sc only outputs valid c syntax
-* finding the source of c errors is usually the same as in plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the like-handwritten c code is available
+* finding the source of c errors is usually the same as with plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the like-handwritten c code is available
 * "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
 * editor modes for scheme can be used and fast scheme-style structural editing is possible
 * the declare and set syntax lets things be grouped nicely
