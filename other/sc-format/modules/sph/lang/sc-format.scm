@@ -82,8 +82,8 @@
     format
     (ht-create-symbol-q indent-string (string-multiply " " 2)
       max-chars-per-line 100
-      max-exprs-per-line-start 1
-      max-exprs-per-line-middle 1
+      max-exprs-per-line-start 3
+      max-exprs-per-line-middle 3
       max-exprs-per-line-end (inf)
       docstring-offset-doublequote #t
       multiple-leading-parenthesis-spacing #t

@@ -3,7 +3,7 @@
 * the output, after formatting, is supposed to be as if originally written in c
 * supports all c and its preprocessor
 * command-line application and scheme library
-* possibly also useful as an intermediate language for applications that want to compile to c
+* possibly also useful as an intermediate language for applications that want to generate c code
 * status: should work, been around for a while, easy to maintain and extend
 * license: gpl3+. does not apply to generated code. generated code has your license
 * you can try it out [here](http://sph.mn/dynamic/syntax/sc/c)
@@ -177,15 +177,16 @@ this repository includes under other/
 
 # other
 * filename extension for source files: ``.sc``
-* clang-format is a recommended auto formatter for c that also handles macro code well
+* clang-format is a recommended auto formatter for c that also handles macro code well. unfortunately, it can not add empty lines between function definitions
 * sc only outputs valid c syntax
-* finding the source of c errors is usually not more difficult compared to plain c, especially when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the like-handwritten c code is available
+* finding the source of c errors is usually the same as in plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the like-handwritten c code is available
 * "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
-* editor modes for scheme can be used. fast scheme-style structural editing is possible
+* editor modes for scheme can be used and fast scheme-style structural editing is possible
 * the declare and set syntax lets things be grouped nicely
+
 * example code from projects using sc
-  * [sph-db](http://files.sph.mn/u/software/sourcecode/sph-db/source)
   * [sph-sp](http://files.sph.mn/u/software/sourcecode/sph-sp/source)
+  * [sph-db](http://files.sph.mn/u/software/sourcecode/sph-db/source)
 
 # syntax reference
 sc expression and the c result. taken from the automated tests
@@ -753,9 +754,16 @@ while(!(0==(a=b(c)))){1;}
 ```
 
 # possible enhancements and ideas
-* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used
+* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
 * allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
-* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be really useful to have a good scheme-style macro system for generating c. for example c doesnt have much support for ellipsis which makes some abstractions impossible
-* "scx": an extension with a module system. for example, automatically create separate c and header files
+* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example c doesnt have much support for nested ellipsis and cant generate multiple expressions from variable arguments
 * more syntax checks
 * format "set" and "pre-define" better. it can happen that sc-format makes keys stand right
+* rewrite sph-sc in c or sc to reduce dependencies
+* "scx": c extensions, for example a module system, symbols, keyword arguments or anonymous functions
+  * module system: exports-form that compiles to nothing; import form that uses export-form and converts unexported identifiers to internal names; option to add prefix to imported bindings; declarations made by macros should be handled (probably the most work)
+* indent-syntax (like coffeescript) could be used with a good indent-syntax to s-expression compiler
+
+# similar projects
+* [lispc](https://github.com/eratosthenesia/lispc)
+* [sxc](https://github.com/BusFactor1Inc/sxc)

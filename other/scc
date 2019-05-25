@@ -3,7 +3,7 @@
 
 (import (sph) (sph cli)
   (only (sph filesystem) ensure-directory-structure) (only (sph string) string-drop-suffix-if-exists)
-  (sph alist) (only (sph process) execute))
+  (sph alist) (sph process))
 
 (define scc-cli
   (let*
@@ -19,6 +19,6 @@
         (execute "clang-format" "-i"
           "-style={BasedOnStyle: Mozilla, SortIncludes: false, AlignEscapedNewlines: DontAlign, AlignOperands: false, AlignAfterOpenBracket: DontAlign, BreakBeforeBraces: Attach, AlwaysBreakAfterReturnType: None, AlwaysBreakAfterDefinitionReturnType: None, PenaltyReturnTypeOnItsOwnLine: 0, AllowShortFunctionsOnASingleLine: true, AllowShortIfStatementsOnASingleLine: true, AllowShortLoopsOnASingleLine: true, ContinuationIndentWidth: 2, ColumnLimit: 0}"
           temp)
-        (apply execute "gcc" (append (alist-ref-q options gcc-option null) (list temp)))))))
+        (apply process-replace-p "gcc" (append (alist-ref-q options gcc-option null) (list temp)))))))
 
 (scc-cli)
