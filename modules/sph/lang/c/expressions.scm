@@ -40,13 +40,7 @@
     cp-stringify
     cp-undef
     parenthesise-ambiguous)
-  (import
-    (guile)
-    (ice-9 regex)
-    (sph)
-    (sph alist)
-    (sph list)
-    (sph string))
+  (import (guile) (ice-9 regex) (sph) (sph alist) (sph list) (sph string))
 
   (define sph-lang-c-expressions-description "generating c expressions as strings")
   (define ambiguous-regexp (make-regexp "^(\\*|&)+|\\.|->|\\[|\\("))
@@ -183,7 +177,7 @@
     (string-append (parenthesise-ambiguous a) (string-join fields "->" (q prefix))))
 
   (define (c-pointer-get a) (string-append "*" (parenthesise-ambiguous a)))
-  (define (c-set name value) (string-append name "=" value))
+  (define* (c-set name value #:optional (operator "=")) (string-append name operator value))
   (define (c-pointer type) (string-append type " * "))
   (define (c-address-of a) (string-append "&" (parenthesise-ambiguous a)))
   (define (c-not a) (string-append "!" a))

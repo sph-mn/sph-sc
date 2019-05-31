@@ -12,6 +12,7 @@
     (sph alist)
     (sph lang sc expressions)
     (sph list)
+    (only (guile) modulo)
     (only (sph tree) tree-every))
 
   (define sph-lang-sc-check-description "syntax checks, examples and error handling")
@@ -45,8 +46,8 @@
       (= variable (3 (return #t)) (5 (return #t)) (else (return #f))))
     declare ((name type) (name type name type name/type ...))
     define
-    ( (name type value) ((name parameters ...) (return-type ...) body ...)
-      ((name parameters ...) return-type body ...))
+    ( (name type value) (name type value name type value ...)
+      ((name parameters ...) (return-type ...) body ...) ((name parameters ...) return-type body ...))
     for
     ( ( (init test update) body ...) (((init ...) test (update ...)) body ...)
       (((begin init ...) test (begin update ...)) body ...))
@@ -56,7 +57,7 @@
     if ((condition consequent) (condition consequent alternate))
     set ((variable value) (variable value variable value variable/value ...)))
 
-  (define (sc-syntax-check-prefix-list prefix a load-paths) "list list -> boolean"
+  (define (sc-syntax-check-prefix-list prefix a state) "symbol list sc-state -> boolean"
     (case prefix
       ; only arity checks
       ( (+ -* /
@@ -81,8 +82,8 @@
           ( ( ( (? not-preprocessor-keyword? name) parameter ...)
               ((? not-function-pointer-symbol? return-type) parameter-types ...) body ...)
             (equal? (length parameter) (length parameter-types)))
-          ((((? not-preprocessor-keyword? name)) return-type body ...) #t) ((name type value) #t)
-          (_ #f)))
+          ((((? not-preprocessor-keyword? name)) return-type body ...) #t)
+          ((name type value rest ...) (zero? (modulo (length rest) 3))) (_ #f)))
       ((for) (match a (((init test update) body ...) #t) (_ #f)))
       ( (if if* pre-if pre-if-defined pre-if-not-defined)
         (match a ((test consequent) #t) ((test consequent alternate) #t) (_ #f)))
@@ -95,11 +96,10 @@
         (match a (((? symbol?) (name type ...) ...) #t) (((name type ...) ...) #t) (_ #f)))
       (else #t)))
 
-  (define (sc-syntax-check a load-paths) "list:expressions (string ...) -> boolean | exception"
+  (define (sc-syntax-check a state) "list:expressions (string ...) -> boolean | exception"
     (tree-every
       (l (a)
         (if (and (list? a) (not (null? a)))
-          (or (sc-syntax-check-prefix-list (first a) (tail a) load-paths)
-            (sc-syntax-error a (first a)))
+          (or (sc-syntax-check-prefix-list (first a) (tail a) state) (sc-syntax-error a (first a)))
           #t))
       a)))

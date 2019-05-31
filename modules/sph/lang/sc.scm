@@ -15,13 +15,7 @@
     (sph lang sc expressions)
     (sph list)
     (sph string)
-    (only (guile)
-      string-contains
-      string-join
-      string-split
-      string-trim
-      getenv
-      compose)
+    (only (guile) string-contains string-join string-split string-trim getenv compose)
     (only (sph filesystem) ensure-trailing-slash)
     (only (sph tree) tree-transform))
 
@@ -34,7 +28,7 @@
   (define (sc-default-load-paths)
     (map ensure-trailing-slash (let (a (getenv "SC_LOAD_PATH")) (if a (string-split a #\:) null))))
 
-  (define (descend-expr->sc prefix a compile load-paths)
+  (define (descend-expr->sc prefix a compile state)
     "list procedure list -> list
      handles expressions that are processed when descending the tree. the result is parsed again"
     (case prefix
@@ -43,12 +37,12 @@
           (pair (q begin)
             (map-slice 2 (l (index value) (list (q set) (list (q array-get) array index) value))
               (tail a)))))
-      ((case case*) (sc-case (eq? (q case*) prefix) a compile (l (a) (sc->sc a null))))
+      ((case case*) (sc-case (eq? (q case*) prefix) a compile (l (a) (sc->sc a state))))
       ((cond*) (sc-cond* a compile))
       ((pre-define-if-not-defined) (sc-pre-define-if-not-defined a compile))
       ((pre-define) (sc-pre-define-multiple a compile))
-      ((sc-include) (sc-include-sc load-paths a (l (a) (sc->sc a load-paths))))
-      ((sc-include-once) (sc-include-sc-once load-paths a (l (a) (sc->sc a load-paths))))
+      ((sc-include) (sc-include-sc state a (l (a) (sc->sc a state))))
+      ((sc-include-once) (sc-include-sc-once state a (l (a) (sc->sc a state))))
       ((set) (sc-set-multiple a compile))
       ( (struct-set)
         (let (struct (first a))
@@ -57,7 +51,7 @@
               (tail a)))))
       (else #f)))
 
-  (define (descend-expr->c prefix a compile)
+  (define (descend-expr->c prefix a compile state)
     "list procedure -> string
      handles expressions that are processed when descending the tree. the result is not parsed again.
      this is for expressions that create syntax that can not be created with other sc syntax"
@@ -101,7 +95,7 @@
       ((let*) (sc-let* a compile))
       ((not) (c-not (compile (first a))))
       ((pointer-get) (apply c-pointer-get (map compile a)))
-      ((pre-define) (sc-pre-define a compile))
+      ((pre-define) (sc-pre-define state a compile))
       ((pre-pragma) (string-append "#pragma " (string-join (map sc-identifier a) " ") "\n"))
       ((pre-undefine) (string-join (map (compose cp-undef sc-identifier) a) "\n" (q suffix)))
       ((pre-let*) (sc-pre-let* a compile))
@@ -115,32 +109,40 @@
       ((pre-if-not-defined) (sc-pre-if (q ifndef) a compile))
       ((pre-stringify) (cp-stringify (compile (first a))))
       ((pre-string-concat) (string-join (map compile a) " "))
-      ((return) (if (null? a) "return" (sc-apply "return" (map compile a))))
+      ((return) (if (null? a) "return" (sc-apply state (q return) a compile)))
       ((sc-insert) (first a))
       ((sc-comment) (string-append "/* " (string-join a "\n") " */\n"))
+      ((sc-no-semicolon) (sc-no-semicolon a compile))
       ((set) (sc-set a compile))
+      ((set+) (sc-set a compile "+="))
+      ((set-) (sc-set a compile "-="))
+      ((set*) (sc-set a compile "*="))
+      ((set/) (sc-set a compile "/="))
       ((struct union) (sc-struct-or-union prefix a compile))
       ((struct-get) (apply c-struct-get (map compile a)))
       ((struct-literal) (sc-struct-literal a compile))
       ((: struct-pointer-get) (apply c-struct-pointer-get (map compile a)))
       ((while) (sc-while a compile))
-      (else (sc-apply (compile prefix) (map compile a)))))
+      (else (sc-apply state prefix a compile))))
 
-  (define (sc->sc a load-paths) "expand only sc->sc expressions"
+  (define (sc->sc a state) "expand only sc->sc expressions"
     (tree-transform a
       (l (a compile)
-        (let* ((prefix (first a)) (a (tail a)) (b (descend-expr->sc prefix a compile load-paths)))
+        (let* ((prefix (first a)) (a (tail a)) (b (descend-expr->sc prefix a compile state)))
           (if b (list b #f) (list #f #t))))
       identity identity))
 
-  (define* (sc->c a #:optional (load-paths (sc-default-load-paths)))
-    "expression [(string ...)] -> string"
-    (and (sc-syntax-check (list a) load-paths)
-      (string-trim
-        (regexp-replace
-          (tree-transform (sc->sc a load-paths)
-            (l (a compile)
-              (let* ((prefix (first a)) (a (tail a)) (b (descend-expr->c prefix a compile)))
-                (if b (list b #f) (list #f #t))))
-            identity sc-value)
-          "\n\n+" "\n")))))
+  (define* (sc->c a #:optional load-paths state)
+    "expression [(string ...) sc-state] -> string
+     load-paths is only used if state is not given or false"
+    (let (state (or state (sc-state-new (or load-paths (sc-default-load-paths)))))
+      (and (sc-syntax-check (list a) state)
+        (string-trim
+          (regexp-replace
+            (tree-transform (sc->sc a state)
+              (l (a compile)
+                (let*
+                  ((prefix (first a)) (a (tail a)) (b (descend-expr->c prefix a compile state)))
+                  (if b (list b #f) (list #f #t))))
+              identity sc-value)
+            "\n\n+" "\n"))))))

@@ -31,6 +31,7 @@
     sc-join-expressions
     sc-let*
     sc-macro-function
+    sc-no-semicolon
     sc-numeric-boolean
     sc-path->full-path
     sc-pre-cond
@@ -44,6 +45,9 @@
     sc-pre-let*
     sc-set
     sc-set-multiple
+    sc-state-load-paths
+    sc-state-new
+    sc-state-no-semicolon
     sc-struct-literal
     sc-struct-or-union
     sc-struct-or-union-body
@@ -75,7 +79,12 @@
       string-split
       string-suffix?
       string-trim-right)
-    (only (sph tree) tree-contains?))
+    (only (sph tree) tree-contains?)
+    (only (sph vector) vector-accessor))
+
+  (define sc-state-load-paths (vector-accessor 1))
+  (define sc-state-no-semicolon (vector-accessor 2))
+  (define (sc-state-new load-paths) (vector (q sc-state) load-paths (ht-create-symbol)))
 
   (define sph-lang-sc-expressions-description
     "bindings for creating c strings from sc specific expressions.
@@ -84,6 +93,30 @@
          example: (+ 1 2 3) -> (1+2+3)
        when received expressions can have undesired meaning, add parentheses
          (struct-set **a b 1) -> (**a).b=1")
+
+  (define (sc-no-semicolon-register state name)
+    "symbol -> unspecified
+     add no semicolon after name when used"
+    (ht-set! (sc-state-no-semicolon state) name #t))
+
+  (define (sc-no-semicolon-unregister state name) (ht-delete! (sc-state-no-semicolon state) name))
+  (define (sc-no-semicolon-registered? state name) (ht-ref (sc-state-no-semicolon state) name))
+
+  (define (sc-no-semicolon expressions compile)
+    "(sc ...) -> c
+     add no semicolon after any expression. for macros that expand to function definitions whose body must not
+     end with a semicolon according to iso c11"
+    (string-join (map compile expressions) "\n" (q suffix)))
+
+  (define (sc-no-semicolon-track state macro-name a)
+    "iso c11 does not allow semicolons at the end of function bodies like {};
+     because sc can not know from macro application syntax if it expands to a function definition,
+     it needs to track all macro definitions to decide if a semicolon needs to be added.
+     this does not work when using macro definitions from preprocessor included c code -
+     in this case only sc-no-semicolon expressions, sc-insert or a compiler option (enabled by default in gcc) can solve this"
+    (match a (((quote begin) initial ... last) (sc-no-semicolon-track state macro-name last))
+      (((quote define) (name parameters ...) body ...) (sc-no-semicolon-register state macro-name))
+      (else a)))
 
   (define-syntax-rule (add-begin-if-multiple a) (if (= 1 (length a)) (first a) (pair (q begin) a)))
   (define (contains-set? a) "list -> boolean" (and (list? a) (tree-contains? a (q set))))
@@ -222,34 +255,28 @@
             (_ (if (contains-set? b) (sc-semicolon-list-to-comma-list (compile b)) (compile b)))))
         a)))
 
-  (define (sc-apply name a)
-    (c-apply (sc-identifier name)
-      (string-join (map (compose parenthesise-ambiguous sc-identifier) a) ",")))
+  (define (sc-apply state name a compile)
+    (string-append
+      (c-apply (compile name) (string-join (map (compose parenthesise-ambiguous compile) a) ","))
+      (if (sc-no-semicolon-registered? state name) "\n" "")))
 
   (define* (sc-join-expressions a #:optional (expression-separator ""))
-    "main procedure for the concatenation of toplevel expressions. adds semicolons"
-    (string-join
-      (reverse
-        (fold
-          (l (b prev)
-            (pair
-              (cond
-                ( (string-prefix? "#" b)
-                  ; preprocessor directives need to be on a separate line
-                  (if (and (not (null? prev)) (string-suffix? "\n" (first prev)))
-                    (string-append b "\n") (string-append "\n" b "\n")))
-                ( (string-prefix? "/*" b)
-                  (if (and (not (null? prev)) (string-suffix? "\n" (first prev))) b
-                    (string-append "\n" b)))
-                ((string-suffix? "\n" b) b)
-                (else
-                  (cond
-                    ((string-suffix? ";" b) b)
-                    ((string-suffix? ":" b) (string-append b "\n"))
-                    (else (string-append b ";")))))
-              prev))
-          (list) (remove string-null? a)))
-      expression-separator))
+    "main procedure for the concatenation of toplevel expressions"
+    (define (fold-f b prev)
+      (pair
+        (cond
+          ( (string-prefix? "#" b)
+            ; preprocessor directives need to be on a separate line
+            (if (and (not (null? prev)) (string-suffix? "\n" (first prev))) (string-append b "\n")
+              (string-append "\n" b "\n")))
+          ( (string-prefix? "/*" b)
+            (if (and (not (null? prev)) (string-suffix? "\n" (first prev))) b
+              (string-append "\n" b)))
+          ((or (string-suffix? "\n" b) (string-suffix? ";" b)) b)
+          ((string-suffix? ":" b) (string-append b "\n"))
+          (else (string-append b ";")))
+        prev))
+    (apply string-append (reverse (fold fold-f null (remove string-null? a)))))
 
   (define* (sc-define-type compile name value) "any any -> string"
     (let (name (compile name))
@@ -317,7 +344,9 @@
                     (string-append name parameters) (tail return-type))
                   body-string)
                 (string-append (sc-compile-type return-type compile) " "
-                  name parameters body-string))))))))
+                  name parameters body-string))
+              ; only declarations get a semicolon at the end
+              (if (string-null? body-string) "" "\n")))))))
 
   (define (sc-macro-function name parameter body compile)
     (get-body-and-docstring& body compile
@@ -325,7 +354,9 @@
       (l (docstring body-string)
         (string-append (or docstring "")
           (string-replace-string
-            (cp-define (sc-identifier name) body-string (sc-identifier-list parameter)) "\n" "\\\n")
+            (string-trim-right
+              (cp-define (sc-identifier name) body-string (sc-identifier-list parameter)) #\newline)
+            "\n" "\\\n")
           (if docstring "\n" "")))))
 
   (define (sc-function-parameter compile name type)
@@ -375,11 +406,15 @@
         (pair (q begin) (map-slice 2 (l a (pair (q pre-define) a)) (map compile a))))
       (_ #f)))
 
-  (define (sc-pre-define a compile) "-> string"
+  (define (sc-pre-define state a compile) "-> string"
     (match a ((name) (cp-define (sc-identifier name)))
       ( (name value)
-        (match name ((name parameter ...) (sc-macro-function name parameter (list value) compile))
-          (_ (cp-define (sc-identifier name) (string-replace-string (compile value) "\n" "\\\n")))))
+        (match name
+          ( (name parameter ...) (sc-no-semicolon-track state name value)
+            (sc-macro-function name parameter (list value) compile))
+          (_ (sc-no-semicolon-track state name value)
+            (cp-define (sc-identifier name)
+              (string-replace-string (string-trim-right (compile value) #\newline) "\n" "\\\n")))))
       (_ #f)))
 
   (define (sc-pre-include paths)
@@ -445,21 +480,22 @@
           (list (q file-not-accessible)
             (string-append (any->string path) " not found in " (any->string load-paths)))))))
 
-  (define (sc-include-sc-once load-paths paths compile->sc)
-    "(string ...) (symbol/string ...) -> list"
+  (define (sc-include-sc-once state paths compile->sc) "(string ...) (symbol/string ...) -> list"
     (compile->sc
       (pair (q begin)
         (map
           (l (path)
-            (let (path (sc-path->full-path load-paths path))
+            (let (path (sc-path->full-path (sc-state-load-paths state) path))
               (if (ht-ref sc-included-paths path) (q (begin))
                 (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
           paths))))
 
-  (define (sc-include-sc load-paths paths compile->sc) "(string ...) (string ...) -> list"
+  (define (sc-include-sc state paths compile->sc) "(string ...) (string ...) -> list"
     (compile->sc
       (pair (q begin)
-        (append-map (l (a) (let (a (sc-path->full-path load-paths a)) (file->datums a read))) paths))))
+        (append-map
+          (l (a) (let (a (sc-path->full-path (sc-state-load-paths state) a)) (file->datums a read)))
+          paths))))
 
   (define (sc-define-array a compile)
     (match a
@@ -478,7 +514,13 @@
         (sc-function compile name return-type body parameter types))
       ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
         (sc-function compile name return-type body null null))
-      ((name type value) (c-define (compile name) (sc-compile-type type compile) (compile value)))
+      ( (name type value rest ...)
+        (string-join
+          (map-slice 3
+            (l (name type value)
+              (c-define (compile name) (sc-compile-type type compile) (compile value)))
+            a)
+          ";"))
       (_ #f)))
 
   (define (sc-struct-or-union keyword a compile) "symbol/false ? procedure -> string"
@@ -493,7 +535,7 @@
       (c-variable (compile name) (sc-compile-type type compile))))
 
   (define (sc-struct-literal a compile)
-    (string-append (c-compound (map (l (a) (if (list? a) (map compile a) (compile a))) a))))
+    (c-compound (map (l (a) (if (list? a) (map compile a) (compile a))) a)))
 
   (define (sc-declare a compile)
     (sc-join-expressions
@@ -510,7 +552,8 @@
             (_ (or (sc-define (list id type) compile) (sc-declare-variable id type compile)))))
         a)))
 
-  (define (sc-set a compile) (match a ((name value) (c-set (compile name) (compile value))) (_ #f)))
+  (define* (sc-set a compile #:optional (operator "="))
+    (match a ((name value) (c-set (compile name) (compile value) operator)) (_ #f)))
 
   (define (sc-set-multiple a compile)
     "-> list:sc
@@ -534,14 +577,10 @@
   (define* (sc-pre-cond-if if-type add-endif test consequent #:optional alternate)
     (string-replace-string
       (string-append "#"
-        (case if-type
-          ((elif) "elif")
-          ((if) "if")
-          ((ifdef) "ifdef")
-          ((ifndef) "ifndef"))
-        " " test
-        "\n" consequent
-        "\n" (if alternate (string-append "#else\n" alternate "\n") "") (if add-endif "#endif" ""))
+        (case if-type ((elif) "elif") ((if) "if") ((ifdef) "ifdef") ((ifndef) "ifndef")) " "
+        test "\n"
+        consequent "\n"
+        (if alternate (string-append "#else\n" alternate "\n") "") (if add-endif "#endif" ""))
       "\n\n" "\n"))
 
   (define (sc-pre-cond if-type a compile)

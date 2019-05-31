@@ -7,6 +7,22 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (begin (sc-no-semicolon (a 1)) (set b 2))
+      "a(1)\nb=2;"
+      (begin (sc-no-semicolon (a 1) (set b 2)))
+      "a(1)\nb=2\n"
+      (begin (pre-define a (begin (define (a) void 1))) (declare b int))
+      "#define a void a(){1;}\nint b;"
+      (begin (pre-define (a b) (define (c) void 1)) (a "xyz"))
+      "#define a(b) void c(){1;}\na(\"xyz\")\n"
+      (set+ a 1)
+      "a+=1"
+      (set- a 1)
+      "a-=1"
+      (set* a 1)
+      "a*=1"
+      (set/ a 1)
+      "a/=1"
       (declare a (type (struct (b (array int 3)))))
       "typedef struct{int b[3];} a;"
       (pre-define-if-not-defined abc 3 def 4)
@@ -155,25 +171,25 @@
         (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
       "int(*(*(*a)(long long int))(double))(float);"
       (define (a) (function-pointer uint32_t uint64_t) #t)
-      "uint32_t(*a())(uint64_t){1;}"
+      "uint32_t(*a())(uint64_t){1;}\n"
       (define (a b) ((function-pointer uint32-t uint64_t) (function-pointer uint32-t uint64_t)) #t)
-      "uint32_t(*a(uint32_t(*b)(uint64_t)))(uint64_t){1;}"
+      "uint32_t(*a(uint32_t(*b)(uint64_t)))(uint64_t){1;}\n"
       (define (a b) ((function-pointer (function-pointer uint32_t b-16) uint8_t) b-64))
       "uint32_t(*(*a(b_64 b))(uint8_t))(b_16)"
       (define (pre-concat a b) uint32_t 1)
       "uint32_t a##b=1"
       (define (abc) uint32_t (return 0))
-      "uint32_t abc(){return(0);}"
+      "uint32_t abc(){return(0);}\n"
       (define (abc d e) (uint32_t uint64_t b16) (return 0))
-      "uint32_t abc(uint64_t d,b16 e){return(0);}"
+      "uint32_t abc(uint64_t d,b16 e){return(0);}\n"
       (define (abc d e) (uint32_t (pre-concat b 64) b16) (return 0))
-      "uint32_t abc(b##64 d,b16 e){return(0);}"
+      "uint32_t abc(b##64 d,b16 e){return(0);}\n"
       (define (a) void "test-docstring")
       "/** test-docstring */\nvoid a()"
       (define (a b) (c d) "e")
       "/** e */\nc a(d b)"
       (define (a b c) (void void void) "test-docstring" (+ b c))
-      "/** test-docstring */\nvoid a(void b,void c){(b+c);}"
+      "/** test-docstring */\nvoid a(void b,void c){(b+c);}\n"
       (do-while #t 1 2 3)
       "do{1;2;3;}while(1)"
       (enum (a b c d e))

@@ -16,9 +16,13 @@
         ( (options (cli)) (input (alist-ref-q options input))
           (temp (string-append dir "/" (string-drop-suffix-if-exists ".sc" input) ".c")))
         (ensure-directory-structure dir) (execute "sc" input temp)
+        ; clang-format is too stupid to add spaces between functions, it's not possible.
         (execute "clang-format" "-i"
           "-style={BasedOnStyle: Mozilla, SortIncludes: false, AlignEscapedNewlines: DontAlign, AlignOperands: false, AlignAfterOpenBracket: DontAlign, BreakBeforeBraces: Attach, AlwaysBreakAfterReturnType: None, AlwaysBreakAfterDefinitionReturnType: None, PenaltyReturnTypeOnItsOwnLine: 0, AllowShortFunctionsOnASingleLine: true, AllowShortIfStatementsOnASingleLine: true, AllowShortLoopsOnASingleLine: true, ContinuationIndentWidth: 2, ColumnLimit: 0}"
           temp)
+        ; clang-format is too stupid to treat code as only c code. it adds a space after "new"
+        ; and breaks macro definitions with that because it always formats for cpp.
+        (execute "sed" "-i" "s/#define new (/#define new(/g" temp)
         (apply process-replace-p "gcc" (append (alist-ref-q options gcc-option null) (list temp)))))))
 
 (scc-cli)
