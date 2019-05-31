@@ -184,8 +184,11 @@
         (l (name value)
           (let (identifier (match name (((? not-preprocessor-keyword? name) _ ...) name) (_ name)))
             (qq
-              (pre-if-not-defined (unquote identifier) (pre-define (unquote name) (unquote value))))))
-        a)))
+              (pre-if-not-defined (unquote identifier)
+                (unquote
+                  (if value (qq (pre-define (unquote name) (unquote value)))
+                    (qq (pre-define (unquote name)))))))))
+        (if (= 1 (length a)) (list (first a) #f) a))))
 
   (define (sc-do-while a compile)
     (match a
