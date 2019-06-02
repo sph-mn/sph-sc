@@ -44,6 +44,7 @@
       ((sc-include) (sc-include-sc state a (l (a) (sc->sc a state))))
       ((sc-include-once) (sc-include-sc-once state a (l (a) (sc->sc a state))))
       ((set) (sc-set-multiple a compile))
+      ((set+ set- set* set/) (sc-set-multiple a compile prefix))
       ( (struct-set)
         (let (struct (first a))
           (pair (q begin)
@@ -134,7 +135,7 @@
 
   (define* (sc->c a #:optional load-paths state)
     "expression [(string ...) sc-state] -> string
-    load-paths is only used if state is not given or false"
+     load-paths is only used if state is not given or false"
     (let (state (or state (sc-state-new (or load-paths (sc-default-load-paths)))))
       (and (sc-syntax-check (list a) state)
         (string-trim

@@ -558,12 +558,11 @@
   (define* (sc-set a compile #:optional (operator "="))
     (match a ((name value) (c-set (compile name) (compile value) operator)) (_ #f)))
 
-  (define (sc-set-multiple a compile)
+  (define* (sc-set-multiple a compile #:optional (set (q set)))
     "-> list:sc
      the -multiple version gives the expression joiner a chance to choose the right delimiter in context"
     (match a
-      ( (name-1 value-1 name-2 value-2 rest ...)
-        (pair (q begin) (map-slice 2 (l a (pair (q set) a)) a)))
+      ((name-1 value-1 name-2 value-2 rest ...) (pair (q begin) (map-slice 2 (l a (pair set a)) a)))
       (_ #f)))
 
   (define (sc-cond* a compile)
