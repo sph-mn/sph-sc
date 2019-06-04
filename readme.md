@@ -748,21 +748,56 @@ while(1){1;2;3;}
 ->
 while(!(0==(a=b(c)))){1;}
 
-(sc-comment "abc")
+(sc-comment "abc" "def" "ghi")
 ->
-/* abc */
+/* abc
+def
+ghi */
+
+(begin (sc-no-semicolon (a 1)) (set b 2))
+->
+a(1)
+b=2;
+
+(set+ a 1)
+->
+a+=1
+
+(set- a 1)
+->
+a-=1
+
+(set* a 1)
+->
+a*=1
+
+(set/ a 1)
+->
+a/=1
+
+(pre-define-if-not-defined abc 3 def 4)
+->
+#ifndef abc
+#define abc 3
+#endif
+#ifndef def
+#define def 4
+#endif
+
+(for ((set a 1 b 2) #t (set c 3 d 4)) #t)
+->
+for(a=1,b=2;1;c=3,d=4){1;}
 ```
 
 # possible enhancements and ideas
-* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
-* allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
-* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example c doesnt have much support for nested ellipsis and cant generate multiple expressions from variable arguments
-* more syntax checks
-* format "set" and "pre-define" better. it can happen that sc-format makes keys stand right
 * rewrite sph-sc in c or sc to reduce dependencies
 * "scx": c extensions, for example a module system, symbols, keyword arguments or anonymous functions
   * module system: exports-form that compiles to nothing; import form that uses export-form and converts unexported identifiers to internal names; option to add prefix to imported bindings; declarations made by macros should be handled (probably the most work)
+* allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
 * indent-syntax (like coffeescript) could be used with a good indent-syntax to s-expression compiler
+* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
+* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example c doesnt have support for nested ellipsis and cant generate multiple expressions from variable arguments
+* more syntax checks
 
 # similar projects
 * [lispc](https://github.com/eratosthenesia/lispc) - lisp(ish) to c converter (designed for clisp)

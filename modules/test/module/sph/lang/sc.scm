@@ -7,38 +7,6 @@
 
   (test-execute-procedures-lambda
     (sc->c
-      (begin (sc-no-semicolon (a 1)) (set b 2))
-      "a(1)\nb=2;"
-      (begin (sc-no-semicolon (a 1) (set b 2)))
-      "a(1)\nb=2\n"
-      (begin (pre-define a (begin (define (a) void 1))) (declare b int))
-      "#define a void a(){1;}\nint b;"
-      (begin (pre-define (a b) (define (c) void 1)) (a "xyz"))
-      "#define a(b) void c(){1;}\na(\"xyz\")\n"
-      (set+ a 1)
-      "a+=1"
-      (set- a 1)
-      "a-=1"
-      (set* a 1)
-      "a*=1"
-      (set/ a 1)
-      "a/=1"
-      (declare a (type (struct (b (array int 3)))))
-      "typedef struct{int b[3];} a;"
-      (pre-define-if-not-defined abc 3 def 4)
-      "#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
-      (pre-define (a) (begin 1 (sc-comment "b") 2 3))
-      "#define a() 1;\\\n/* b */\\\n2;3"
-      (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-      "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
-      ; bundled expressions comma delimited in context
-      (for ( (set a 1 b 2) #t (set c 3 d 4)) #t)
-      "for(a=1,b=2;1;c=3,d=4){1;}"
-      ; bug with missing newline after pre-define
-      (begin
-        (pre-define (a) (begin "test" b) c d)
-        (declare e f))
-      "/** test */\n#define a() b\n#define c d\nf e;"
       (begin a--b)
       "a__b;"
       (begin *a.b)
@@ -340,4 +308,36 @@
       "/* abc\ndef\nghi */\n"
       (!= 1 2 3)
       "(1!=2)&&(2!=3)"
+      (begin (sc-no-semicolon (a 1)) (set b 2))
+      "a(1)\nb=2;"
+      (begin (sc-no-semicolon (a 1) (set b 2)))
+      "a(1)\nb=2\n"
+      (begin (pre-define a (begin (define (a) void 1))) (declare b int))
+      "#define a void a(){1;}\nint b;"
+      (begin (pre-define (a b) (define (c) void 1)) (a "xyz"))
+      "#define a(b) void c(){1;}\na(\"xyz\")\n"
+      (set+ a 1)
+      "a+=1"
+      (set- a 1)
+      "a-=1"
+      (set* a 1)
+      "a*=1"
+      (set/ a 1)
+      "a/=1"
+      (declare a (type (struct (b (array int 3)))))
+      "typedef struct{int b[3];} a;"
+      (pre-define-if-not-defined abc 3 def 4)
+      "#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
+      (pre-define (a) (begin 1 (sc-comment "b") 2 3))
+      "#define a() 1;\\\n/* b */\\\n2;3"
+      (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
+      "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
+      ; bundled expressions comma delimited in context
+      (for ( (set a 1 b 2) #t (set c 3 d 4)) #t)
+      "for(a=1,b=2;1;c=3,d=4){1;}"
+      ; bug with missing newline after pre-define
+      (begin
+        (pre-define (a) (begin "test" b) c d)
+        (declare e f))
+      "/** test */\n#define a() b\n#define c d\nf e;"
       )))
