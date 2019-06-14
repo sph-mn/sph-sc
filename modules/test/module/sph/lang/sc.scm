@@ -133,6 +133,8 @@
       "uint32_t h##i;"
       (define a uint32_t 1)
       "uint32_t a=1"
+      (define a uint32_t 1 b uint64_t 2)
+      "uint32_t a=1;uint64_t b=2"
       (declare a (function-pointer (function-pointer (unsigned int) float) double))
       "unsigned int(*(*a)(double))(float);"
       (declare a
@@ -316,8 +318,8 @@
       "#define a void a(){1;}\nint b;"
       (begin (pre-define (a b) (define (c) void 1)) (a "xyz"))
       "#define a(b) void c(){1;}\na(\"xyz\")\n"
-      (set+ a 1)
-      "a+=1"
+      (set+ a 1 b 2)
+      "a+=1;b+=2;"
       (set- a 1)
       "a-=1"
       (set* a 1)
