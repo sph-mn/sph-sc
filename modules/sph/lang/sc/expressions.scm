@@ -91,7 +91,7 @@
      when to add parentheses
        returned expressions should always be unambiguosly one expression
          example: (+ 1 2 3) -> (1+2+3)
-       when received expressions can have undesired meaning, add parentheses
+       when received expressions could get an unexpected different meaning, add parentheses
          (struct-set **a b 1) -> (**a).b=1")
 
   (define (sc-no-semicolon-register state name)
@@ -128,13 +128,13 @@
     (if (and (list? a) (not (null? a)) (equal? (q begin) (first a))) a (list (q begin) a)))
 
   (define (alist->regexp-match-replacements a)
-    "automatically converts strings at the prefix position to regular expressions"
+    "automatically converts strings as alist keys to regular expressions"
     (map (l (e) (pair (if (string? (first e)) (make-regexp (first e)) (first e)) (tail e))) a))
 
   (define identifier-replacements
     (alist->regexp-match-replacements
       ; (regexp search-string . replacement)
-      ; replaced in order
+      ; replaces inside the matched regexp portions. replacements are made in order.
       ; mostly following the c identifier conversion rules used in guile.
       ; https://www.gnu.org/software/guile/manual/html_node/API-Overview.html#API-Overview
       (alist "->" "_to_"
@@ -510,7 +510,8 @@
 
   (define (sc-define a compile)
     "(argument ...) procedure -> string/false
-     if the first argument is a preprocessor command, it is a variable declaration"
+     if the first argument is a preprocessor command, it is a variable declaration.
+     it is still possible to construct function names with the preprocessor"
     (match a
       ( ( ( (? not-preprocessor-keyword? name) parameter ...)
           ((? not-function-pointer-symbol? return-type) types ...) body ...)
