@@ -10,7 +10,17 @@
 ;   wisp2sc | sc
 
 (import (language wisp) (rnrs io ports)
-  (sph) (only (sph tree) tree-transform) (only (sph lang scheme) port->datums))
+  (sph) (only (sph tree) tree-transform) (only (sph lang scheme) port->datums) (sph list))
+
+(define (convert-key-value a) "((key value ...) ...) -> (key (begin value ...) ...)"
+  (apply append
+    (map-apply
+      (l (key . value)
+        (if (= 1 (length value)) (pair key value) (list key (pairs (q begin) value))))
+      a)))
+
+(define (key-value? a one-to-many)
+  (every (l (a) (and (list? a) ((if one-to-many <= =) 2 (length a)))) a))
 
 (define (wisp->sc a)
   (tree-transform a
@@ -18,8 +28,11 @@
       (let*
         ( (prefix (first a)) (b (tail a))
           (mapped
-            (case prefix ((array-set) (pairs prefix (first b) (apply append (tail b))))
-              ((declare pre-define set set+ set- set* set/) (pair prefix (apply append b)))
+            (case prefix
+              ((array-set) (pairs prefix (first b) (apply append (tail b))))
+              ((pre-define) (and (key-value? b #t) (pair prefix (convert-key-value b))))
+              ( (declare set set+ set- set* set/)
+                (and (key-value? b #f) (pair prefix (apply append b))))
               ( (define)
                 (and (every (l (a) (and (list? a) (= 3 (length a)))) b)
                   (pair prefix (apply append b))))
