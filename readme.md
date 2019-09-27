@@ -188,6 +188,23 @@ this repository includes under other/
   * [sph-sp](http://files.sph.mn/u/software/sourcecode/sph-sp/source)
   * [sph-db](http://files.sph.mn/u/software/sourcecode/sph-db/source)
 
+# notes
+## macro usage and semicolons
+in strict c11 mode, semicolons after blocks with braces are forbidden. when macros are used, sc does not know if the macro will expand to something that ends with a block, for example a function definition.
+compilers usually arent strict by default and dont even warn about this, but if you want to follow the standard strictly and have such a case, sc-no-semicolon can be used to prevent insertion of a semicolon.
+for example: `(begin (sc-no-semicolon (mymacro 1)) (set b 2))` will lead to `mymacro(1)` instead of `mymacro(1);`
+
+## slightly different switch-case form
+"case" in sc compiles to if/else-if and lets the user specify the equality predicate.
+see the section "syntax reference" below for an example.
+the syntax is:
+~~~
+(case predicate value-to-compare case-clause ...)
+case-clause: ((value ...) consequent ...) / (value consequent ...)
+~~~
+
+this way it is possible to match values with =, but alternatively other predicates like custom comparison functions.
+
 # syntax reference
 sc expression and the c result. taken from the automated tests
 ```
