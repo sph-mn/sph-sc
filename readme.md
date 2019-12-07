@@ -205,6 +205,16 @@ case-clause: ((value ...) consequent ...) / (value consequent ...)
 
 this way it is possible to match values with =, but alternatively other predicates like custom comparison functions.
 
+# possible enhancements and ideas
+* rewrite sph-sc in c or sc to reduce dependencies
+* "scx": c extensions, for example a module system, symbols, keyword arguments or anonymous functions
+  * module system: exports-form that compiles to nothing; import form that uses export-form and converts unexported identifiers to internal names; option to add prefix to imported bindings; declarations made by macros should be handled (probably the most work)
+* allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
+* indent-syntax (like coffeescript) could be used with a good indent-syntax to s-expression compiler
+* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
+* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example, c doesnt have support for nested ellipsis and cant generate multiple expressions for variable arguments
+* more syntax checks
+
 # syntax reference
 sc expression and the c result. taken from the automated tests
 ```
@@ -805,16 +815,6 @@ a/=1
 ->
 for(a=1,b=2;1;c=3,d=4){1;}
 ```
-
-# possible enhancements and ideas
-* rewrite sph-sc in c or sc to reduce dependencies
-* "scx": c extensions, for example a module system, symbols, keyword arguments or anonymous functions
-  * module system: exports-form that compiles to nothing; import form that uses export-form and converts unexported identifiers to internal names; option to add prefix to imported bindings; declarations made by macros should be handled (probably the most work)
-* allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
-* indent-syntax (like coffeescript) could be used with a good indent-syntax to s-expression compiler
-* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
-* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example, c doesnt have support for nested ellipsis and cant generate multiple expressions for variable arguments
-* more syntax checks
 
 # similar projects
 * [lispc](https://github.com/eratosthenesia/lispc) - lisp(ish) to c converter (designed for clisp)
