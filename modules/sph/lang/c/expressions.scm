@@ -199,5 +199,7 @@
       ((string? a) (c-string a))
       ((number? a) (number->string a))
       ((boolean? a) (if a "1" "0"))
-      ((char? a) (string-enclose (any->string a) "'"))
+      ( (char? a)
+        (let (a (any->string-write (string a)))
+          (string-enclose (substring a 1 (- (string-length a) 1)) "'")))
       (else (throw (q cannot-convert-to-c-value) a)))))

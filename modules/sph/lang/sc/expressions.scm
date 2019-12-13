@@ -504,7 +504,9 @@
     (match a
       ( (name type size values ...)
         (let (size (any->list size))
-          (c-define-array (compile name) (compile type)
+          (c-define-array (compile name)
+            (match type (((? preprocessor-keyword? _) _ ...) (compile type))
+              (else (sc-identifier type)))
             (if (null? size) (list "") (map compile size))
             (if (null? values) #f (map compile values)))))))
 

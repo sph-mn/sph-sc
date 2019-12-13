@@ -7,6 +7,12 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (declare a (array (struct b) 3))
+      "struct b a[3];"
+      (declare a (array (long unsigned int) 3))
+      "long unsigned int a[3];"
+      (begin #\newline)
+      "'\\n';"
       (begin a--b)
       "a__b;"
       (begin *a.b)
