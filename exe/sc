@@ -1,10 +1,9 @@
-#!/usr/bin/guile
+#!/usr/bin/env guile
 !#
-
-(import (sph) (sph lang indent-syntax)
-  (sph lang scheme) (rnrs exceptions)
-  (sph string) (sph list)
-  (sph filesystem) (sph alist) (sph lang sc) (only (guile) read) (sph stream) (sph cli))
+(use-modules (sph) (sph lang indent-syntax)
+  (sph lang scheme) (sph string)
+  ((rnrs exceptions) #:select (guard)) (sph list)
+  (sph filesystem) (sph alist) (sph lang sc) (sph stream) (sph cli))
 
 (define (process input-port output-port check)
   (guard
@@ -43,15 +42,16 @@
     (if source-paths (each-input-file (l (a) (process a (current-output-port) check)) source-paths)
       (process (current-input-port) (current-output-port) check))))
 
-(define (display-syntax-error a) (display-line "sc syntax error")
-  (display-line
+(define (display-syntax-error a) (display "sc syntax error\n")
+  (display
     (prefix-tree->indent-tree
       (alist-bind (tail a) (expected irritant port-filename)
         (compact
           (list (and port-filename (string-append "in " (any->string-write port-filename)))
             (and irritant (string-append "at " (any->string-write irritant)))
             (and expected (pair "expected" (map any->string-write expected))))))
-      1)))
+      1))
+  (newline))
 
 (define sc-cli
   (let
