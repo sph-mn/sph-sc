@@ -1,6 +1,12 @@
 #!/usr/bin/guile
 !#
 
+(use-modules (srfi srfi-1) (sph)
+  (srfi srfi-41) (sph stream)  (ice-9 match)
+  (sph lang sc expressions) (sph lang scheme)
+  ((sph filesystem) #:select (path->full-path ensure-trailing-slash)) (sph alist)
+  (sph list) (sph cli) (sph list other) (sph lang sc) (sph string) (rnrs sorting))
+
 (define sph-sc-documentor-cli-description
   "extracts declarations from sc files and displays an overview in markdown format")
 
@@ -17,11 +23,6 @@
    there is no user extension mechanism yet. new extractors must be added to \"extractors\".
    new sc-doc-element types can be used but sc-format-group would
    have to be extended to recognise them")
-
-(import (sph) (sph stream)
-  (ice-9 match) (sph lang sc expressions)
-  (sph lang scheme) (only (sph filesystem) path->full-path ensure-trailing-slash)
-  (sph alist) (sph list) (sph cli) (sph list other) (sph lang sc) (sph string) (rnrs sorting))
 
 (define (extract-enum a) (list (pair (q enum) a)))
 
@@ -74,9 +75,11 @@
           (_ (list (q macro) name null))))
       a)))
 
-(define-as extractors alist-q
-  ; commenting them here removes them from output
-  enum extract-enum pre-define extract-pre-define define extract-define declare extract-declare)
+"commenting them here removes them from output"
+
+(define extractors
+  (alist-q enum extract-enum
+    pre-define extract-pre-define define extract-define declare extract-declare))
 
 (define (extract-one a)
   "list -> sc-doc-elements
@@ -108,7 +111,7 @@
 (define (extract-from-files-combined paths)
   "extract from multiple files and display a merged result" (append-map extract-from-file paths))
 
-(define-as group-order list-q routine macro variable type enum)
+(define group-order (list-q routine macro variable type enum))
 
 (define (group-title id md-level)
   (string-append (if (< 0 md-level) (string-append (string-multiply "#" md-level) " ") "")
@@ -191,7 +194,6 @@
     ((type) (format-group-type a))
     ( (routine)
       (map (l (a) (format-group-element id a))
-        ; sort by name. a: ((routine db-status-name (a) uint8_t* (status-t)) ...)
         (list-sort-with-accessor string<? (compose symbol->string second) a)))
     (else (list-sort string<? (map (l (a) (format-group-element id a)) a)))))
 
