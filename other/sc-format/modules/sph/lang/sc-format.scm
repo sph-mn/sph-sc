@@ -1,20 +1,39 @@
 (define-module (sph lang sc-format))
 
-(use-modules (ice-9 match) (sph)
-  (sph hashtable) (sph lang scm-format)
-  (sph lang scm-format format) (sph string) ((sph list) #:select (map-slice)))
+(use-modules ((srfi srfi-1) #:select (split-at)) (ice-9 match)
+  (sph) (sph hashtable)
+  (sph lang scm-format) (sph lang scm-format format) (sph string) ((sph list) #:select (map-slice)))
 
 (export sc-format)
 
 (define sph-lang-sc-format-description
   "formatter for sc (sph-sc) source code. also serves as an example of how custom formatters can be defined")
 
-(define-syntax-rule (map-recurse recurse a indent) (map (l (a) (first (recurse a indent))) a))
+(define (map-recurse recurse a indent) (map (l (a) (first (recurse a indent))) a))
 (define sc-f format-list-f)
 
+(define (sc-docstring a recurse config indent)
+  (if (null? a) a
+    (if (string? (first a))
+      (pair
+        (format-docstring (first a) (ht-ref-q config docstring-offset-doublequote)
+          (ht-ref-q config indent-string) indent)
+        (map-recurse recurse (tail a) indent))
+      (map-recurse recurse a indent))))
+
+(define (scd-f start mid end docstring-offset)
+  (l (a recurse config indent)
+    (list
+      (format-list
+        (apply-values
+          (l (prefix suffix) (append prefix (sc-docstring suffix recurse config indent)))
+          (split-at a docstring-offset))
+        config indent start mid end)
+      #f)))
+
 (define (format-define a recurse config indent)
-  (match a ((_ (name ...) types body) ((sc-f 3 1 0) a recurse config indent))
-    ((_ (name ...) types body ...) ((sc-f 3 1 1) a recurse config indent))
+  (match a ((_ (name ...) types body) ((scd-f 3 1 0 3) a recurse config indent))
+    ((_ (name ...) types body ...) ((scd-f 3 1 1 3) a recurse config indent))
     ((_ name type value) ((sc-f 4 1 0) a recurse config indent))
     ((_ name type) ((sc-f 4 1 0) a recurse config indent))
     ((_ name/type ...) ((sc-f 1 2 2) a recurse config indent))))
@@ -23,11 +42,24 @@
   (match a ((_ name value) ((sc-f 2 1 0) a recurse config indent))
     ((_ name/type ...) ((sc-f 1 2 2) a recurse config indent))))
 
+(define (format-sc-comment a recurse config indent)
+  (list
+    (format-list
+      (pair (first a)
+        (map
+          (l (a)
+            (format-docstring a (ht-ref-q config docstring-offset-doublequote)
+              (ht-ref-q config indent-string) indent))
+          (tail a)))
+      config indent 1 1 1)
+    #f))
+
 "(sc-f 1 1 0) is the default"
 
 (define sc-format-default-config
   (ht-create-symbol-q descend-prefix->format-f
-    (ht-create-symbol-q begin (sc-f 1 1 1)
+    (ht-create-symbol-q begin (scd-f 1 1 1 1)
+      sc-comment format-sc-comment
       for (sc-f 2 1 1)
       case (sc-f 3 1 1)
       case* (sc-f 3 1 1)
