@@ -238,7 +238,7 @@
           (not
             (and (symbol? a-first)
               (or (preprocessor-keyword? a-first) (eq? (q function-pointer) a-first))))))
-      (string-join (map sc-identifier a) " ") (compile a))
+      (string-join (map compile a) " ") (compile a))
     (sc-identifier a)))
 
 (define (sc-compile-types a compile)
@@ -404,7 +404,7 @@
           ( (name type (? integer? bits))
             (string-append
               (string-join (map (l (a) (sc-compile-type a compile)) type) " " (q suffix))
-              (sc-identifier name) ":" (sc-value bits)))
+              (compile name) ":" (sc-value bits)))
           ( (name type)
             (if (sc-function-pointer? type)
               (apply sc-function-pointer compile (compile name) (tail type))
@@ -468,11 +468,11 @@
     (_ #f)))
 
 (define (sc-struct-or-union keyword a compile) "symbol/false ? procedure -> string"
-  (let (keyword-string (symbol->string keyword))
-    (apply (l (name body) (c-statement name (sc-struct-or-union-body body compile)))
-      (if (symbol? (first a))
-        (list (string-append keyword-string " " (sc-identifier (first a))) (tail a))
-        (list keyword-string a)))))
+  (let
+    ( (keyword-string (symbol->string keyword)) (a-first (first a))
+      (c (l (name body) (c-statement name (sc-struct-or-union-body body compile)))))
+    (if (or (symbol? a-first) (and (list? a-first) (preprocessor-keyword? (first a-first))))
+      (c (string-append keyword-string " " (compile a-first)) (tail a)) (c keyword-string a))))
 
 (define (sc-declare-variable name type compile)
   (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))

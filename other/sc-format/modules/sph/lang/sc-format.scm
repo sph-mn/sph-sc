@@ -39,8 +39,9 @@
     ((_ name/type ...) ((sc-f 1 2 2) a recurse config indent))))
 
 (define (format-set a recurse config indent)
-  (match a ((_ name value) ((sc-f 2 1 0) a recurse config indent))
-    ((_ name/type ...) ((sc-f 1 2 2) a recurse config indent))))
+  (let (config (ht-copy* config (l (a) (ht-set-multiple! a (q max-exprs-per-line-assoc) 2))))
+    (match a ((_ name value) ((sc-f 2 1 0) a recurse config indent))
+      ((_ name/type ...) ((sc-f 1 2 2) a recurse config indent)))))
 
 (define (format-sc-comment a recurse config indent)
   (list
@@ -87,6 +88,7 @@
       max-exprs-per-line-start 3
       max-exprs-per-line-middle 3
       max-exprs-per-line-end (inf)
+      max-exprs-per-line-assoc 1
       docstring-offset-doublequote #t
       multiple-leading-parenthesis-spacing #t
       toplevel-vertical-spacing 1 toplevel-vertical-spacing-oneline 0)))

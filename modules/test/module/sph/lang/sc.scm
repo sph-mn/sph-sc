@@ -7,6 +7,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (struct (pre-concat a b) (c (struct (pre-concat a b*))))
+      "struct a##b{struct a##b* c;}"
       (declare a (array (struct b) 3))
       "struct b a[3];"
       (declare a (array (long unsigned int) 3))
