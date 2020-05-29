@@ -170,10 +170,11 @@
 
 (define (sc-numeric-boolean prefix a compile)
   (let (operator (if (eq? (q =) prefix) "==" (symbol->string prefix)))
-    (string-join
-      (map-segments 2 (l (a b) (parenthesise (string-append a operator b)))
-        (map (l (a) (if (contains-set? a) (parenthesise (compile a)) (compile a))) a))
-      "&&")))
+    ( (if (= 2 (length a)) identity parenthesise)
+      (string-join
+        (map-segments 2 (l (a b) (parenthesise (string-append a operator b)))
+          (map (l (a) (if (contains-set? a) (parenthesise (compile a)) (compile a))) a))
+        "&&"))))
 
 (define (sc-if a compile)
   (match a

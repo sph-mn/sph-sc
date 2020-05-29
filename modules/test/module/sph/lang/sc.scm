@@ -31,8 +31,8 @@
       "ab->cd"
       (= a 1)
       "(a==1)"
-      (= 1 2 3)
-      "(1==2)&&(2==3)"
+      (and (= 1 2 3) (= 1 2))
+      "(((1==2)&&(2==3))&&(1==2))"
       (address-of a-b)
       "&a_b"
       (and 1 2 3)
@@ -317,7 +317,7 @@
       (sc-comment "abc" "def" "ghi")
       "/* abc\ndef\nghi */\n"
       (!= 1 2 3)
-      "(1!=2)&&(2!=3)"
+      "((1!=2)&&(2!=3))"
       (begin (sc-no-semicolon (a 1)) (set b 2))
       "a(1)\nb=2;"
       (begin (sc-no-semicolon (a 1) (set b 2)))
