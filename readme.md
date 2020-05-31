@@ -24,8 +24,8 @@ c supports declarations for variables, arrays, structs, types and enums and they
   f (type (struct (id int) (name char*))))
 ```
 
-## macros
-preprocessor macros are defined like variables and functions and dont need escaped newlines or special formatting
+## preprocessor macros
+preprocessor macros are defined similar to variables and functions and dont need escaped newlines or special formatting
 ```
 (pre-define is-included #t)
 ```
@@ -181,6 +181,8 @@ this repository includes under other/
 * finding the source of c errors is usually the same as with plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the like-handwritten c code is available
 * "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
 * editor modes for scheme can be used and fast scheme-style structural editing is possible
+* indent-syntax (like coffeescript or python) can be used with [wisp](https://www.draketo.de/english/wisp). also see other/wisp2sc
+* square bracket array accessors can be used as long as they parse to scheme identifiers, for example (+ a[0] a[1])
 * the declare and set syntax lets things be grouped nicely
 
 * example code from projects using sc
@@ -205,29 +207,59 @@ case-clause: ((value ...) consequent ...) / (value consequent ...)
 this way it is possible to match values with =, but alternatively other predicates like custom comparison functions.
 
 # possible enhancements and ideas
-* rewrite sph-sc in c or sc to reduce dependencies
+* rewrite sph-sc in c or sc to reduce dependencies. needs a good scheme parser mainly
 * "scx": c extensions, for example a module system, symbols, keyword arguments or anonymous functions
   * module system: exports-form that compiles to nothing; import form that uses export-form and converts unexported identifiers to internal names; option to add prefix to imported bindings; declarations made by macros should be handled (probably the most work)
-* allow users to add syntax like [sescript](https://github.com/sph-mn/sescript) does
-* indent-syntax (like coffeescript) can be used with a good indent-syntax to s-expression compiler
+* allow users to add custom syntax like [sescript](https://github.com/sph-mn/sescript) does
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
-* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example, c doesnt have support for nested ellipsis and cant generate multiple expressions for variable arguments
-* more syntax checks
+* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example, c doesnt have support for nested ellipsis and cant generate multiple expressions for variable arguments. it could also be useful for extended, literal like, syntax for arrays and similar objects
+* better support for wisp, for example with a command-line flag. sc in wisp can be simplified if some replacements are made, for example alternated key/value listings (key value key/value ...) to ((key value) ...)
+* more syntax checks for clearer error messages
+* reduce round brackets, as there are cases where round brackets are added when it is optional. arguments to preprocessor macros and complex and/or expressions are the perhaps most difficult cases
 
 # syntax reference
 sc expression and the c result. taken from the automated tests
-```
-(begin *a.field)
-->
-*(a.field);
 
-(begin &*a.field)
+~~~
+(struct (pre-concat a b) (c (struct (pre-concat a b*))))
 ->
-&*(a.field);
+struct a##b{struct a##b* c;}
 
-(begin &*a:b:c)
+(declare a (array (struct b) 3))
 ->
-&*(a->b->c);
+struct b a[3];
+
+(declare a (array (long unsigned int) 3))
+->
+long unsigned int a[3];
+
+(begin #\newline)
+->
+'\n';
+
+(begin a--b)
+->
+a__b;
+
+(begin *a.b)
+->
+*(a.b);
+
+(struct-get (pointer-get a) b)
+->
+(*a).b
+
+(struct-get (a b) c)
+->
+(a(b)).c
+
+(if* #t (set a 1 b 2) 0)
+->
+(1?((a=1),(b=2)):0)
+
+(*a b)
+->
+(*a)(b)
 
 (: ab cd)
 ->
@@ -237,9 +269,9 @@ ab->cd
 ->
 (a==1)
 
-(= 1 2 3)
+(and (= 1 2 3) (= 1 2))
 ->
-(1==2)&&(2==3)
+(((1==2)&&(2==3))&&(1==2))
 
 (address-of a-b)
 ->
@@ -253,6 +285,14 @@ ab->cd
 ->
 (a&&(b=c(d)))
 
+(array-get a 1)
+->
+a[1]
+
+(array-get (array-get a 1) 2)
+->
+(a[1])[2]
+
 (array-get aaa 3)
 ->
 aaa[3]
@@ -260,6 +300,10 @@ aaa[3]
 (array-get aaa 3 4 5)
 ->
 aaa[3][4][5]
+
+(array-get *a 3)
+->
+(*a)[3]
 
 (array-literal 1 "2" 3 4)
 ->
@@ -317,6 +361,18 @@ a_x_p_less_to_;
 ->
 -1;
 
+(begin *a.field)
+->
+*(a.field);
+
+(begin &*a.field)
+->
+&*(a.field);
+
+(begin &*a:b:c)
+->
+&*(a->b->c);
+
 (begin 1 (begin 2 3))
 ->
 1;2;3;
@@ -347,23 +403,19 @@ ab->cd;
 
 (case = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
 ->
-if(((3==myvalue)||(2==myvalue))){1;}else if((4==myvalue)){0;}else if((("a"==myvalue)||("b"==myvalue))){1;1;}else{0;0;}
-
-(case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
-->
-(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:((("a"==myvalue)||("b"==myvalue))?(1,1):(0,0))))
+if((3==myvalue)||(2==myvalue)){1;}else if(4==myvalue){0;}else if(("a"==myvalue)||("b"==myvalue)){1;1;}else{0;0;}
 
 (cond ((= a 1) #t))
 ->
-if((a==1)){1;}
+if(a==1){1;}
 
 (cond ((= a 1) (= b 2)) ((= c 3) #t))
 ->
-if((a==1)){(b==2);}else if((c==3)){1;}
+if(a==1){(b==2);}else if(c==3){1;}
 
 (cond ((= a 1) (= b 2)) ((= c 3) #t) (else 4))
 ->
-if((a==1)){(b==2);}else if((c==3)){1;}else{4;}
+if(a==1){(b==2);}else if(c==3){1;}else{4;}
 
 (cond* ((= a 1) (= b 2)) ((= c 3) #f #t) (else #t #f))
 ->
@@ -425,6 +477,10 @@ enum{ea,eb,ec};struct d{unsigned int da;};
 ->
 typedef uint8_t f;typedef struct{unsigned int ga;} g;
 
+(declare h (struct-variable ha 0 0))
+->
+ha h={0,0};
+
 (declare (pre-concat h i) uint32_t)
 ->
 uint32_t h##i;
@@ -432,6 +488,10 @@ uint32_t h##i;
 (define a uint32_t 1)
 ->
 uint32_t a=1
+
+(define a uint32_t 1 b uint64_t 2)
+->
+uint32_t a=1;uint64_t b=2
 
 (declare a (function-pointer (function-pointer (unsigned int) float) double))
 ->
@@ -472,7 +532,12 @@ uint32_t abc(b##64 d,b16 e){return(0);}
 (define (a) void "test-docstring")
 ->
 /** test-docstring */
-void a(){}
+void a()
+
+(define (a b) (c d) "e")
+->
+/** e */
+c a(d b)
 
 (define (a b c) (void void void) "test-docstring" (+ b c))
 ->
@@ -513,7 +578,7 @@ void(*)(vo_id*)
 
 (if (= a 3) (exit 1) (return (bit-or b c)))
 ->
-if((a==3)){exit(1);}else{return((b|c));}
+if(a==3){exit(1);}else{return((b|c));}
 
 (if 1 2 (begin 3 4 (return #t)))
 ->
@@ -551,21 +616,55 @@ abc:uint32_t a=3;(a+b);
 ->
 !1
 
-(array-get a 1)
-->
-a[1]
-
-(array-get (array-get a 1) 2)
-->
-(a[1])[2]
-
 (pointer-get a-b)
 ->
-(*a_b)
+*a_b
+
+(pointer-get (a b))
+->
+*(a(b))
+
+(pointer-get b)
+->
+*b
+
+(pointer-get b.c)
+->
+*(b.c)
 
 (pre-concat a b cd e)
 ->
 a##b##cd##e
+
+(pre-cond ((= a b) 1))
+->
+#if (a==b)
+1;
+#endif
+
+(pre-cond ((= a b) 1) (c (pre-define a)) (else 2))
+->
+#if (a==b)
+1;
+#elif c
+#define a
+#else
+2;
+#endif
+
+(pre-cond-defined (a 1) (b 2))
+->
+#ifdef a
+1;
+#elif b
+2;
+#endif
+
+(pre-cond-not-defined (a 1))
+->
+#ifndef a
+1;
+#endif
 
 (pre-define a)
 ->
@@ -582,8 +681,7 @@ a##b##cd##e
 (pre-define (a b) (begin "test-docstring" (+ b c) 3))
 ->
 /** test-docstring */
-#define a(b) (b+c);\
-  3
+#define a(b) (b+c);3
 
 (pre-define ob-ject 3)
 ->
@@ -602,15 +700,6 @@ a##b##cd##e
 (pre-define (->test a b) c)
 ->
 #define _to_test(a,b) c
-
-(pre-define-if-not-defined abc 3 def 4)
-->
-#ifndef abc
-#define abc 3
-#endif
-#ifndef def
-#define def 4
-#endif
 
 (pre-if (= a b) (begin c d e) (begin f g))
 ->
@@ -658,7 +747,7 @@ c;
 #include <b>
 #include "./c"
 
-(pre-let (a 1 b 2) (+ a b))
+(pre-let* (a 1 b 2) (+ a b))
 ->
 #define a 1
 #define b 2
@@ -666,19 +755,19 @@ c;
 #undef a
 #undef b
 
-(pre-let (a 1) a)
+(pre-let* (a 1) a)
 ->
 #define a 1
 a;
 #undef a
 
-(pre-let ((a b) 1) a)
+(pre-let* ((a b) 1) a)
 ->
 #define a(b) 1
 a;
 #undef a
 
-(pre-let ((a b) 1 (c d) 2) a)
+(pre-let* ((a b) 1 (c d) 2) a)
 ->
 #define a(b) 1
 #define c(d) 2
@@ -698,10 +787,6 @@ a;
 ->
 #undef my_macro
 
-(sc-insert "var a = 3")
-->
-var a = 3
-
 (return)
 ->
 return
@@ -710,6 +795,14 @@ return
 ->
 return(1,2)
 
+(sc-insert "var a = 3")
+->
+var a = 3
+
+(set *a *b.c)
+->
+*a=*(b.c)
+
 (set a 1)
 ->
 a=1
@@ -717,6 +810,10 @@ a=1
 (set a 1 b-2 2 c-3 3)
 ->
 a=1;b_2=2;c_3=3;
+
+(set a:b (: *a b))
+->
+a->b=(*a)->b
 
 (struct-get a b)
 ->
@@ -729,6 +826,10 @@ a.b.c.d.e
 (struct-get (pointer-get a) b)
 ->
 (*a).b
+
+(struct-get **a b)
+->
+(**a).b
 
 (struct (a (unsigned int)) (b (unsigned char) 3))
 ->
@@ -774,20 +875,43 @@ while(1){1;2;3;}
 ->
 while(!(0==(a=b(c)))){1;}
 
+(sc-comment "abc")
+->
+/* abc */
+
 (sc-comment "abc" "def" "ghi")
 ->
 /* abc
 def
 ghi */
 
+(!= 1 2 3)
+->
+((1!=2)&&(2!=3))
+
 (begin (sc-no-semicolon (a 1)) (set b 2))
 ->
 a(1)
 b=2;
 
-(set+ a 1)
+(begin (sc-no-semicolon (a 1) (set b 2)))
 ->
-a+=1
+a(1)
+b=2
+
+(begin (pre-define a (begin (define (a) void 1))) (declare b int))
+->
+#define a void a(){1;}
+int b;
+
+(begin (pre-define (a b) (define (c) void 1)) (a "xyz"))
+->
+#define a(b) void c(){1;}
+a("xyz")
+
+(set+ a 1 b 2)
+->
+a+=1;b+=2;
 
 (set- a 1)
 ->
@@ -801,6 +925,10 @@ a*=1
 ->
 a/=1
 
+(declare a (type (struct (b (array int 3)))))
+->
+typedef struct{int b[3];} a;
+
 (pre-define-if-not-defined abc 3 def 4)
 ->
 #ifndef abc
@@ -810,10 +938,27 @@ a/=1
 #define def 4
 #endif
 
+(pre-define (a) (begin 1 (sc-comment "b") 2 3))
+->
+#define a() 1;\
+/* b */\
+2;3
+
+(case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
+->
+(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:((("a"==myvalue)||("b"==myvalue))?(1,1):(0,0))))
+
 (for ((set a 1 b 2) #t (set c 3 d 4)) #t)
 ->
 for(a=1,b=2;1;c=3,d=4){1;}
-```
+
+(begin (pre-define (a) (begin "test" b) c d) (declare e f))
+->
+/** test */
+#define a() b
+#define c d
+f e;
+~~~
 
 # similar projects
 * [lispc](https://github.com/eratosthenesia/lispc) - lisp(ish) to c converter (designed for clisp)
