@@ -208,15 +208,15 @@ this way it is possible to match values with =, but alternatively other predicat
 
 # possible enhancements and ideas
 * rewrite sph-sc in c or sc to reduce dependencies. needs a good scheme parser mainly
-* "scx": c extensions, for example a module system, symbols, keyword arguments or anonymous functions
-  * module system: exports-form that compiles to nothing; import form that uses export-form and converts unexported identifiers to internal names; option to add prefix to imported bindings; declarations made by macros should be handled (probably the most work)
+* "scx": c extensions, for example a module system, keyword arguments or anonymous functions
+  * module system: exports-form that compiles to nothing; import form that reads export-form and rewrites all unexported identifiers to have internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. alternative: [clang-modules](https://clang.llvm.org/docs/Modules.html)
 * allow users to add custom syntax like [sescript](https://github.com/sph-mn/sescript) does
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
 * sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example, c doesnt have support for nested ellipsis and cant generate multiple expressions for variable arguments. it could also be useful for extended, literal like, syntax for arrays and similar objects
 * better support for wisp, for example with a command-line flag. sc in wisp can be simplified if some replacements are made, for example alternated key/value listings (key value key/value ...) to ((key value) ...)
 * reduce the code, merged into a single module perhaps like sescript
 * more syntax checks for clearer error messages
-* reduce round brackets, as there are cases where round brackets are added when it is optional. arguments to preprocessor macros and complex and/or expressions are the perhaps most difficult cases
+* reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros and complex and/or expressions are the perhaps most difficult cases
 
 # syntax reference
 sc expression and the c result. taken from the automated tests
