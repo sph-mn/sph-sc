@@ -2,10 +2,10 @@
 !#
 
 (use-modules (srfi srfi-1) (sph)
-  (srfi srfi-41) (sph stream)  (ice-9 match)
-  (sph lang sc expressions) (sph lang scheme)
-  ((sph filesystem) #:select (path->full-path ensure-trailing-slash)) (sph alist)
-  (sph list) (sph cli) (sph list other) (sph lang sc) (sph string) (rnrs sorting))
+  (srfi srfi-41) (sph stream)
+  (ice-9 match) (sph lang sc expressions)
+  (sph lang scheme) ((sph filesystem) #:select (path->full-path ensure-trailing-slash))
+  (sph alist) (sph list) (sph cli) (sph list other) (sph lang sc) (sph string) (rnrs sorting))
 
 (define sph-sc-documentor-cli-description
   "extracts declarations from sc files and displays an overview in markdown format")
