@@ -661,16 +661,19 @@
           (string-append (any->string path) " not found in " (any->string load-paths)))))))
 
 (define (sc-include-sc paths compile state) "(string ...) (string ...) -> list"
-  (append-map
-    (l (a) (let (a (sc-path->full-path (sc-state-load-paths state) a)) (file->datums a read))) paths))
+  (pair (q begin)
+    (append-map
+      (l (a) (let (a (sc-path->full-path (sc-state-load-paths state) a)) (file->datums a read)))
+      paths)))
 
 (define (sc-include-sc-once paths compile state) "(string ...) (symbol/string ...) -> list"
-  (map
-    (l (path)
-      (let (path (sc-path->full-path (sc-state-load-paths state) path))
-        (if (ht-ref sc-included-paths path) (q (begin))
-          (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
-    paths))
+  (pair (q begin)
+    (map
+      (l (path)
+        (let (path (sc-path->full-path (sc-state-load-paths state) path))
+          (if (ht-ref sc-included-paths path) (q (begin))
+            (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
+      paths)))
 
 (define (sc-define-array a compile)
   (match a
