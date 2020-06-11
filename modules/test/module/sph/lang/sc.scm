@@ -7,12 +7,6 @@
 
   (test-execute-procedures-lambda
     (sc->c
-      ; set comma delimited in context
-      (for ( (set a 1 b 2) #t (set c 3 d 4)) #t)
-      "for(a=1,b=2;1;c=3,d=4){1;}"
-      ;(if* #t (set a 1 b 2) 0)
-      ;"(1?((a=1),(b=2)):0)"
-
       (struct (pre-concat a b) (c (struct (pre-concat a b*))))
       "struct a##b{struct a##b* c;}"
       (declare a (array (struct b) 3))
@@ -351,4 +345,9 @@
         (pre-define (a) (begin "test" b) c d)
         (declare e f))
       "/** test */\n#define a() b\n#define c d\nf e;"
+      ; sub expressions need to be joined with commas in these contexts
+      (for ( (set a 1 b 2) #t (set c 3 d 4)) #t)
+      "for(a=1,b=2;1;c=3,d=4){1;}"
+      (if* #t (set a 1 b 2) 0)
+      "(1?(a=1,b=2):0)"
       )))

@@ -30,6 +30,11 @@
    return a procedure that when called with a vector returns the value at index"
   (l (a) (vector-ref a index)))
 
+(define (vector-setter index)
+  "integer -> procedure:{vector value -> unspecified}
+   return a procedure that when called with a vector and a value sets index to value"
+  (l (a value) (vector-set! a index value)))
+
 (define (tree-finder find f a)
   "procedure:{predicate list ... -> any} procedure:{element -> any/boolean} list -> any
    call f with each tree list and leaf from top to bottom and return true results of f"
@@ -60,8 +65,10 @@
 
 (define sc-state-load-paths (vector-accessor 1))
 (define sc-state-no-semicolon (vector-accessor 2))
+(define sc-state-comma-join (vector-accessor 3))
+(define sc-state-comma-join-set! (vector-setter 3))
 (define ambiguous-regexp (make-regexp "^(\\*|&)+|\\.|->|\\[|\\("))
-(define (sc-state-new load-paths) (vector (q sc-state) load-paths (ht-create-symbol)))
+(define (sc-state-new load-paths) (vector (q sc-state) load-paths (ht-create-symbol) #f))
 
 (define (sc-syntax-examples-get name) "prepend the prefix symbol to example argument patterns"
   "symbol -> false/list"
@@ -419,7 +426,9 @@
     (comma-join
       (l (a)
         (match a (((quote begin) a ...) (string-join (map compile a) ","))
-          (((? symbol?) _ ...) (compile a)) (_ (string-join (map compile a) ",")))))
+          ( ( (? symbol?) _ ...) (sc-state-comma-join-set! state #t)
+            (let (result (compile a)) (sc-state-comma-join-set! state #f) result))
+          (_ (string-join (map compile a) ",")))))
     (match a
       ( ( (init test update) body ...)
         (c-for (comma-join init) (compile test) (comma-join update) (compile (pair (q begin) body)))))))
@@ -457,8 +466,7 @@
     (c-apply (compile name) (string-join (map (compose parenthesise-ambiguous compile) a) ","))
     (if (sc-no-semicolon-registered? state name) "\n" "")))
 
-(define* (sc-join-expressions a #:optional (expression-separator ""))
-  "main procedure for the concatenation of toplevel expressions"
+(define (sc-join-expressions a) "main procedure for the concatenation of toplevel expressions"
   (define (fold-f b prev)
     (pair
       (cond
@@ -652,22 +660,17 @@
         (list (q file-not-accessible)
           (string-append (any->string path) " not found in " (any->string load-paths)))))))
 
-(define (sc-include-sc-once state paths compile->sc) "(string ...) (symbol/string ...) -> list"
-  (compile->sc
-    (pair (q begin)
-      (map
-        (l (path)
-          (let (path (sc-path->full-path (sc-state-load-paths state) path))
-            (if (ht-ref sc-included-paths path) (q (begin))
-              (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
-        paths))))
+(define (sc-include-sc paths compile state) "(string ...) (string ...) -> list"
+  (append-map
+    (l (a) (let (a (sc-path->full-path (sc-state-load-paths state) a)) (file->datums a read))) paths))
 
-(define (sc-include-sc state paths compile->sc) "(string ...) (string ...) -> list"
-  (compile->sc
-    (pair (q begin)
-      (append-map
-        (l (a) (let (a (sc-path->full-path (sc-state-load-paths state) a)) (file->datums a read)))
-        paths))))
+(define (sc-include-sc-once paths compile state) "(string ...) (symbol/string ...) -> list"
+  (map
+    (l (path)
+      (let (path (sc-path->full-path (sc-state-load-paths state) path))
+        (if (ht-ref sc-included-paths path) (q (begin))
+          (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
+    paths))
 
 (define (sc-define-array a compile)
   (match a
@@ -730,8 +733,8 @@
   (l (a compile state)
     (match a ((name value) (c-set (compile name) (compile value) operator))
       ( (name-1 value-1 name-2 value-2 rest ...)
-        (sc-join-expressions
-          (map-slice 2 (l (name value) (c-set (compile name) (compile value) operator)) a)))
+        (let (b (map-slice 2 (l (name value) (c-set (compile name) (compile value) operator)) a))
+          (if (sc-state-comma-join state) (string-join b ",") (sc-join-expressions b))))
       (_ #f))))
 
 (define (sc-cond* a compile state)
