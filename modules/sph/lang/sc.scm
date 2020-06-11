@@ -939,8 +939,7 @@
 (define (sc->c* a state) (define (compile a) (sc->c* a state))
   (if (list? a)
     (let* ((f (ht-ref sc-syntax-table (first a))) (b (and f (f (tail a) compile state))))
-      (if b (if (list? b) (sc-join-expressions (map compile b)) b)
-        (sc-apply (first a) (tail a) compile state)))
+      (if b (if (list? b) (compile b) b) (sc-apply (first a) (tail a) compile state)))
     (sc-value a)))
 
 (define (post-process a) (string-trim (regexp-replace a "\n\n+" "\n")))

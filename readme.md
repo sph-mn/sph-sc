@@ -167,6 +167,21 @@ examples
 (sc->c code)
 ```
 
+## extension
+how to add your own syntax: this is currently possible only when compiling with scheme and not via the command-line tool. add or override custom syntax in the hashtable sc-syntax-table, example below, and then use sc->c as usual
+~~~
+(import (sph lang sc) (rnrs hashtables))
+
+(hashtable-set! sc-syntax-table (quote myprefix)
+  (lambda (a compile state)
+    "list:without-prefix procedure:recurse:{a -> string} vector -> string:c/list:sc"
+    (list (quote if) (car a) #t #f)))
+
+(define code (quote (myprefix "test")))
+
+(display (sc->c code))
+~~~
+
 # utilities
 this repository includes under other/
 * an auto formatter "sc-format"
@@ -210,13 +225,11 @@ this way it is possible to match values with =, but alternatively other predicat
 * rewrite sph-sc in c or sc to reduce dependencies. needs a good scheme parser mainly
 * "scx": c extensions, for example a module system, keyword arguments or anonymous functions
   * module system: exports-form that compiles to nothing; import form that reads export-form and rewrites all unexported identifiers to have internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. alternative: [clang-modules](https://clang.llvm.org/docs/Modules.html)
-* allow users to add custom syntax like [sescript](https://github.com/sph-mn/sescript) does
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
-* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example, c doesnt have support for nested ellipsis and cant generate multiple expressions for variable arguments. it could also be useful for extended, literal like, syntax for arrays and similar objects
+* sc-syntax-case and sc-syntax-rules: scheme code or pattern matching to create expansions. it could be useful to have a hygienic macro system for generating c. for example, c doesnt have support for nested ellipsis and cant generate multiple expressions for variable arguments. it could also be useful for extended, literal-like, syntax for arrays and similar objects
 * better support for wisp, for example with a command-line flag. sc in wisp can be simplified if some replacements are made, for example alternated key/value listings (key value key/value ...) to ((key value) ...)
-* reduce the code, merged into a single module perhaps like sescript
 * more syntax checks for clearer error messages
-* reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros and complex and/or expressions are the perhaps most difficult cases
+* try to reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros and complex and/or expressions are the perhaps most difficult cases
 
 # syntax reference
 sc expression and the c result. taken from the automated tests
