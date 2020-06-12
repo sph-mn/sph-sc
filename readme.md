@@ -101,6 +101,26 @@ the replacements are done like guile does it. "-" becomes "_", "->" becomes ``_t
 (sc-insert "// free c code string to be included as is")
 ```
 
+## scheme macros
+sc supports non-hygienic macros with pattern matching and scheme expressions.
+
+~~~
+(sc-define-syntax (for-i index limit body ...)
+  (for ((set index 0) (< index limit) (set+ index 1)) body ...))
+
+(for-i i 10 (printf "%lu\n" i))
+~~~
+
+~~~
+(sc-define-syntax (test x ((a b) ...) body ...)
+  (x ((a ...) (b) ...) body ...))
+
+(sc-define-syntax* (test* a b ...)
+  (cons* 0 a b))
+
+(test 1 ((2 3) (4 5)) b1 b2)
+~~~
+
 # dependencies
 * [guile](https://www.gnu.org/software/guile) >= 2
 * [sph-lib](https://github.com/sph-mn/sph-lib)
@@ -167,19 +187,22 @@ examples
 (sc->c code)
 ```
 
-## extension
-how to add your own syntax: this is currently possible only when compiling with scheme and not via the command-line tool. add or override custom syntax in the hashtable sc-syntax-table, example below, and then use sc->c as usual
+custom syntax can be defined from scheme before using sc->c with:
 ~~~
-(import (sph lang sc) (rnrs hashtables))
+(sc-define-syntax-scm* (quote test) (quote (a b ...))
+  (lambda (a b) (cons* 0 a b)))
 
+; symbol list list -> unspecified
+(sc-define-syntax-scm id pattern expansion)
+(sc-define-syntax-scm* id pattern procedure)
+~~~
+
+alternatively, the syntax table can be modified directly:
+~~~
 (hashtable-set! sc-syntax-table (quote myprefix)
   (lambda (a compile state)
     "list:without-prefix procedure:recurse:{a -> string} vector -> string:c/list:sc"
     (list (quote if) (car a) #t #f)))
-
-(define code (quote (myprefix "test")))
-
-(display (sc->c code))
 ~~~
 
 # utilities
