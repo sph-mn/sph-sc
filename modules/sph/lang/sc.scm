@@ -2,18 +2,20 @@
 
 (use-modules (srfi srfi-1) ((rnrs io ports) #:select (get-datum))
   (ice-9 match) (sph)
-  (sph list)
+  (rnrs eval) (sph list)
   ( (sph string) #:select
     (parenthesise parenthesised? any->string
       any->string-write regexp-match-replace regexp-replace string-replace-string string-enclose))
   ( (sph hashtable) #:select
     (ht-create-symbol-q ht-create-symbol ht-delete!
       ht-ref ht-set! ht-from-list ht-hash-symbol ht-create-string))
-  ((sph alist) #:select (alist))
+  ((sph alist) #:select (alist alist-ref))
   ((sph filesystem) #:select (ensure-trailing-slash search-load-path realpath*)))
 
 (export sc->c sc-default-load-paths
-  sph-lang-sc-description sc-syntax-table sc-syntax-check sc-syntax-error sc-syntax-error?)
+  sph-lang-sc-description sc-syntax-table
+  sc-syntax-check sc-syntax-error
+  sc-syntax-error? sc-define-syntax-scm sc-define-syntax-scm* sc-syntax-expand)
 
 (define sph-lang-sc-description
   "an s-expression to c compiler.
@@ -34,6 +36,12 @@
   "integer -> procedure:{vector value -> unspecified}
    return a procedure that when called with a vector and a value sets index to value"
   (l (a value) (vector-set! a index value)))
+
+(define (tree-map-lists f a) "bottom to top"
+  (map (l (a) (if (list? a) (f (tree-map-lists f a)) a)) a))
+
+(define (tree-map-leafs f a) "bottom to top"
+  (map (l (a) (if (list? a) (tree-map-leafs f a) (f a))) a))
 
 (define (tree-finder find f a)
   "procedure:{predicate list ... -> any} procedure:{element -> any/boolean} list -> any
@@ -856,42 +864,119 @@
           "&&")))))
 
 (define (sc-address-of a compile state) (c-address-of (apply string-append (map compile a))))
+(define eval-environment (environment (q (guile)) (q (ice-9 match))))
+
+(define (match->alist a pattern)
+  "matches with (ice-9 match) but takes pattern as a variable and returns
+   matches in an association list ((pattern-identifier . value) ...)"
+  (let (ids (delete (quote ...) (flatten pattern)))
+    (eval
+      (qq
+        (match (unquote (list (q quote) a))
+          ( (unquote pattern)
+            (list (unquote-splicing (map (l (id) (list (q cons) (list (q quote) id) id)) ids))))))
+      eval-environment)))
+
+(define (replace-identifiers a replacements)
+  (tree-map-leafs (l (a) (or (alist-ref replacements a) a)) a))
+
+(define (replace-pattern a replacements)
+  "any:pattern alist -> (pattern ...)
+   fill in placeholders and repeat the pattern for each value.
+   example
+     pattern: (a), replacements: ((a 1 2)), result: ((1) (2)).
+   the values of the first placeholder define the number of repetition.
+     pattern: (a b), replacements: ((a 1 2) (b 3)), result: ((1 3) (2 b))"
+  (let*
+    ( (a (list a)) (pattern-ids (flatten a))
+      (values (tail (find (l (a) (contains? pattern-ids (first a))) replacements))))
+    (apply append
+      (map-integers (length values)
+        (l (index)
+          (tree-map-leafs
+            (l (a) (let (values (alist-ref replacements a)) (if values (list-ref values index) a))) a))))))
+
+(define (replace-ellipsis a replacements) "expand patterns followed by ... in list"
+  (if (null? a) a
+    (let loop ((a (first a)) (rest (tail a)))
+      (if (null? rest) (list a)
+        (if (eq? (q ...) (first rest))
+          (append (replace-pattern a replacements)
+            (if (null? (tail rest)) null (loop (first (tail rest)) (tail (tail rest)))))
+          (pair a (loop (first rest) (tail rest))))))))
+
+(define (sc-define-syntax-scm id pattern expansion)
+  "define new sc syntax from scheme.
+   in scheme:
+     (sc-define-syntax-scm test (quote (a b ...)) (quote (a (+ 1 b) ...)))"
+  (ht-set! sc-syntax-table id
+    (l (a compile state)
+      (let (replacements (match->alist a pattern))
+        (first
+          (replace-identifiers
+            (tree-map-lists (l (a) (replace-ellipsis a replacements)) (list expansion)) replacements))))))
+
+(define (sc-define-syntax a compile state)
+  "define new syntax in sc using syntax-rules style pattern matching. non-hygienic.
+   examples:
+     (define-syntax (test a b ...) (a (+ 1 b) ...))
+     (define-syntax (test (a b) ...) ((+ a b) ...))"
+  (match a (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))) "")
+
+(define (sc-define-syntax-scm* id pattern procedure)
+  "define new sc syntax from scheme.
+   in scheme:
+     (sc-define-syntax-scm* test (quote (a b ...)) (lambda (a b) (cons* (q printf) \"%d %d\" a b)))"
+  (ht-set! sc-syntax-table id
+    (l (a compile state)
+      (let (replacements (match->alist a pattern)) (apply procedure (map tail replacements))))))
+
+(define (sc-define-syntax* a compile state)
+  "define new syntax in sc using a scheme expression. non-hygienic.
+   the scheme expression can return sc as a list or c as a string.
+   in sc:
+     (define-syntax* (test a b ...) (cons* (q printf) \"%d %d\" a b))"
+  (match a
+    ( ( (id pattern ...) scheme-expression)
+      (let (formals (delete (q ...) (flatten pattern)))
+        (sc-define-syntax-scm* id pattern
+          (eval (list (q lambda) formals scheme-expression) eval-environment))))
+    (_ a))
+  a)
+
+(define (sc-syntax-expand id pattern) "return the direct result from a syntax handler"
+  (let (state (sc-state-new (sc-default-load-paths)))
+    ((ht-ref sc-syntax-table id) pattern (l (a) (sc->c* a state)) state)))
 
 (define sc-syntax-table
-  (ht-create-symbol-q array-set sc-array-set
-    case (sc-case-f #f)
-    case* (sc-case-f #t)
-    cond* sc-cond*
-    pre-define-if-not-defined sc-pre-define-if-not-defined
-    pre-define sc-pre-define
-    sc-include sc-include-sc
-    sc-include-once sc-include-sc-once
-    struct-set sc-struct-set
+  (ht-create-symbol-q : (l (a c s) (apply c-struct-pointer-get (map c a)))
+    != (sc-comparison-infix-f "!=")
+    < (sc-comparison-infix-f "<")
+    <= (sc-comparison-infix-f "<=")
+    = (sc-comparison-infix-f "=")
+    > (sc-comparison-infix-f ">")
+    >= (sc-comparison-infix-f ">=")
+    * (sc-infix-f "*")
     + (sc-infix-f "+")
     - (sc-infix-f "-")
-    * (sc-infix-f "*")
     / (sc-infix-f "/")
-    != (sc-comparison-infix-f "!=")
-    = (sc-comparison-infix-f "=")
-    < (sc-comparison-infix-f "<")
-    > (sc-comparison-infix-f ">")
-    <= (sc-comparison-infix-f "<=")
-    >= (sc-comparison-infix-f ">=")
-    and (sc-infix-f "&&")
-    bit-and (sc-infix-f "&")
-    bit-or (sc-infix-f "|")
-    bit-shift-right (sc-infix-f ">>")
-    bit-shift-left (sc-infix-f "<<")
-    bit-xor (sc-infix-f "^")
-    modulo (sc-infix-f "%")
-    or (sc-infix-f "||")
     address-of sc-address-of
+    and (sc-infix-f "&&")
     array-get (l (a compile state) (apply c-array-get (map compile a)))
     array-literal (l (a compile state) (c-compound (map compile a)))
+    array-set sc-array-set
     begin (l (a compile state) (sc-join-expressions (map compile a)))
+    bit-and (sc-infix-f "&")
     bit-not (l (a compile state) (c-bit-not (compile (first a))))
+    bit-or (sc-infix-f "|")
+    bit-shift-left (sc-infix-f "<<")
+    bit-shift-right (sc-infix-f ">>")
+    bit-xor (sc-infix-f "^")
+    case (sc-case-f #f)
+    case* (sc-case-f #t)
     compound-statement (l (a compile state) (c-compound (sc-join-expressions (map compile a))))
     cond sc-cond
+    cond* sc-cond*
     convert-type (l (a compile state) (apply c-convert-type (map compile a)))
     declare sc-declare
     define sc-define
@@ -906,38 +991,45 @@
     (l (a compile state)
       (string-append (compile (first a)) ":" (sc-join-expressions (map compile (tail a)))))
     let* sc-let*
+    modulo (sc-infix-f "%")
     not (l (a compile state) (c-not (compile (first a))))
+    or (sc-infix-f "||")
     pointer-get (l (a compile state) (apply c-pointer-get (map compile a)))
+    pre-concat (l (a compile state) (cp-concat (map sc-identifier a)))
+    pre-cond-defined (l (a c s) (sc-pre-cond (q ifdef) a c))
+    pre-cond (l (a c s) (sc-pre-cond (q if) a c))
+    pre-cond-not-defined (l (a c s) (sc-pre-cond (q ifndef) a c))
+    pre-define-if-not-defined sc-pre-define-if-not-defined
+    pre-define sc-pre-define
+    pre-if-defined (l (a c s) (sc-pre-if (q ifdef) a c))
+    pre-if (l (a c s) (sc-pre-if (q if) a c))
+    pre-if-not-defined (l (a c s) (sc-pre-if (q ifndef) a c))
+    pre-include (l (a compile state) (sc-pre-include a))
+    pre-let* sc-pre-let*
     pre-pragma
     (l (a compile state) (string-append "#pragma " (string-join (map sc-identifier a) " ") "\n"))
+    pre-string-concat (l (a c s) (string-join (map c a) " "))
+    pre-stringify (l (a c s) (cp-stringify (c (first a))))
     pre-undefine
     (l (a compile state) (string-join (map (compose cp-undef sc-identifier) a) "\n" (q suffix)))
-    pre-let* sc-pre-let*
-    pre-include (l (a compile state) (sc-pre-include a))
-    pre-concat (l (a compile state) (cp-concat (map sc-identifier a)))
-    pre-cond (l (a c s) (sc-pre-cond (q if) a c))
-    pre-cond-defined (l (a c s) (sc-pre-cond (q ifdef) a c))
-    pre-cond-not-defined (l (a c s) (sc-pre-cond (q ifndef) a c))
-    pre-if (l (a c s) (sc-pre-if (q if) a c))
-    pre-if-defined (l (a c s) (sc-pre-if (q ifdef) a c))
-    pre-if-not-defined (l (a c s) (sc-pre-if (q ifndef) a c))
-    pre-stringify (l (a c s) (cp-stringify (c (first a))))
-    pre-string-concat (l (a c s) (string-join (map c a) " "))
     return (l (a c s) (if (null? a) "return" (sc-apply (q return) a c s)))
-    sc-insert (l (a c s) (first a))
     sc-comment (l (a c s) (string-append "/* " (string-join a "\n") " */\n"))
+    sc-define-syntax sc-define-syntax
+    sc-define-syntax* sc-define-syntax*
+    sc-include-once sc-include-sc-once
+    sc-include sc-include-sc
+    sc-insert (l (a c s) (first a))
     sc-no-semicolon sc-no-semicolon
     set (sc-set-f "=")
+    set* (sc-set-f "*=")
     set+ (sc-set-f "+=")
     set- (sc-set-f "-=")
-    set* (sc-set-f "*=")
     set/ (sc-set-f "/=")
-    struct (l (a c s) (sc-struct-or-union (q struct) a c))
-    union (l (a c s) (sc-struct-or-union (q union) a c))
     struct-get (l (a c s) (apply c-struct-get (map c a)))
+    struct (l (a c s) (sc-struct-or-union (q struct) a c))
     struct-literal sc-struct-literal
-    : (l (a c s) (apply c-struct-pointer-get (map c a)))
-    struct-pointer-get (l (a c s) (apply c-struct-pointer-get (map c a))) while sc-while))
+    struct-pointer-get (l (a c s) (apply c-struct-pointer-get (map c a)))
+    struct-set sc-struct-set union (l (a c s) (sc-struct-or-union (q union) a c)) while sc-while))
 
 (define (sc->c* a state) (define (compile a) (sc->c* a state))
   (if (list? a)

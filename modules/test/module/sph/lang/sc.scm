@@ -1,9 +1,22 @@
 (define-test-module (test module sph lang sc)
   (import
     (sph test)
-    (sph lang sc))
+    (sph lang sc)
+    (ice-9 match))
 
   (define-test (sc->c arguments) (sc->c arguments))
+
+  (define-test (sc-define-syntax a)
+    (match a
+      ( (id pattern expansion application)
+        (sc-define-syntax-scm id pattern expansion)
+        (sc-syntax-expand id application))))
+
+  (define-test (sc-define-syntax* a)
+    (match a
+      ((id pattern expansion application)
+        (sc-define-syntax-scm* id pattern expansion)
+        (sc-syntax-expand id application))))
 
   (test-execute-procedures-lambda
     (sc->c
@@ -350,4 +363,10 @@
       "for(a=1,b=2;1;c=3,d=4){1;}"
       (if* #t (set a 1 b 2) 0)
       "(1?(a=1,b=2):0)"
-      )))
+      )
+    (sc-define-syntax
+      (test (x ((a b) ...) body ...) (x ((a ...) (b) ...) body ...) (1 ((2 3) (4 5)) b1 b2))
+       (1 ((2 4) (3) (5)) b1 b2))
+    (sc-define-syntax*
+      (test* (a b ...) (unquote (lambda (a b) (cons* 0 a b))) (1 2 3))
+      (0 1 2 3))))
