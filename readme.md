@@ -102,7 +102,7 @@ the replacements are done like guile does it. "-" becomes "_", "->" becomes ``_t
 ```
 
 ## scheme macros
-sc supports non-hygienic macros with pattern matching and scheme expressions.
+sc supports non-hygienic macros with pattern matching.
 
 ~~~
 (sc-define-syntax (for-i index limit body ...)
@@ -111,17 +111,18 @@ sc supports non-hygienic macros with pattern matching and scheme expressions.
 (for-i i 10 (printf "%lu\n" i))
 ~~~
 
+sc-define-syntax* uses scheme expressions to generate the expansion and can return strings for plain c or sc as scheme data.
+~~~
+(sc-define-syntax* (test* a b ...)
+  (cons* 0 a b))
+~~~
+
 ~~~
 (sc-define-syntax (test x ((a b) ...) body ...)
   (x ((a ...) (b) ...) body ...))
 
-(sc-define-syntax* (test* a b ...)
-  (cons* 0 a b))
-
 (test 1 ((2 3) (4 5)) b1 b2)
 ~~~
-
-sc-define-syntax* macros use scheme expressions to generate the expansion and can return strings for plain c or sc as scheme data.
 
 # dependencies
 * [guile](https://www.gnu.org/software/guile) >= 2
