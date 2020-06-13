@@ -15,7 +15,9 @@
 (export sc->c sc-default-load-paths
   sph-lang-sc-description sc-syntax-table
   sc-syntax-check sc-syntax-error
-  sc-syntax-error? sc-define-syntax-scm sc-define-syntax-scm* sc-syntax-expand)
+  sc-syntax-error? sc-define-syntax-scm
+  sc-define-syntax-scm* sc-syntax-expand
+  sc-identifier sc-not-preprocessor-keyword? sc-not-function-pointer-symbol? sc-path->full-path)
 
 (define sph-lang-sc-description
   "an s-expression to c compiler.
@@ -142,10 +144,10 @@
     ((declare) (even? (length a)))
     ( (define)
       (match a
-        ( ( ( (? not-preprocessor-keyword? name) parameter ...)
-            ((? not-function-pointer-symbol? return-type) parameter-types ...) body ...)
+        ( ( ( (? sc-not-preprocessor-keyword? name) parameter ...)
+            ((? sc-not-function-pointer-symbol? return-type) parameter-types ...) body ...)
           (equal? (length parameter) (length parameter-types)))
-        ((((? not-preprocessor-keyword? name)) return-type body ...) #t)
+        ((((? sc-not-preprocessor-keyword? name)) return-type body ...) #t)
         ((name type value rest ...) (zero? (modulo (length rest) 3))) (_ #f)))
     ((for) (match a (((init test update) body ...) #t) (_ #f)))
     ( (if if* pre-if pre-if-defined pre-if-not-defined)
@@ -344,8 +346,8 @@
 (define-syntax-rule (add-begin-if-multiple a) (if (= 1 (length a)) (first a) (pair (q begin) a)))
 (define (contains-set? a) "list -> boolean" (and (list? a) (tree-contains? a (q set))))
 (define (preprocessor-keyword? a) (and (symbol? a) (string-prefix? "pre-" (symbol->string a))))
-(define not-preprocessor-keyword? (negate preprocessor-keyword?))
-(define (not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
+(define sc-not-preprocessor-keyword? (negate preprocessor-keyword?))
+(define (sc-not-function-pointer-symbol? a) (not (and (symbol? a) (eq? (q function-pointer) a))))
 
 (define (add-begin a)
   (if (and (list? a) (not (null? a)) (equal? (q begin) (first a))) a (list (q begin) a)))
@@ -400,7 +402,8 @@
     (pair (q begin)
       (map-slice 2
         (l (name value)
-          (let (identifier (match name (((? not-preprocessor-keyword? name) _ ...) name) (_ name)))
+          (let
+            (identifier (match name (((? sc-not-preprocessor-keyword? name) _ ...) name) (_ name)))
             (qq
               (pre-if-not-defined (unquote identifier)
                 (unquote
@@ -697,10 +700,10 @@
    if the first argument is a preprocessor command, it is a variable declaration.
    it is still possible to construct function names with the preprocessor"
   (match a
-    ( ( ( (? not-preprocessor-keyword? name) parameter ...)
-        ((? not-function-pointer-symbol? return-type) types ...) body ...)
+    ( ( ( (? sc-not-preprocessor-keyword? name) parameter ...)
+        ((? sc-not-function-pointer-symbol? return-type) types ...) body ...)
       (sc-function compile name return-type body parameter types))
-    ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
+    ( ( ( (? sc-not-preprocessor-keyword? name)) return-type body ...)
       (sc-function compile name return-type body null null))
     ( (name type value rest ...)
       (string-join
@@ -1013,7 +1016,7 @@
     pre-undefine
     (l (a compile state) (string-join (map (compose cp-undef sc-identifier) a) "\n" (q suffix)))
     return (l (a c s) (if (null? a) "return" (sc-apply (q return) a c s)))
-    sc-comment (l (a c s) (string-append "/* " (string-join a "\n") " */\n"))
+    sc-comment (l (a c s) (string-append "/* " (string-join (map any->string a) "\n") " */\n"))
     sc-define-syntax sc-define-syntax
     sc-define-syntax* sc-define-syntax*
     sc-include-once sc-include-sc-once

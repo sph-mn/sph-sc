@@ -3,9 +3,9 @@
 
 (use-modules (srfi srfi-1) (sph)
   (srfi srfi-41) (sph stream)
-  (ice-9 match) (sph lang sc expressions)
+  (ice-9 match) (sph lang sc)
   (sph lang scheme) ((sph filesystem) #:select (path->full-path ensure-trailing-slash))
-  (sph alist) (sph list) (sph cli) (sph list other) (sph lang sc) (sph string) (rnrs sorting))
+  (sph alist) (sph list) (sph cli) (sph list other)  (sph string) (rnrs sorting))
 
 (define sph-sc-documentor-cli-description
   "extracts declarations from sc files and displays an overview in markdown format")
@@ -28,10 +28,10 @@
 
 (define (extract-define a) "-> (routine name parameters output-type input-type)"
   (match a
-    ( ( ( (? not-preprocessor-keyword? name) parameter ...)
-        ((? not-function-pointer-symbol? return-type) types ...) body ...)
+    ( ( ( (? sc-not-preprocessor-keyword? name) parameter ...)
+        ((? sc-not-function-pointer-symbol? return-type) types ...) body ...)
       (list (list (q routine) name parameter return-type types)))
-    ( ( ( (? not-preprocessor-keyword? name)) return-type body ...)
+    ( ( ( (? sc-not-preprocessor-keyword? name)) return-type body ...)
       (list (list (q routine) name null return-type null)))
     (((? symbol? name) type value) (list (list (q variable) name type))) (else #f)))
 

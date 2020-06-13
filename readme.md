@@ -111,17 +111,15 @@ sc supports non-hygienic macros with pattern matching.
 (for-i i 10 (printf "%lu\n" i))
 ~~~
 
-sc-define-syntax* uses scheme expressions to generate the expansion and can return strings for plain c or sc as scheme data.
-~~~
-(sc-define-syntax* (test* a b ...)
-  (cons* 0 a b))
-~~~
-
 ~~~
 (sc-define-syntax (test x ((a b) ...) body ...)
   (x ((a ...) (b) ...) body ...))
+~~~
 
-(test 1 ((2 3) (4 5)) b1 b2)
+sc-define-syntax* uses scheme expressions to generate the expansion and can return strings for plain c or scheme data for sc.
+~~~
+(sc-define-syntax* (test* a b ...)
+  (cons* 0 a b))
 ~~~
 
 # dependencies
@@ -253,7 +251,7 @@ this way it is possible to match values with =, but alternatively other predicat
   * module system: exports-form that compiles to nothing; import form that reads export-form and rewrites all unexported identifiers to have internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. alternative: [clang-modules](https://clang.llvm.org/docs/Modules.html)
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
 * better support for wisp, for example with a command-line flag. sc in wisp can be simplified if some replacements are made, for example alternated key/value listings (key value key/value ...) to ((key value) ...)
-* more syntax checks for clearer error messages
+* improve error messages. examples and checks just need to be extended, and a better exception printer installed
 * try to reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros and complex and/or expressions are the perhaps most difficult cases
 * hygienic macros
 
