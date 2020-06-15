@@ -1,11 +1,10 @@
 #!/usr/bin/guile
 !#
-
 (use-modules (srfi srfi-1) (sph)
   (srfi srfi-41) (sph stream)
   (ice-9 match) (sph lang sc)
   (sph lang scheme) ((sph filesystem) #:select (path->full-path ensure-trailing-slash))
-  (sph alist) (sph list) (sph cli) (sph list other)  (sph string) (rnrs sorting))
+  (sph alist) (sph list) (sph cli) (sph list other) (sph string) (rnrs sorting))
 
 (define sph-sc-documentor-cli-description
   "extracts declarations from sc files and displays an overview in markdown format")
@@ -79,7 +78,8 @@
 
 (define extractors
   (alist-q enum extract-enum
-    pre-define extract-pre-define define extract-define declare extract-declare))
+    pre-define extract-pre-define
+    pre-define-if-not-defined extract-pre-define define extract-define declare extract-declare))
 
 (define (extract-one a)
   "list -> sc-doc-elements

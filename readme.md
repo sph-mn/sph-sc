@@ -131,7 +131,7 @@ sc-define-syntax* uses scheme expressions to generate the expansion and can retu
 install all dependencies
 
 ### download
-* [download](http://sph.mn/git/download/sph-sc.stable.tgz)
+* [download](https://github.com/sph-mn/sph-sc/archive/master.zip)
 * alternatives: [releases](http://files.sph.mn/u/software/releases), git clone git://sph.mn/sph-sc, [github](https://github.com/sph-mn/sph-sc)
 
 ### unpack
@@ -190,12 +190,14 @@ examples
 
 custom syntax can be defined from scheme before using sc->c with:
 ~~~
-(sc-define-syntax-scm* (quote test) (quote (a b ...))
-  (lambda (a b) (cons* 0 a b)))
-
 ; symbol list list -> unspecified
 (sc-define-syntax-scm id pattern expansion)
+
+; symbol list {any ... -> string:c/any:sc} -> unspecified
 (sc-define-syntax-scm* id pattern procedure)
+
+(sc-define-syntax-scm* (quote test) (quote (a b ...))
+  (lambda (a b) (cons* 0 a b)))
 ~~~
 
 alternatively, the syntax table can be modified directly:

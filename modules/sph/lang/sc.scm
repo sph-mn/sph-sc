@@ -1028,6 +1028,7 @@
     set+ (sc-set-f "+=")
     set- (sc-set-f "-=")
     set/ (sc-set-f "/=")
+    set% (sc-set-f "%=")
     struct-get (l (a c s) (apply c-struct-get (map c a)))
     struct (l (a c s) (sc-struct-or-union (q struct) a c))
     struct-literal sc-struct-literal

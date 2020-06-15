@@ -52,7 +52,7 @@
             (if (string? a)
               (format-docstring a (ht-ref-q config docstring-offset-doublequote)
                 (ht-ref-q config indent-string) indent)
-              a))
+              (first (recurse a indent))))
           (tail a)))
       config indent 1 1 1)
     #f))
