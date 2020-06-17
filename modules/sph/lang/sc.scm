@@ -943,9 +943,8 @@
     ( ( (id pattern ...) scheme-expression)
       (let (formals (delete (q ...) (flatten pattern)))
         (sc-define-syntax-scm* id pattern
-          (eval (list (q lambda) formals scheme-expression) eval-environment))))
-    (_ a))
-  a)
+          (eval (list (q lambda) formals scheme-expression) eval-environment)))))
+  "")
 
 (define (sc-syntax-expand id pattern) "return the direct result from a syntax handler"
   (let (state (sc-state-new (sc-default-load-paths)))
