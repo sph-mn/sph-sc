@@ -117,6 +117,7 @@
         (((begin init ...) test (begin update ...)) body ...))
       pointer-get ((variable))
       array-get ((variable indices ...))
+      array-set* ((variable values ...))
       convert-type ((variable new-type))
       if ((condition consequent) (condition consequent alternate))
       set ((variable value) (variable value variable value variable/value ...)))
@@ -133,8 +134,8 @@
         pre-pragma pre-undefine
         pre-include pre-concat pre-string-concat pre-stringify sc-comment while)
       (acount? a 1))
-    ( (: struct-pointer-get do-while
-        bit-or bit-and bit-xor or and modulo pre-let let let* = < > <= >=)
+    ( (array-set* : struct-pointer-get
+        do-while bit-or bit-and bit-xor or and modulo pre-let let let* = < > <= >=)
       (acount? a 2))
     ((array-set struct-set) (acount? a 3))
     ((address-of bit-not goto not pointer-get) (acount? a 1 1))
@@ -826,6 +827,13 @@
         (map-slice 2 (l (index value) (list (q set) (list (q array-get) array index) value))
           (tail a))))))
 
+(define (sc-array-set* a compile state)
+  (let (array (first a))
+    (compile
+      (pair (q begin)
+        (map-with-index (l (index value) (list (q set) (list (q array-get) array index) value))
+          (tail a))))))
+
 (define (sc-case-f is-case*)
   (l (a compile state)
     (compile
@@ -967,6 +975,7 @@
     array-get (l (a compile state) (apply c-array-get (map compile a)))
     array-literal (l (a compile state) (c-compound (map compile a)))
     array-set sc-array-set
+    array-set* sc-array-set*
     begin (l (a compile state) (sc-join-expressions (map compile a)))
     bit-and (sc-infix-f "&")
     bit-not (l (a compile state) (c-bit-not (compile (first a))))

@@ -219,8 +219,9 @@ this repository includes under other/
 * filename extension for source files: ``.sc``
 * clang-format is a recommended auto formatter for c that also handles macro code well. unfortunately, it cannot add empty lines between function definitions
 * sc only outputs valid c syntax
-* finding the source of c errors is usually the same as with plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the like-handwritten c code is available
+* finding the source of c errors is usually the same as with plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the almost like handwritten c code is available
 * "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
+* sc-macros are only included with sc-include
 * editor modes for scheme can be used and fast scheme-style structural editing is possible
 * indent-syntax (like coffeescript or python) can be used with [wisp](https://www.draketo.de/english/wisp). also see other/wisp2sc
 * square bracket array accessors can be used as long as they parse to scheme identifiers, for example (+ a[0] a[1])
@@ -248,6 +249,7 @@ case-clause: ((value ...) consequent ...) / (value consequent ...)
 this way it is possible to match values with =, but alternatively other predicates like custom comparison functions.
 
 # possible enhancements and ideas
+* sc-gensym to generate unique identifiers in macros
 * rewrite sph-sc in c or sc to reduce dependencies. needs a good scheme parser mainly
 * "scx": c extensions, for example a module system, keyword arguments or anonymous functions
   * module system: exports-form that compiles to nothing; import form that reads export-form and rewrites all unexported identifiers to have internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. alternative: [clang-modules](https://clang.llvm.org/docs/Modules.html)

@@ -20,6 +20,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (array-set* a 2 3 4)
+      "a[0]=2;a[1]=3;a[2]=4;"
       (struct (pre-concat a b) (c (struct (pre-concat a b*))))
       "struct a##b{struct a##b* c;}"
       (declare a (array (struct b) 3))
