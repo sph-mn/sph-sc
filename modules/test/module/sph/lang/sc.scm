@@ -20,6 +20,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (declare a (array point-t 2 (1 2) (3 4)))
+      "point_t a[2]={{1,2},{3,4}};"
       (array-set* a 2 3 4)
       "a[0]=2;a[1]=3;a[2]=4;"
       (struct (pre-concat a b) (c (struct (pre-concat a b*))))
@@ -367,8 +369,10 @@
       "(1?(a=1,b=2):0)"
       )
     (sc-define-syntax
-      (test (x ((a b) ...) body ...) (x ((a ...) (b) ...) body ...) (1 ((2 3) (4 5)) b1 b2))
-       (1 ((2 4) (3) (5)) b1 b2))
+      (id (x ((a b) ...) body ...) (x ((a ...) (b) ...) body ...) (1 ((2 3) (4 5)) b1 b2))
+      (1 ((2 4) (3) (5)) b1 b2)
+      (id ((name data ...) ...) (a (b name data ...) ...) ((c 1 2 3) (d 4 5 6)))
+      (a (b c 1 2 3) (b d 4 5 6)))
     (sc-define-syntax*
       (test* (a b ...) (unquote (lambda (a b) (cons* 0 a b))) (1 2 3))
       (0 1 2 3))))

@@ -1,8 +1,9 @@
 (define-module (sph lang sc))
 
-(use-modules (srfi srfi-1) ((rnrs io ports) #:select (get-datum))
-  (ice-9 match) (sph)
-  (rnrs eval) (sph list)
+(use-modules (srfi srfi-1) (srfi srfi-2)
+  ((rnrs io ports) #:select (get-datum)) (ice-9 match)
+  (sph) (rnrs eval)
+  (sph list)
   ( (sph string) #:select
     (parenthesise parenthesised? any->string
       any->string-write regexp-match-replace regexp-replace string-replace-string string-enclose))
@@ -41,6 +42,9 @@
 
 (define (tree-map-lists f a) "bottom to top"
   (map (l (a) (if (list? a) (f (tree-map-lists f a)) a)) a))
+
+(define (tree-map-lists-top f a) "top to bottom"
+  (map (l (a) (if (list? a) (tree-map-lists f (f a)) a)) a))
 
 (define (tree-map-leafs f a) "bottom to top"
   (map (l (a) (if (list? a) (tree-map-leafs f a) (f a))) a))
@@ -103,24 +107,24 @@
 
 (define sc-syntax-examples
   (ht-from-list
-    (list-q address-of ((variable))
-      case
-      ( (predicate subject (match-value/else consequent ...) ..1)
-        (= variable (3 (return #t)) (5 (return #t)) (else (return #f))))
-      declare ((name type) (name type name type name/type ...))
-      define
-      ( (name type value) (name type value name type value ...)
-        ((name parameters ...) (return-type ...) body ...)
-        ((name parameters ...) return-type body ...))
-      for
-      ( ( (init test update) body ...) (((init ...) test (update ...)) body ...)
-        (((begin init ...) test (begin update ...)) body ...))
-      pointer-get ((variable))
-      array-get ((variable indices ...))
-      array-set* ((variable values ...))
-      convert-type ((variable new-type))
-      if ((condition consequent) (condition consequent alternate))
-      set ((variable value) (variable value variable value variable/value ...)))
+    (q
+      (address-of ((variable)) case
+        ( (predicate subject (match-value/else consequent ...) ..1)
+          (= variable (3 (return #t)) (5 (return #t)) (else (return #f))))
+        declare ((name type) (name type name type name/type ...))
+        define
+        ( (name type value) (name type value name type value ...)
+          ((name parameters ...) (return-type ...) body ...)
+          ((name parameters ...) return-type body ...))
+        for
+        ( ( (init test update) body ...) (((init ...) test (update ...)) body ...)
+          (((begin init ...) test (begin update ...)) body ...))
+        pointer-get ((variable))
+        array-get ((variable indices ...))
+        array-set* ((variable values ...))
+        convert-type ((variable new-type))
+        if ((condition consequent) (condition consequent alternate))
+        set ((variable value) (variable value variable value variable/value ...))))
     eq? ht-hash-symbol))
 
 (define (sc-syntax-check-prefix-list prefix a state)
@@ -694,7 +698,16 @@
         (c-define-array (compile name)
           (match type (((? preprocessor-keyword? _) _ ...) (compile type))
             (else (sc-identifier type)))
-          (if (null? size) (list "") (map compile size)) (if (null? values) #f (map compile values)))))))
+          (if (null? size) (list "") (map compile size))
+          (if (null? values) #f
+            (map
+              (l (b)
+                (compile
+                  (if
+                    (and (list? b) (not (null? b))
+                      (case (first b) ((array-literal struct-literal) #f) (else #t)))
+                    (pair (q array-literal) b) b)))
+              values)))))))
 
 (define (sc-define a compile state)
   "(argument ...) procedure -> string/false
@@ -893,21 +906,43 @@
 
 (define (replace-pattern a replacements)
   "any:pattern alist -> (pattern ...)
-   fill in placeholders and repeat the pattern for each value.
+   receives a pattern that is followed by an ellipsis.
+   fill in placeholders and repeat the pattern for each available value.
    example
      pattern: (a), replacements: ((a 1 2)), result: ((1) (2)).
-   the values of the first placeholder define the number of repetition.
-     pattern: (a b), replacements: ((a 1 2) (b 3)), result: ((1 3) (2 b))"
+   the placeholder with the most values defines the repetition.
+   the last value is repeated for missing values.
+   pattern: (a b), replacements: ((a 1 2) (b 3)), result: ((1 3) (2 3))
+   matches are temporarily replaced with vectors to support nested ellipsis ((name data ...) ...)"
   (let*
-    ( (a (list a)) (pattern-ids (flatten a))
-      (values (tail (find (l (a) (contains? pattern-ids (first a))) replacements))))
+    ( (replacements
+        (filter-map
+          (l (a) "filter relevant placeholders"
+            (if (symbol? a) (assq a replacements)
+              (if (vector? a) (pair (vector-ref a 0) (vector-ref a 1)) a)))
+          (flatten (list a))))
+      (repetition (apply max (map (l (a) (if (list? (tail a)) (length (tail a)) 1)) replacements)))
+      (replacements
+        (map
+          (l (a) "normalise and possibly repeat the last value"
+            (let (values (any->list (tail a)))
+              (pair (first a)
+                (if (> repetition (length values))
+                  (append values (make-list (- repetition (length values)) (last values))) values))))
+          replacements)))
     (apply append
-      (map-integers (length values)
-        (l (index)
+      (map-integers repetition
+        (l (index) "repeatedly replace all placeholders in pattern"
           (tree-map-leafs
-            (l (a) (let (values (alist-ref replacements a)) (if values (list-ref values index) a))) a))))))
+            (l (a)
+              (let
+                (values
+                  (if (vector? a) (alist-ref replacements (vector-ref a 0))
+                    (if (symbol? a) (alist-ref replacements a) #f)))
+                (if values (vector a (list-ref values index)) a)))
+            (list a)))))))
 
-(define (replace-ellipsis a replacements) "expand patterns followed by ... in list"
+(define (replace-ellipsis-one a replacements) "expand all patterns followed by ... in list"
   (if (null? a) a
     (let loop ((a (first a)) (rest (tail a)))
       (if (null? rest) (list a)
@@ -916,6 +951,11 @@
             (if (null? (tail rest)) null (loop (first (tail rest)) (tail (tail rest)))))
           (pair a (loop (first rest) (tail rest))))))))
 
+(define (replace-ellipsis a replacements)
+  "expand all patterns followed by ... in lists and sublists"
+  (tree-map-leafs (l (a) (if (vector? a) (vector-ref a 1) a))
+    (tree-map-lists-top (l (a) (replace-ellipsis-one a replacements)) (list a))))
+
 (define (sc-define-syntax-scm id pattern expansion)
   "define new sc syntax from scheme.
    in scheme:
@@ -923,9 +963,7 @@
   (ht-set! sc-syntax-table id
     (l (a compile state)
       (let (replacements (match->alist a pattern))
-        (first
-          (replace-identifiers
-            (tree-map-lists (l (a) (replace-ellipsis a replacements)) (list expansion)) replacements))))))
+        (first (replace-identifiers (replace-ellipsis expansion replacements) replacements))))))
 
 (define (sc-define-syntax a compile state)
   "define new syntax in sc using syntax-rules style pattern matching. non-hygienic.
