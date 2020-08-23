@@ -511,7 +511,8 @@
         (let (a-first (first a))
           (not
             (and (symbol? a-first)
-              (or (preprocessor-keyword? a-first) (eq? (q function-pointer) a-first))))))
+              (or (preprocessor-keyword? a-first) (eq? (q function-pointer) a-first)
+                (eq? (q array-type) a-first) (eq? (q sc-insert) a-first))))))
       (string-join (map compile a) " ") (compile a))
     (sc-identifier a)))
 
@@ -520,6 +521,8 @@
 
 (define (sc-function-pointer? a)
   (and (list? a) (not (null? a)) (eq? (q function-pointer) (first a))))
+
+(define (sc-array-type? a) (and (list? a) (not (null? a)) (eq? (q array-type) (first a))))
 
 (define (sc-function-pointer compile inner type-output . type-input)
   "procedure string ? ? ... -> string"
@@ -574,9 +577,25 @@
           "\n" "\\\n")
         (if docstring "\n" "")))))
 
+(define (ref-sc-function-pointer compile inner type-output . type-input)
+  "procedure string ? ? ... -> string"
+  (if (sc-function-pointer? type-output)
+    (apply sc-function-pointer compile
+      (string-append (parenthesise (string-append "*" inner)) (sc-compile-types type-input compile))
+      (tail type-output))
+    (string-append (sc-compile-type type-output compile) (parenthesise (string-append "*" inner))
+      (sc-compile-types type-input compile))))
+
+(define (sc-array-type compile name type) "implementation incomplete"
+  (match type
+    ( (type size ...)
+      (string-append (sc-compile-type type compile) " " (apply c-array-get name (map compile size))))))
+
 (define (sc-function-parameter compile name type)
-  (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
-    (string-append (sc-compile-type type compile) " " (compile name))))
+  (cond
+    ((sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type)))
+    ((sc-array-type? type) (sc-array-type compile (compile name) (tail type)))
+    (else (string-append (sc-compile-type type compile) " " (compile name)))))
 
 (define (sc-function-parameters compile names types function-name)
   (parenthesise
@@ -890,13 +909,15 @@
 
 (define sc-gensym
   (let (gensym-counter 0)
-    (nullary
+    (l (a compile state)
       "return a quasi-unique identifier (not returned twice but not checked for if user defined) for use inside macros"
       (set! gensym-counter (+ 1 gensym-counter))
-      (string->symbol (string-append "__sc" (number->string gensym-counter 32))))))
+      (string-append "__sc" (number->string gensym-counter 32)))))
 
 (export sc-define-syntax-scm sc-define-syntax-scm* sc-syntax-expand)
-(define eval-environment (environment (q (guile)) (q (ice-9 match))))
+
+(define eval-environment
+  (environment (q (guile)) (q (ice-9 match)) (q (sph lang sc eval-environment))))
 
 (define (match->alist a pattern)
   "matches with (ice-9 match) but takes pattern as a variable and returns
@@ -1057,6 +1078,7 @@
     enum sc-enum
     for sc-for
     function-pointer (l (a compile state) (apply sc-function-pointer compile "" a))
+    array-type (l (a compile state) (apply sc-array-type compile "" a))
     goto (l (a compile state) (string-append "goto " (compile (first a))))
     if sc-if
     if* sc-if*

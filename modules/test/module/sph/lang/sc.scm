@@ -367,6 +367,10 @@
       "for(a=1,b=2;1;c=3,d=4){1;}"
       (if* #t (set a 1 b 2) 0)
       "(1?(a=1,b=2):0)"
+      (define (a b) (void (sc-insert "test")))
+      "void a(test b)"
+      (define (a b) (void (array-type double 3)))
+      "void a(double b[3])"
       )
     (sc-define-syntax
       (id (x ((a b) ...) body ...) (x ((a ...) (b) ...) body ...) (1 ((2 3) (4 5)) b1 b2))
