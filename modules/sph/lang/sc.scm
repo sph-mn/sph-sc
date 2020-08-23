@@ -1013,9 +1013,11 @@
 (define (sc-define-syntax a compile state)
   "define new syntax in sc using syntax-rules style pattern matching. non-hygienic.
    examples:
-     (define-syntax (test a b ...) (a (+ 1 b) ...))
      (define-syntax (test (a b) ...) ((+ a b) ...))"
-  (match a (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))) "")
+  (match a
+    (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))
+    (((id pattern ...) docstring expansion) (sc-define-syntax-scm id pattern expansion)))
+  "")
 
 (define (sc-define-syntax-scm* id pattern procedure)
   "define new sc syntax from scheme.
@@ -1032,6 +1034,10 @@
      (define-syntax* (test a b ...) (cons* (q printf) \"%d %d\" a b))"
   (match a
     ( ( (id pattern ...) scheme-expression)
+      (let (formals (delete (q ...) (flatten pattern)))
+        (sc-define-syntax-scm* id pattern
+          (eval (list (q lambda) formals scheme-expression) eval-environment))))
+    ( ( (id pattern ...) docstring scheme-expression)
       (let (formals (delete (q ...) (flatten pattern)))
         (sc-define-syntax-scm* id pattern
           (eval (list (q lambda) formals scheme-expression) eval-environment)))))
@@ -1127,6 +1133,9 @@
     struct-literal sc-struct-literal
     struct-pointer-get (l (a c s) (apply c-struct-pointer-get (map c a)))
     struct-set sc-struct-set union (l (a c s) (sc-struct-or-union (q union) a c)) while sc-while))
+
+"square/round brackets ambiguity must be disabled to support type[][3] identifiers"
+(read-disable (quote square-brackets))
 
 (define (sc->c* a state) (define (compile a) (sc->c* a state))
   (if (list? a)

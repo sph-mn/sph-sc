@@ -251,7 +251,7 @@ this way it is possible to match values with =, but alternatively other predicat
 # possible enhancements and ideas
 * better support for array types
   * (array x ...) as in declare for type conversions, function parameters and typedef
-  * ``int(*)[3]``, ``int(*a)[3]``, ``typedef int(*a)[3]``,
+  * ``int(*)[3]``, ``int(*a)[3]``, ``typedef int(*a)[3]``, ``int[][3]``
 * rewrite sph-sc in c or sc to reduce dependencies. needs a good scheme parser mainly
 * "scx": c extensions, for example a module system, keyword arguments or anonymous functions
   * module system: exports-form that compiles to nothing; import form that reads export-form and rewrites all unexported identifiers to have internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. alternative: [clang-modules](https://clang.llvm.org/docs/Modules.html)
