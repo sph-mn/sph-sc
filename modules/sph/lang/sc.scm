@@ -16,6 +16,7 @@
 (export sc->c sc-default-load-paths
   sph-lang-sc-description sc-syntax-table
   sc-syntax-check sc-syntax-error
+  sc-syntax? sc-gensym
   sc-syntax-error? sc-identifier
   sc-not-preprocessor-keyword? sc-not-function-pointer-symbol?
   sc-path->full-path sc-define-syntax-scm sc-define-syntax-scm* sc-syntax-expand)
@@ -81,8 +82,13 @@
 (define sc-state-no-semicolon (vector-accessor 2))
 (define sc-state-comma-join (vector-accessor 3))
 (define sc-state-comma-join-set! (vector-setter 3))
+(define sc-state-eval-env (vector-accessor 4))
 (define ambiguous-regexp (make-regexp "^(\\*|&)+|\\.|->|\\[|\\("))
-(define (sc-state-new load-paths) (vector (q sc-state) load-paths (ht-create-symbol) #f))
+
+(define (sc-state-new load-paths)
+  (vector (q sc-state) load-paths
+    (ht-create-symbol) #f
+    (environment (q (guile)) (q (ice-9 match)) (q (sph lang sc eval-environment)))))
 
 (define (sc-syntax-examples-get name) "prepend the prefix symbol to example argument patterns"
   "symbol -> false/list"
@@ -723,7 +729,7 @@
                 (compile
                   (if
                     (and (list? b) (not (null? b))
-                      (case (first b) ((array-literal struct-literal) #f) (else #t)))
+                      (not (and (symbol? (first b)) (sc-syntax? (first b)))))
                     (pair (q array-literal) b) b)))
               values)))))))
 
@@ -745,6 +751,15 @@
           a)
         ";"))
     (_ #f)))
+
+(define (sc-syntax? a) (if (ht-ref sc-syntax-table a) #t #f))
+
+(define sc-gensym
+  (let (gensym-counter 0)
+    (nullary
+      "return a quasi-unique identifier (not returned twice but not checked for if user defined) for use inside macros"
+      (set! gensym-counter (+ 1 gensym-counter))
+      (string->symbol (string-append "_t" (number->string gensym-counter 32))))))
 
 (define (sc-struct-or-union keyword a compile) "symbol/false ? procedure -> string"
   (let
@@ -906,20 +921,9 @@
           "&&")))))
 
 (define (sc-address-of a compile state) (c-address-of (apply string-append (map compile a))))
-
-(define sc-gensym
-  (let (gensym-counter 0)
-    (l (a compile state)
-      "return a quasi-unique identifier (not returned twice but not checked for if user defined) for use inside macros"
-      (set! gensym-counter (+ 1 gensym-counter))
-      (string-append "__sc" (number->string gensym-counter 32)))))
-
 (export sc-define-syntax-scm sc-define-syntax-scm* sc-syntax-expand)
 
-(define eval-environment
-  (environment (q (guile)) (q (ice-9 match)) (q (sph lang sc eval-environment))))
-
-(define (match->alist a pattern)
+(define (match->alist a pattern eval-environment)
   "matches with (ice-9 match) but takes pattern as a variable and returns
    matches in an association list ((pattern-identifier . value) ...)"
   (let (ids (delete (quote ...) (flatten pattern)))
@@ -941,8 +945,9 @@
           (if (list? a) (append (get-ellipsis-ids a) (loop (first rest) (tail rest)))
             (loop (first rest) (tail rest))))))))
 
-(define (get-matches a pattern c) "c:{repeated-ids . singular-ids}"
-  (let ((matches (match->alist a pattern)) (ellipsis-ids (get-ellipsis-ids pattern)))
+(define (get-matches a pattern eval-environment c) "c:{repeated-ids . singular-ids}"
+  (let
+    ((matches (match->alist a pattern eval-environment)) (ellipsis-ids (get-ellipsis-ids pattern)))
     (apply-values c (partition (l (a) (containsq? ellipsis-ids (first a))) matches))))
 
 (define (replace-identifiers a replacements)
@@ -1007,6 +1012,7 @@
   (ht-set! sc-syntax-table id
     (l (a compile state)
       (get-matches a pattern
+        (sc-state-eval-env state)
         (l (repeated single)
           (first (replace-identifiers (replace-ellipsis expansion repeated) single)))))))
 
@@ -1014,8 +1020,7 @@
   "define new syntax in sc using syntax-rules style pattern matching. non-hygienic.
    examples:
      (define-syntax (test (a b) ...) ((+ a b) ...))"
-  (match a
-    (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))
+  (match a (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))
     (((id pattern ...) docstring expansion) (sc-define-syntax-scm id pattern expansion)))
   "")
 
@@ -1025,7 +1030,8 @@
      (sc-define-syntax-scm* test (quote (a b ...)) (lambda (a b) (cons* (q printf) \"%d %d\" a b)))"
   (ht-set! sc-syntax-table id
     (l (a compile state)
-      (let (replacements (match->alist a pattern)) (apply procedure (map tail replacements))))))
+      (let (replacements (match->alist a pattern (sc-state-eval-env state)))
+        (apply procedure (map tail replacements))))))
 
 (define (sc-define-syntax* a compile state)
   "define new syntax in sc using a scheme expression. non-hygienic.
@@ -1036,11 +1042,11 @@
     ( ( (id pattern ...) scheme-expression)
       (let (formals (delete (q ...) (flatten pattern)))
         (sc-define-syntax-scm* id pattern
-          (eval (list (q lambda) formals scheme-expression) eval-environment))))
+          (eval (list (q lambda) formals scheme-expression) (sc-state-eval-env state)))))
     ( ( (id pattern ...) docstring scheme-expression)
       (let (formals (delete (q ...) (flatten pattern)))
         (sc-define-syntax-scm* id pattern
-          (eval (list (q lambda) formals scheme-expression) eval-environment)))))
+          (eval (list (q lambda) formals scheme-expression) (sc-state-eval-env state))))))
   "")
 
 (define (sc-syntax-expand id pattern) "return the direct result from a syntax handler"
@@ -1117,7 +1123,6 @@
     sc-comment (l (a c s) (string-append "/* " (string-join (map any->string a) "\n") " */\n"))
     sc-define-syntax sc-define-syntax
     sc-define-syntax* sc-define-syntax*
-    sc-gensym sc-gensym
     sc-include-once sc-include-sc-once
     sc-include sc-include-sc
     sc-insert (l (a c s) (first a))
