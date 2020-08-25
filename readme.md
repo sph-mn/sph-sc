@@ -208,12 +208,25 @@ alternatively, the syntax table can be modified directly:
     (list (quote if) (car a) #t #f)))
 ~~~
 
+## bindings available in sc-define-syntax*
+the current environment is:
+~~~
+(environment (q (guile)) (q (ice-9 match)) (q (sph lang sc eval-environment)))
+~~~
+
+custom environments can be passed to sc->c via sc-state, which can be created with sc-state-new. hints:
+~~~
+(sc-state-new load-paths #:optional eval-env)
+(sc->c a #:optional load-paths state)
+~~~
+
 # utilities
 this repository includes under other/
 * an auto formatter "sc-format"
 * a documentation extractor "sc-documentor". it displays a list of declared types, enums, routines, macros and variables in markdown
 * an emacs mode "sph-sc-mode.el". example config in other/emacs
 * "scc" which compiles sc files directly with gcc
+* example-macros.sc
 
 # other
 * filename extension for source files: ``.sc``

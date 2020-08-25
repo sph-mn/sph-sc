@@ -61,7 +61,9 @@
 
 (define sc-format-default-config
   (ht-create-symbol-q descend-prefix->format-f
-    (ht-create-symbol-q begin (scd-f 1 1 1 1)
+    (ht-create-symbol-q
+      sc-define-syntax* (scd-f 2 1 1 2)
+      begin (scd-f 1 1 1 1)
       sc-comment format-sc-comment
       for (sc-f 2 1 1)
       case (sc-f 3 1 1)

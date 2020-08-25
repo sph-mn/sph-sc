@@ -85,10 +85,10 @@
 (define sc-state-eval-env (vector-accessor 4))
 (define ambiguous-regexp (make-regexp "^(\\*|&)+|\\.|->|\\[|\\("))
 
-(define (sc-state-new load-paths)
+(define* (sc-state-new load-paths #:optional eval-env)
   (vector (q sc-state) load-paths
     (ht-create-symbol) #f
-    (environment (q (guile)) (q (ice-9 match)) (q (sph lang sc eval-environment)))))
+    (or eval-env (environment (q (guile)) (q (ice-9 match)) (q (sph lang sc eval-environment))))))
 
 (define (sc-syntax-examples-get name) "prepend the prefix symbol to example argument patterns"
   "symbol -> false/list"
