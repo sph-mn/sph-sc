@@ -111,6 +111,8 @@ sc supports non-hygienic macros with pattern matching.
 (for-i i 10 (printf "%lu\n" i))
 ~~~
 
+complex ellipsis patterns are supported
+
 ~~~
 (sc-define-syntax (test x ((a b) ...) body ...)
   (x ((a ...) (b) ...) body ...))
@@ -235,6 +237,7 @@ this repository includes under other/
 * finding the source of c errors is usually the same as with plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the almost like handwritten c code is available
 * "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
 * sc-macros are only included with sc-include
+* in sc-define-syntax*, (sc-gensym) and (sc-syntax? identifier) are available. the former returns a new identifier with each call, _t1, _t2 and so on, for temporary variable names
 * editor modes for scheme can be used and fast scheme-style structural editing is possible
 * indent-syntax (like coffeescript or python) can be used with [wisp](https://www.draketo.de/english/wisp). also see other/wisp2sc
 * square bracket array accessors can be used as long as they parse to scheme identifiers, for example (+ a[0] a[1])
@@ -267,10 +270,10 @@ this way it is possible to match values with =, but alternatively other predicat
   * ``int(*)[3]``, ``int(*a)[3]``, ``typedef int(*a)[3]``, ``int[][3]``
 * "scx": sc with extensions. for example adding a module system, keyword arguments or anonymous functions
   * module system: exports-form that compiles to nothing; import form that reads export-form from files and rewrites unexported identifiers to have less likely conflicting internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. or syntax for [clang-modules](https://clang.llvm.org/docs/Modules.html)
-* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
-* better support for wisp, for example with a command-line flag. sc in wisp can be simplified if some replacements are made, for example alternated key/value listings (key value key/value ...) to ((key value) ...)
+* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` (or sc-insert). a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
+* better support for [wisp](https://www.draketo.de/english/wisp), for example with a command-line flag. sc in wisp can be simplified if some replacements are made, for example alternated key/value listings (key value key/value ...) to ((key value) (key value) ...)
 * improve error messages. the existing checks and example patterns can be extended, and a better exception printer installed
-* try to reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros are perhaps the most difficult case because there can be ambiguities that are hard to detect
+* try to reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros can lead to ambiguities that are hard to detect
 * hygienic macros
 
 # syntax reference
