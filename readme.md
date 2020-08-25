@@ -263,15 +263,14 @@ this way it is possible to match values with =, but alternatively other predicat
 
 # possible enhancements and ideas
 * better support for array types
-  * (array x ...) as in declare for type conversions, function parameters and typedef
+  * (array x ...), as in declare. for type conversions, function parameters, typedef and dynamic array sizes
   * ``int(*)[3]``, ``int(*a)[3]``, ``typedef int(*a)[3]``, ``int[][3]``
-* rewrite sph-sc in c or sc to reduce dependencies. needs a good scheme parser mainly
-* "scx": c extensions, for example a module system, keyword arguments or anonymous functions
-  * module system: exports-form that compiles to nothing; import form that reads export-form and rewrites all unexported identifiers to have internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. alternative: [clang-modules](https://clang.llvm.org/docs/Modules.html)
+* "scx": sc with extensions. for example adding a module system, keyword arguments or anonymous functions
+  * module system: exports-form that compiles to nothing; import form that reads export-form from files and rewrites unexported identifiers to have less likely conflicting internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. or syntax for [clang-modules](https://clang.llvm.org/docs/Modules.html)
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c and only ``(sc-comment "comment string")`` (or sc-insert) can be used. a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
 * better support for wisp, for example with a command-line flag. sc in wisp can be simplified if some replacements are made, for example alternated key/value listings (key value key/value ...) to ((key value) ...)
-* improve error messages. examples and checks just need to be extended, and a better exception printer installed
-* try to reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros and complex and/or expressions are the perhaps most difficult cases
+* improve error messages. the existing checks and example patterns can be extended, and a better exception printer installed
+* try to reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros are perhaps the most difficult case because there can be ambiguities that are hard to detect
 * hygienic macros
 
 # syntax reference
@@ -369,6 +368,10 @@ aaa[3][4][5]
 (array-set aa 0 11 1 22 3 33)
 ->
 aa[0]=11;aa[1]=22;aa[3]=33;
+
+(array-set* a 2 3 4)
+->
+a[0]=2;a[1]=3;a[2]=4;
 
 (begin "\"\"")
 ->
