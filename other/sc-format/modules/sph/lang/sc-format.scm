@@ -4,7 +4,7 @@
   (sph) (sph hashtable)
   (sph lang scm-format) (sph lang scm-format format) (sph string) ((sph list) #:select (map-slice)))
 
-(export sc-format)
+(export sc-format sc-f scd-f sc-format-config sc-formatters)
 
 (define sph-lang-sc-format-description
   "formatter for sc (sph-sc) source code. also serves as an example of how custom formatters can be defined")
@@ -59,43 +59,44 @@
 
 "(sc-f 1 1 0) is the default"
 
+(define sc-formatters
+  (ht-create-symbol-q sc-define-syntax* (scd-f 2 1 1 2)
+    begin (scd-f 1 1 1 1)
+    sc-comment format-sc-comment
+    for (sc-f 2 1 1)
+    case (sc-f 3 1 1)
+    case* (sc-f 3 1 1)
+    declare format-set
+    define format-define
+    do-while (sc-f 2 1 1)
+    if (sc-f 3 1 1)
+    if* (sc-f 3 1 1)
+    label (sc-f 2 1 1)
+    pre-define format-set
+    pre-define-if-not-defined format-set
+    pre-include-once (sc-f 1 2 2)
+    pre-let format-let
+    range-comment format-range-comment
+    sc-include-once (sc-f 1 2 2)
+    scsh-block-comment format-scsh-block-comment
+    semicolon-comment format-semicolon-comment
+    set format-set
+    struct (sc-f 1 1 1)
+    struct-pointer-set (sc-f 2 2 2) struct-set (sc-f 2 2 2) array-set (sc-f 2 2 2) while (sc-f 2 1 1)))
+
+(define sc-format-config
+  (ht-create-symbol-q indent-string (string-multiply " " 2)
+    max-chars-per-line 100
+    max-exprs-per-line-start 3
+    max-exprs-per-line-middle 3
+    max-exprs-per-line-end (inf)
+    max-exprs-per-line-assoc 1
+    docstring-offset-doublequote #t
+    multiple-leading-parenthesis-spacing #t
+    toplevel-vertical-spacing 1 toplevel-vertical-spacing-oneline 0))
+
 (define sc-format-default-config
-  (ht-create-symbol-q descend-prefix->format-f
-    (ht-create-symbol-q
-      sc-define-syntax* (scd-f 2 1 1 2)
-      begin (scd-f 1 1 1 1)
-      sc-comment format-sc-comment
-      for (sc-f 2 1 1)
-      case (sc-f 3 1 1)
-      case* (sc-f 3 1 1)
-      declare format-set
-      define format-define
-      do-while (sc-f 2 1 1)
-      if (sc-f 3 1 1)
-      if* (sc-f 3 1 1)
-      label (sc-f 2 1 1)
-      pre-define format-set
-      pre-define-if-not-defined format-set
-      pre-include-once (sc-f 1 2 2)
-      pre-let format-let
-      range-comment format-range-comment
-      sc-include-once (sc-f 1 2 2)
-      scsh-block-comment format-scsh-block-comment
-      semicolon-comment format-semicolon-comment
-      set format-set
-      struct (sc-f 1 1 1)
-      struct-pointer-set (sc-f 2 2 2)
-      struct-set (sc-f 2 2 2) array-set (sc-f 2 2 2) while (sc-f 2 1 1))
-    format
-    (ht-create-symbol-q indent-string (string-multiply " " 2)
-      max-chars-per-line 100
-      max-exprs-per-line-start 3
-      max-exprs-per-line-middle 3
-      max-exprs-per-line-end (inf)
-      max-exprs-per-line-assoc 1
-      docstring-offset-doublequote #t
-      multiple-leading-parenthesis-spacing #t
-      toplevel-vertical-spacing 1 toplevel-vertical-spacing-oneline 0)))
+  (ht-create-symbol-q descend-prefix->format-f sc-formatters format sc-format-config))
 
 (define* (sc-format a #:key (indent 0) (config sc-format-default-config))
   (let
