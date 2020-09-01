@@ -240,10 +240,10 @@
       (string-join
         (map (l (e) (if (list? e) (string-append (first e) "=" (first (tail e))) e)) enum-list) ","))))
 
-(define (c-define-array name type sizes values) "string string (string ...) string ... -> string"
+(define (c-define-array name type sizes values) "string string (string ...) string -> string"
   (string-append type " "
     name (apply string-append (map (l (a) (string-append "[" a "]")) sizes))
-    (if values (string-append "={" (string-join values ",") "}") "")))
+    (if values (string-append "=" values "") "")))
 
 (define (c-variable name type) "string string -> string" (string-append type " " name))
 
@@ -674,7 +674,7 @@
     (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries))
       (((entries ...)) (c "" entries)))))
 
-(define (sc-struct-or-union-body elements compile)
+(define (sc-struct-or-union-body elements compile state)
   (string-join
     (map
       (l (a)
@@ -686,7 +686,7 @@
           ( (name type)
             (if (sc-function-pointer? type)
               (apply sc-function-pointer compile (compile name) (tail type))
-              (match type (((quote array) a ...) (sc-define-array (pair name a) compile))
+              (match type (((quote array) a ...) (sc-define-array (pair name a) compile state))
                 (else (string-append (sc-compile-type type compile) " " (compile name))))))))
       elements)
     ";" (q suffix)))
@@ -715,23 +715,24 @@
             (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
       paths)))
 
-(define (sc-define-array a compile)
+(define (sc-list? a)
+  (and (list? a) (or (null? a) (not (and (symbol? (first a)) (sc-syntax? (first a)))))))
+
+(define (sc-array-literal a compile state) "list -> string"
+  (string-append "{"
+    (string-join (map (l (a) (if (sc-list? a) (sc-array-literal a compile state) (compile a))) a)
+      ",")
+    "}"))
+
+(define (sc-define-array a compile state)
   (match a
     ( (name type size values ...)
       (let (size (any->list size))
         (c-define-array (compile name)
           (match type (((? preprocessor-keyword? _) _ ...) (compile type))
             (else (sc-identifier type)))
-          (if (null? size) (list "") (map compile size))
-          (if (null? values) #f
-            (map
-              (l (b)
-                (compile
-                  (if
-                    (and (list? b) (not (null? b))
-                      (not (and (symbol? (first b)) (sc-syntax? (first b)))))
-                    (pair (q array-literal) b) b)))
-              values)))))))
+          (if (null? size) (list "") (map (l (a) (if (null? a) "" (compile a))) size))
+          (if (null? values) #f (sc-array-literal values compile state)))))))
 
 (define (sc-define a compile state)
   "(argument ...) procedure -> string/false
@@ -761,10 +762,10 @@
       (set! gensym-counter (+ 1 gensym-counter))
       (string->symbol (string-append "_t" (number->string gensym-counter 32))))))
 
-(define (sc-struct-or-union keyword a compile) "symbol/false ? procedure -> string"
+(define (sc-struct-or-union keyword a compile state) "symbol/false ? procedure -> string"
   (let
     ( (keyword-string (symbol->string keyword)) (a-first (first a))
-      (c (l (name body) (c-statement name (sc-struct-or-union-body body compile)))))
+      (c (l (name body) (c-statement name (sc-struct-or-union-body body compile state)))))
     (if (or (symbol? a-first) (and (list? a-first) (preprocessor-keyword? (first a-first))))
       (c (string-append keyword-string " " (compile a-first)) (tail a)) (c keyword-string a))))
 
@@ -782,10 +783,10 @@
         (match type
           ( ( (quote struct-variable) type a ...)
             (sc-define (list id type (pair (q struct-literal) a)) compile state))
-          (((quote array) a ...) (sc-define-array (pair id a) compile))
+          (((quote array) a ...) (sc-define-array (pair id a) compile state))
           (((quote enum) a ...) (sc-enum a compile state))
           ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
-            (sc-struct-or-union (first type) (pair id (tail type)) compile))
+            (sc-struct-or-union (first type) (pair id (tail type)) compile state))
           (((quote type) type) (sc-define-type compile id type))
           (_ (or (sc-define (list id type) compile state) (sc-declare-variable id type compile)))))
       a)))
@@ -1068,7 +1069,7 @@
     address-of sc-address-of
     and (sc-infix-f "&&")
     array-get (l (a compile state) (apply c-array-get (map compile a)))
-    array-literal (l (a compile state) (c-compound (map compile a)))
+    array-literal sc-array-literal
     array-set sc-array-set
     array-set* sc-array-set*
     begin (l (a compile state) (sc-join-expressions (map compile a)))
@@ -1134,10 +1135,10 @@
     set/ (sc-set-f "/=")
     set% (sc-set-f "%=")
     struct-get (l (a c s) (apply c-struct-get (map c a)))
-    struct (l (a c s) (sc-struct-or-union (q struct) a c))
+    struct (l (a c s) (sc-struct-or-union (q struct) a c s))
     struct-literal sc-struct-literal
     struct-pointer-get (l (a c s) (apply c-struct-pointer-get (map c a)))
-    struct-set sc-struct-set union (l (a c s) (sc-struct-or-union (q union) a c)) while sc-while))
+    struct-set sc-struct-set union (l (a c s) (sc-struct-or-union (q union) a c s)) while sc-while))
 
 "square/round brackets ambiguity must be disabled to support type[][3] identifiers"
 (read-disable (quote square-brackets))

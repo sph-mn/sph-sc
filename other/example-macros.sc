@@ -49,8 +49,11 @@
     (pairs (q array-set*) name values)))
 
 (sc-define-syntax* (array-get-flat a (d ...) i ...)
-  "pointer access like with multidimensional array notation x[1][2][2].
-   dimensions: (2 4 3), access: (1 2 2), offset: (1 * 4 * 3 + 2 * 3 + 2)"
+  "access on pointers like with multidimensional array notation, x[1][2][2].
+   example:
+     (array-get-flat a (2 4 3) 1 2 2)
+     ->
+     *(a + (1 * 4 * 3) + (2 * 3) + 2);"
   (qq
     (pointer-get
       (+ a
