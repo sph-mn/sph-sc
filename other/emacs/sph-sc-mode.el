@@ -1,6 +1,6 @@
 ; sph-sc.el - emacs mode for sph-sc
-; version 2018-05-20
-; Copyright (C) 2018 sph http://sph.mn <sph@posteo.eu> (current maintainer)
+; version 2020-09-01
+; Copyright (C) 2018-2020 sph http://sph.mn <sph@posteo.eu> (maintainer)
 
 ;; This program is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
 (defalias 'pointto-toplevel-sexp-begin 'beginning-of-defun)
 (defalias 'sequence-ref 'elt)
 
-;-- syntax --;
 ; the syntax-table describes how various standard functions will treat the text, for example movement within the buffer with 'forward-word'
 (defvar scheme-mode-syntax-table
   (let ((st (make-syntax-table)) (i 0))
@@ -56,8 +55,6 @@
     (modify-syntax-entry ?\\ "\\ " st)
     st))
 
-;-- syntax highlighting --;
-
 (defconst sph-sc-sexp-comment-syntax-table
   (let ((st (make-syntax-table scheme-mode-syntax-table)))
     (modify-syntax-entry ?\; "." st)
@@ -65,12 +62,13 @@
     (modify-syntax-entry ?# "'" st)
     st))
 
+; syntax highlighting
 (defun lisp-font-lock-syntactic-face-function (state)
   (if (nth 3 state)
-    ;This might be a (doc) string or a ... symbol.
+    ; this might be a (doc) string or a ... symbol.
     (let ((startpos (nth 8 state)))
       (if (eq (char-after startpos) ?|)
-        ;This is not a string, but a ... symbol.
+        ; this is not a string, but a ... symbol.
         nil
         (let* ((listbeg (nth 1 state))
             (firstsym (and listbeg
@@ -123,7 +121,7 @@
         (put-text-property (- end 1) end 'syntax-table '(12)))))
   (lisp-font-lock-syntactic-face-function state))
 
-;the levels are a font-lock feature to loosely set what should be highlighted
+; the keywords levels are a font-lock feature to loosely set what should be highlighted
 (defconst sph-sc-font-lock-keywords-1
   (eval-when-compile
     '("(\\(define[^ ]*?\\) +(\\(\\sw+\\)" (1 'font-lock-keyword-face) (2 'font-lock-function-name-face))))
@@ -131,12 +129,12 @@
 (defconst sph-sc-font-lock-keywords-2
   (eval-when-compile
     (list
-      ; '(font-lock-toplevel-variables (2 'font-lock-variable-name-face) )
+      ;'(font-lock-toplevel-variables (2 'font-lock-variable-name-face) )
       (quote ("(\\(pre-define[^ ]?\\) (\\(\\sw+\\)" (2 font-lock-function-name-face)))
       (quote ("(\\(pre-\\w+\\)" (1 font-lock-preprocessor-face)))
       (quote ("(\\(sc-\\w+\\)" (1 font-lock-preprocessor-face)))
       (quote ("(\\(define[^ ]*?\\) +(\\(\\sw+\\) \\(.*?\\))" (2 font-lock-function-name-face)))
-      ; color round brackets
+      ; colorize round brackets
       ;(quote ("(\\|)" . font-lock-string-face))
       ;(quote ("(\\(define[^? ]*?\\) +\\(\\sw+\\)" (2 font-lock-variable-name-face)))
       (quote ("(\\(label\\) +\\(\\sw+\\)" (2 font-lock-function-name-face)))
@@ -163,12 +161,20 @@
 
 (defvar sph-sc-font-lock-keywords sph-sc-font-lock-keywords-1 "default expressions to highlight in scheme modes")
 
-;-- indentation --;
+; formatting
 (defvar compress-whitespace-on-indent t)
 
+(defun sph-sc-compress-whitespace-on-line (start)
+  "replaces multiple subsequent spaces in a line with a single space"
+  (save-excursion
+    (move-to-column start)
+    (while (re-search-forward "[ \t]+" (line-end-position) t)
+      (replace-match " "))
+    (move-to-column start)
+    (while (re-search-forward "[ \t]$" (line-end-position) t)
+      (replace-match ""))))
+
 (defun sph-sc-indent-line ()
-  ; restore-cursor-position makes for the effect of either jumping to the indented beginning of the line,
-  ; or letting the cursor move with the line
   (interactive "P")
   (let
     ( (restore-cursor-position (> (current-column) (current-indentation)))
@@ -181,38 +187,28 @@
 
 (defun sph-sc-calculate-indentation ()
   "return the column to which the current line should be indented.
-  it finds the current sexp-depth and indents by (* sexp-depth lisp-body-indent)"
+   it finds the current sexp-depth and indents regularly by (* sexp-depth lisp-body-indent),
+   for example an expression nested two levels deeper will be indented exactly two indent steps further"
   (let ((indent-line-beginning (line-beginning-position)))
     (pointto-toplevel-sexp-begin)
     (if (>= (point) indent-line-beginning) ;depth 1 begins on the current line
       0
-      ;indent-point-depth - parse until indent-line-beginning is reached while counting expression nesting-depth
+      ; indent-point-depth - parse until indent-line-beginning is reached while counting expression nesting-depth
       (* (max 0 (sequence-ref (parse-partial-sexp (point) indent-line-beginning) 0)) lisp-body-indent))))
 
-(defun sph-sc-compress-whitespace-on-line (start)
-  ; this compresses whitespace in strings ...
-  (save-excursion
-    (move-to-column start)
-    (while (re-search-forward "[ \t]+" (line-end-position) t)
-      (replace-match " "))
-    (move-to-column start)
-    (while (re-search-forward "[ \t]$" (line-end-position) t)
-      (replace-match ""))))
-
-;-- key binding --;
 (defvar sph-sc-mode-map
   (let ((keymap (make-sparse-keymap "sph-sc")))
     keymap)
   "keymap for sph-sc-mode")
 
-;-- mode initialisation --;
+; mode initialisation
 (defcustom sph-sc-mode-hook nil "normal hook run when entering 'sph-sc-mode'. see 'run-hooks'"
   :type 'hook :group 'scheme)
 
 (defun sph-sc-mode ()
   "major mode for editing scheme code"
   (interactive)
-  ;has the effect of switching to fundamental mode and erasing most of the effects of the previous major mode
+  ; has the effect of switching to fundamental mode and removing most of the effects of the previous major mode
   (kill-all-local-variables)
 
   (setq major-mode 'sph-sc-mode)
@@ -222,7 +218,7 @@
 
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
 
-  ;exposes the indentation function
+  ; exposes the indentation function
   (make-local-variable 'indent-line-function)
   (setq indent-line-function 'sph-sc-indent-line)
 
@@ -236,7 +232,6 @@
   (set (make-local-variable 'comment-start-skip) "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\);+[ \t]*")
   (set (make-local-variable 'font-lock-comment-start-skip) ";+ *")
   (set (make-local-variable 'comment-column) 40)
-
   (set
     (make-local-variable 'font-lock-defaults)
     '( (sph-sc-font-lock-keywords sph-sc-font-lock-keywords-1 sph-sc-font-lock-keywords-2)
@@ -247,6 +242,7 @@
       (parse-sexp-lookup-properties . t)
       (font-lock-extra-managed-props syntax-table)))
   (run-mode-hooks 'sph-sc-mode-hook))
+
 (defgroup scheme nil
   "editing scheme code."
   :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)

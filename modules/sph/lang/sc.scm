@@ -936,7 +936,8 @@
       eval-environment)))
 
 (define (get-ellipsis-ids a)
-  "return a list of all identifiers followed by ..., which ice-9 match will always put into a list"
+  "return a list of all identifiers followed by ..., which ice-9 match will always put into a list,
+   ambiguous with lists matched by non-ellipsis variables"
   (if (null? a) a
     (let loop ((a (first a)) (rest (tail a)))
       (if (null? rest) null
