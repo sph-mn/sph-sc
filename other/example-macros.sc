@@ -41,7 +41,7 @@
   "define an array with data but set values one by one with array-set*.
    allows to set runtime calculated values.
    example:
-     (define-array-set* a int 3 4)
+     (define-array-set* a int (calc 3) 4)
      ->
      int a[2];
      a[0] = calc(3);

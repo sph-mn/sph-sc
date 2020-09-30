@@ -952,9 +952,6 @@
     ((matches (match->alist a pattern eval-environment)) (ellipsis-ids (get-ellipsis-ids pattern)))
     (apply-values c (partition (l (a) (containsq? ellipsis-ids (first a))) matches))))
 
-(define (replace-identifiers a replacements)
-  (tree-map-leafs (l (a) (or (alist-ref replacements a) a)) a))
-
 (define (replace-pattern a replacements)
   "any:pattern alist -> (pattern ...)
    receives a pattern that is followed by an ellipsis.
@@ -1002,6 +999,9 @@
             (if (null? (tail rest)) null (loop (first (tail rest)) (tail (tail rest)))))
           (pair a (loop (first rest) (tail rest))))))))
 
+(define (replace-identifiers a replacements)
+  (tree-map-leafs (l (a) (or (alist-ref replacements a) a)) a))
+
 (define (replace-ellipsis a replacements)
   "expand all patterns followed by ... in lists and sublists"
   (tree-map-leafs (l (a) (if (vector? a) (vector-ref a 1) a))
@@ -1016,7 +1016,9 @@
       (get-matches a pattern
         (sc-state-eval-env state)
         (l (repeated single)
-          (first (replace-identifiers (replace-ellipsis expansion repeated) single)))))))
+          "!! there is a bug here, as replace-ellipsis replaces in expanded code,
+           if the expanded code contains ellipsis"
+          (first (replace-ellipsis (replace-identifiers expansion single) repeated)))))))
 
 (define (sc-define-syntax a compile state)
   "define new syntax in sc using syntax-rules style pattern matching. non-hygienic.
