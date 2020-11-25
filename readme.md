@@ -146,10 +146,12 @@ tar -xf sph-sc.tgz
 * -f is for the source file name
 
 ### without the installer
-* copy or symlink everything that is under "modules" into a directory listed when executing "guile -c '(display %load-path)'". a final example path is /usr/share/guile/site/sph/
-* copy or symlink exe/sc into a directory listed when executing "echo $PATH"
+* copy or symlink everything that is under "modules" into a directory listed when executing "guile -c '(display %load-path)'". a final example path is /usr/share/guile/site/sph/lang/sc.scm. also ensure that the user who will use the modules has the permissions to read the files
+* copy or symlink exe/sc into a directory listed when executing "echo $PATH". ensure that the execute permission is set ("chmod +x", "ls -l" rwx)
 
-### using the installer
+### with the installer
+the installer uses the cp utility at this point and works only on gnu/linux
+
 ```shell
 cd sph-sc
 su root
@@ -243,14 +245,14 @@ this repository includes under other/
 
 # other
 * filename extension for source files: ``.sc``
-* clang-format is a recommended auto formatter for c that also handles macro code well. unfortunately, it cannot add empty lines between function definitions
+* clang-format is a recommended auto formatter for c that also handles macro code relatively well (doesnt cleanly format macros without semicolons). unfortunately, it cannot add empty lines between function definitions
 * sc only outputs valid c syntax
 * finding the source of c errors is usually the same as with plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the almost like handwritten c code is available
 * "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
 * sc-macros are only included with sc-include
 * in sc-define-syntax*, (sc-gensym) and (sc-syntax? identifier) are available. the former returns a new identifier with each call, _t1, _t2 and so on, for temporary variable names
 * editor modes for scheme can be used and fast scheme-style structural editing is possible
-* indent-syntax (like coffeescript or python) can be used with [wisp](https://www.draketo.de/english/wisp). also see other/wisp2sc
+* indent-syntax (like coffeescript or python) can be used in combination with [wisp](https://www.draketo.de/english/wisp). also see other/wisp2sc
 * square bracket array accessors can be used as long as they parse to scheme identifiers, for example (+ a[0] a[1])
 * the declare and set syntax lets things be grouped nicely
 

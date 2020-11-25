@@ -498,7 +498,7 @@
         ( (string-prefix? "#" b) "preprocessor directives need to be on a separate line"
           (if (and (not (null? prev)) (string-suffix? "\n" (first prev))) (string-append b "\n")
             (string-append "\n" b "\n")))
-        ( (string-prefix? "/*" b)
+        ( (or (string-prefix? "/*" b) (string-prefix? "//" b))
           (if (and (not (null? prev)) (string-suffix? "\n" (first prev))) b (string-append "\n" b)))
         ((or (string-suffix? "\n" b) (string-suffix? ";" b)) b)
         ((string-suffix? ":" b) (string-append b "\n"))
@@ -1060,9 +1060,12 @@
     ((ht-ref sc-syntax-table id) pattern (l (a) (sc->c* a state)) state)))
 
 (define (sc-comment a c s)
+  "note: // comments dont work inside preprocessor macros,
+   because the \\ to escape the newline will make it apply to
+   the rest of the preprocessor macro"
   (let (a-string (string-join (map any->string a) "\n"))
     (if (string-contains a-string "\n") (string-append "/* " a-string " */\n")
-      (string-append "\n// " a-string "\n"))))
+      (string-append "\n/* " a-string " */\n"))))
 
 (define sc-syntax-table
   (ht-create-symbol-q : (l (a c s) (apply c-struct-pointer-get (map c a)))

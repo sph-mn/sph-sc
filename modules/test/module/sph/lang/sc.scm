@@ -328,7 +328,7 @@
       (while (not (= 0 (set a (b c)))) #t)
       "while(!(0==(a=b(c)))){1;}"
       (sc-comment "abc")
-      "// abc\n"
+      "/* abc */\n"
       (sc-comment "abc" "def" "ghi")
       "/* abc\ndef\nghi */\n"
       (!= 1 2 3)
@@ -354,7 +354,7 @@
       (pre-define-if-not-defined abc 3 def 4)
       "#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
       (pre-define (a) (begin 1 (sc-comment "b") 2 3))
-      "#define a() 1;\\\n// b\\\n2;3"
+      "#define a() 1;\\\n/* b */\\\n2;3"
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
       "(((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:(((\"a\"==myvalue)||(\"b\"==myvalue))?(1,1):(0,0))))"
       ; bug with missing newline after pre-define
