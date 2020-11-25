@@ -125,7 +125,7 @@ sc-define-syntax* uses scheme expressions to generate the expansion and can retu
 ~~~
 
 # dependencies
-* [guile](https://www.gnu.org/software/guile) >= 2
+* [guile](https://www.gnu.org/software/guile) >= 3
 * [sph-lib](https://github.com/sph-mn/sph-lib)
 
 # installation
@@ -145,7 +145,11 @@ tar -xf sph-sc.tgz
 * -x is for extract
 * -f is for the source file name
 
-### install
+### without the installer
+* copy or symlink everything that is under "modules" into a directory listed when executing "guile -c '(display %load-path)'". a final example path is /usr/share/guile/site/sph/
+* copy or symlink exe/sc into a directory listed when executing "echo $PATH"
+
+### using the installer
 ```shell
 cd sph-sc
 su root
@@ -154,6 +158,13 @@ su root
 
 the install script has a "--help" and a "--dry-run" option for more information.
 the installer should only copy files and set permissions for non-root users.
+
+### testing
+after everything is installed, run the following inside the sph-sc repository directory to see that everything works without errors.
+
+```shell
+./exe/test
+```
 
 ## pacman
 with [aurget](https://github.com/pbrisbin/aurget): ``aurget -S --deps sph-sc-git``
