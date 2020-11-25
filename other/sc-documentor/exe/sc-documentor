@@ -1,8 +1,10 @@
 #!/usr/bin/guile
 !#
+
 (use-modules (srfi srfi-1) (sph)
   (srfi srfi-41) (sph stream)
   (ice-9 match) (sph lang sc)
+  (srfi srfi-2)
   (sph lang scheme) ((sph filesystem) #:select (path->full-path ensure-trailing-slash))
   (sph alist) (sph list) (sph cli) (sph list other) (sph string) (rnrs sorting))
 
@@ -111,7 +113,7 @@
 (define (extract-from-files-combined paths)
   "extract from multiple files and display a merged result" (append-map extract-from-file paths))
 
-(define group-order (list-q routine macro variable type enum))
+(define group-order (q (routine macro variable type enum)))
 
 (define (group-title id md-level)
   (string-append (if (< 0 md-level) (string-append (string-multiply "#" md-level) " ") "")
@@ -187,7 +189,7 @@
                   (else id-string))))
             (list-sort-with-accessor string<? (compose symbol->string first)
               (map (compose tail tail) sub-group)))))
-      (list-q other function union struct))))
+      (q (other function union struct)))))
 
 (define (format-group id a)
   (case id
@@ -279,9 +281,9 @@
   (let*
     ( (options
         ( (cli-create #:options
-            (list-q ((sc-file-path ...) #:required? #t #:value-required? #t)
-              (config #:value-required? #t)
-              (md-level #:value-required? #t #:description "markdown heading level, 1..n"))
+            (q (((sc-file-path ...) #:required? #t #:value-required? #t)
+                (config #:value-required? #t)
+                (md-level #:value-required? #t #:description "markdown heading level, 1..n")))
             #:description sph-sc-documentor-cli-description)))
       (config (get-config (alist-ref options (q config))))
       (extracted (extract-from-files-combined (alist-ref options (q sc-file-path))))

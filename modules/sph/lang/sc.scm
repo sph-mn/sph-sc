@@ -376,7 +376,9 @@
       ".!" (pair "!" "_x")
       "\\?" "_p"
       "./." (pair "/" "_or_")
-      ".<" (pair "<" "_less") ".>" (pair ">" "_gr") ".<=" (pair "<=" "_leq") ".>=" (pair ">=" "_geq"))))
+      ".<" (pair "<" "_less")
+      ".>" (pair ">" "_gr")
+      ".<=" (pair "<=" "_leq") ".>=" (pair ">=" "_geq") ".%" (pair "%" "_percent"))))
 
 (define sc-identifier-prefixes (list #\& #\*))
 (define sc-identifier-infixes (list #\. #\:))
@@ -1057,6 +1059,11 @@
   (let (state (sc-state-new (sc-default-load-paths)))
     ((ht-ref sc-syntax-table id) pattern (l (a) (sc->c* a state)) state)))
 
+(define (sc-comment a c s)
+  (let (a-string (string-join (map any->string a) "\n"))
+    (if (string-contains a-string "\n") (string-append "/* " a-string " */\n")
+      (string-append "\n// " a-string "\n"))))
+
 (define sc-syntax-table
   (ht-create-symbol-q : (l (a c s) (apply c-struct-pointer-get (map c a)))
     != (sc-comparison-infix-f "!=")
@@ -1124,7 +1131,7 @@
     pre-undefine
     (l (a compile state) (string-join (map (compose cp-undef sc-identifier) a) "\n" (q suffix)))
     return (l (a c s) (if (null? a) "return" (sc-apply (q return) a c s)))
-    sc-comment (l (a c s) (string-append "/* " (string-join (map any->string a) "\n") " */\n"))
+    sc-comment sc-comment
     sc-define-syntax sc-define-syntax
     sc-define-syntax* sc-define-syntax*
     sc-include-once sc-include-sc-once

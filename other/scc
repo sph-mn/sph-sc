@@ -8,7 +8,7 @@
 (define scc-cli
   (let*
     ( (cli
-        (cli-create #:options (list-q ((input gcc-option ...)))
+        (cli-create #:options (q (((input gcc-option ...))))
           #:description "compile sc files with gcc"))
       (dir "/tmp/scc"))
     (nullary
