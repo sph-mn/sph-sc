@@ -283,7 +283,7 @@ this way it is possible to match values with =, but alternatively other predicat
   * ``int(*)[3]``, ``int(*a)[3]``, ``typedef int(*a)[3]``, ``int[][3]``
 * keyword arguments: it would be easy for sc to match guile style #:keywords with literal parameter names of function definitions
 * module system: exports-form that compiles to nothing; import form that reads export-form from files and rewrites unexported identifiers to have less likely conflicting internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. or syntax for [clang-modules](https://clang.llvm.org/docs/Modules.html)
-* support #;() scheme comments. currently these dont appear in the output. and sc-format removes them
+* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` (or sc-insert). a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
 * better support for [wisp](https://www.draketo.de/english/wisp), for example with a command-line flag. sc in wisp can be simplified if some replacements are made, for example alternated key/value listings (key value key/value ...) to ((key value) (key value) ...)
 * improve error messages. the existing checks and example patterns can be extended, and a better exception printer installed
 * try to reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros can lead to ambiguities that are hard to detect
