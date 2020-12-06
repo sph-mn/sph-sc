@@ -1,12 +1,12 @@
-#!/usr/bin/guile
+#!/usr/bin/env guile
 !#
 
 (use-modules (srfi srfi-1) (sph)
   (srfi srfi-41) (sph stream)
   (ice-9 match) (sph lang sc)
-  (srfi srfi-2)
-  (sph lang scheme) ((sph filesystem) #:select (path->full-path ensure-trailing-slash))
-  (sph alist) (sph list) (sph cli) (sph list other) (sph string) (rnrs sorting))
+  (srfi srfi-2) (sph lang scheme)
+  ((sph filesystem) #:select (path->full-path ensure-trailing-slash)) (sph alist)
+  (sph list) (sph cli) (sph list other) (sph string) (rnrs sorting))
 
 (define sph-sc-documentor-cli-description
   "extracts declarations from sc files and displays an overview in markdown format")
@@ -20,20 +20,27 @@
    sc-doc-element: (symbol:type any ...)
    # extractors
    extractors match sc expression list-prefixes and return an sc-doc-element,
-   for example \"(routine name parameters output-type input-type)\".
+   for example \"('function' name parameters output-type input-type)\".
    there is no user extension mechanism yet. new extractors must be added to \"extractors\".
    new sc-doc-element types can be used but sc-format-group would
    have to be extended to recognise them")
 
 (define (extract-enum a) (list (pair (q enum) a)))
 
-(define (extract-define a) "-> (routine name parameters output-type input-type)"
+(define (extract-define-body-docstring a)
+  (if (or (null? a) (not (string? (first a)))) #f (first a)))
+
+(define (extract-pre-define-value-docstring a)
+  (match a ((begin (? string? docstring) value _ ...) docstring) (_ #f)))
+
+(define (extract-define a) "-> ('function' name parameters output-type input-type docstring)"
   (match a
     ( ( ( (? sc-not-preprocessor-keyword? name) parameter ...)
         ((? sc-not-function-pointer-symbol? return-type) types ...) body ...)
-      (list (list (q routine) name parameter return-type types)))
+      (list
+        (list (q function) name parameter return-type types (extract-define-body-docstring body))))
     ( ( ( (? sc-not-preprocessor-keyword? name)) return-type body ...)
-      (list (list (q routine) name null return-type null)))
+      (list (list (q function) name null return-type null (extract-define-body-docstring body))))
     (((? symbol? name) type value) (list (list (q variable) name type))) (else #f)))
 
 (define (extract-declare-type a) "-> (type symbol:other/struct/union/function name [value])"
@@ -52,7 +59,7 @@
 (define (extract-declare a)
   "-> sc-doc-elements
    sc-doc-elements contains any of the following sc-doc-element types
-     routine, type, (variable name output-type), (enum names ...),
+     function, type, (variable name output-type), (enum names ...),
      (struct name fields), (union name fields)"
   (compact
     (map-slice 2
@@ -69,11 +76,12 @@
       a)))
 
 (define (extract-pre-define a) "-> ((macro name list:parameters) ...)"
-  (if (= 1 (length a)) (list (list (q macro) (first a) null))
+  (if (= 1 (length a)) (list (list (q macro) (first a) null #f))
     (map-slice 2
       (l (name value)
-        (match name ((name parameter ...) (list (q macro) name parameter))
-          (_ (list (q macro) name null))))
+        (let (docstring (extract-pre-define-value-docstring value))
+          (match name ((name parameter ...) (list (q macro) name parameter docstring))
+            (_ (list (q macro) name null docstring)))))
       a)))
 
 "commenting them here removes them from output"
@@ -113,29 +121,33 @@
 (define (extract-from-files-combined paths)
   "extract from multiple files and display a merged result" (append-map extract-from-file paths))
 
-(define group-order (q (routine macro variable type enum)))
+(define group-order (q (function macro variable type enum)))
 
 (define (group-title id md-level)
   (string-append (if (< 0 md-level) (string-append (string-multiply "#" md-level) " ") "")
     (case id
       ((type) "types")
       ((enum) "enum")
-      ((routine) "routines")
+      ((function) "functions")
       ((macro) "macros")
       ((variable) "variables"))))
 
-(define (format-group-element id a)
+(define (format-docstring a)
+  (string-append (string-join (map string-trim (string-split a #\newline)) "\n  " (q prefix)) "\n"))
+
+(define (format-group-element id a with-docstrings)
   (case id
     ( (macro)
       (apply
-        (l (name parameters)
+        (l (name parameters docstring)
           (string-append (sc-identifier name)
             (if (null? parameters) ""
-              (string-append "(" (string-join (map sc-identifier parameters) ", ") ")"))))
+              (string-append "(" (string-join (map sc-identifier parameters) ", ") ")"))
+            (if (and with-docstrings docstring) (format-docstring docstring) "")))
         (tail a)))
-    ( (routine)
+    ( (function)
       (apply
-        (l (name parameters type-out type-in)
+        (l (name parameters type-out type-in docstring)
           (string-append (sc-identifier name) " ::"
             (if (null? parameters) ""
               (string-join
@@ -144,7 +156,8 @@
                     (string-append (sc-identifier arg-type) ":" (sc-identifier arg-name)))
                   type-in parameters)
                 " " (q prefix)))
-            " -> " (sc-identifier type-out)))
+            " -> " (sc-identifier type-out)
+            (if (and with-docstrings docstring) (format-docstring docstring) "")))
         (tail a)))
     ((variable) (apply (l (name type) (string-append (sc->c type) " " (sc->c name))) (tail a)))
     ( (enum)
@@ -171,7 +184,7 @@
             fields))))
     (else "")))
 
-(define (format-group-type a) "format an sc-doc-element group for declared c types"
+(define (format-group-type a with-docstrings) "format an sc-doc-element group for declared c types"
   (apply append
     (filter-map
       (l (sub-type)
@@ -181,23 +194,24 @@
               (let (id-string (sc-identifier (first a)))
                 (case sub-type
                   ( (struct union)
-                    (string-append id-string ": " (format-group-element sub-type (second a))))
+                    (string-append id-string ": "
+                      (format-group-element sub-type (second a) with-docstrings)))
                   ( (function)
                     (string-append id-string ": "
-                      (format-group-element (q function-pointer) (second a))))
+                      (format-group-element (q function-pointer) (second a) with-docstrings)))
                   ((other) (string-append id-string ": " (sc-identifier (second a))))
                   (else id-string))))
             (list-sort-with-accessor string<? (compose symbol->string first)
               (map (compose tail tail) sub-group)))))
       (q (other function union struct)))))
 
-(define (format-group id a)
+(define (format-group id a with-docstrings)
   (case id
-    ((type) (format-group-type a))
-    ( (routine)
-      (map (l (a) (format-group-element id a))
+    ((type) (format-group-type a with-docstrings))
+    ( (function)
+      (map (l (a) (format-group-element id a with-docstrings))
         (list-sort-with-accessor string<? (compose symbol->string second) a)))
-    (else (list-sort string<? (map (l (a) (format-group-element id a)) a)))))
+    (else (list-sort string<? (map (l (a) (format-group-element id a with-docstrings)) a)))))
 
 (define (extracted-identifier-replace a identifier-replacements)
   "(string:regexppattern string:replacement [string:pattern string:replacement] ...)
@@ -217,12 +231,14 @@
       (l (a)
         (case (first a)
           ( (macro)
-            (apply (l (name parameters) (list (q macro) (replace name) (map replace parameters)))
-              (tail a)))
-          ( (routine)
             (apply
-              (l (name parameters type-out type-in)
-                (list (q routine) (replace name)
+              (l (name parameters docstring)
+                (list (q macro) (replace name) (map replace parameters)))
+              (tail a)))
+          ( (function)
+            (apply
+              (l (name parameters type-out type-in docstring)
+                (list (q function) (replace name)
                   (map replace parameters) (replace type-out) (map replace type-in)))
               (tail a)))
           ( (variable)
@@ -258,7 +274,7 @@
         (let
           (name
             (case (first a)
-              ((macro variable routine) (symbol->string (second a)))
+              ((macro variable function) (symbol->string (second a)))
               ((type) (symbol->string (list-ref a 2)))
               (else #f)))
           (not (and name (exclusions? name)))))
@@ -277,30 +293,35 @@
   (let (a (alist-ref config (q replace)))
     (if a (extracted-identifier-replace extracted a) extracted)))
 
+(define (display-markdown grouped md-level with-docstrings)
+  (display-line
+    (string-join
+      (filter-map
+        (l (group-id)
+          (and-let*
+            ((a (alist-ref grouped group-id)) (a (if (eq? (q type) group-id) (group a second) a)))
+            (string-append (group-title group-id md-level) "\n"
+              "~~~\n" (string-join (format-group group-id a with-docstrings) "\n") "\n~~~")))
+        group-order)
+      "\n\n")))
+
 (define (sc-documentor-cli)
   (let*
     ( (options
         ( (cli-create #:options
-            (q (((sc-file-path ...) #:required? #t #:value-required? #t)
+            (q
+              ( ( (sc-file-path ...) #:required? #t #:value-required? #t)
                 (config #:value-required? #t)
-                (md-level #:value-required? #t #:description "markdown heading level, 1..n")))
+                (md-level #:value-required? #t #:description "markdown heading level, 1..n")
+                (with-docstrings)))
             #:description sph-sc-documentor-cli-description)))
       (config (get-config (alist-ref options (q config))))
       (extracted (extract-from-files-combined (alist-ref options (q sc-file-path))))
       (extracted
         (apply-config-replace (apply-config-remove (apply-config-add extracted config) config)
           config))
-      (grouped (group extracted first))
+      (grouped (group extracted first)) (with-docstrings (alist-ref options (q with-docstrings)))
       (md-level (let (a (alist-ref options (q md-level))) (if a (string->number a) 1))))
-    (display-line
-      (string-join
-        (filter-map
-          (l (group-id)
-            (and-let*
-              ((a (alist-ref grouped group-id)) (a (if (eq? (q type) group-id) (group a second) a)))
-              (string-append (group-title group-id md-level) "\n"
-                "```\n" (string-join (format-group group-id a) "\n") "\n```")))
-          group-order)
-        "\n\n"))))
+    (display-markdown grouped md-level with-docstrings)))
 
 (sc-documentor-cli)
