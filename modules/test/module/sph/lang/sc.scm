@@ -20,6 +20,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (sc-define-syntax (x a (b ...) body) (define a (b ...) body))
+      ""
       (declare a (array point-t 2 (1 2) (3 4)))
       "point_t a[2]={{1,2},{3,4}};"
       (array-set* a 2 3 4)

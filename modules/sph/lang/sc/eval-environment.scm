@@ -6,4 +6,6 @@
 (use-modules (sph list) (sph alist) (sph hashtable) (sph) (sph lang sc))
 
 (re-export flatten contains?
-  containsq? containsv? first map-with-index tail pair null pairs q qq debug-log sc-gensym sc-syntax? alist-ref)
+  containsq? containsv?
+  first map-with-index
+  tail pair null pairs q qq debug-log sc-gensym sc-syntax? alist-ref map-integers l)

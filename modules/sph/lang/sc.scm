@@ -50,19 +50,6 @@
 (define (tree-map-leafs f a) "bottom to top"
   (map (l (a) (if (list? a) (tree-map-leafs f a) (f a))) a))
 
-(define (tree-finder find f a)
-  "procedure:{predicate list ... -> any} procedure:{element -> any/boolean} list -> any
-   call f with each tree list and leaf from top to bottom and return true results of f"
-  (find (l (a) (or (f a) (and (list? a) (tree-finder find f a)))) a))
-
-(define (tree-any f a)
-  "procedure list -> false/any
-   call f with each tree element list or leaf from top to bottom and return the first true result of f.
-   can be used to extract single elements from tree. aliased as tree-any and tree-extract"
-  (tree-finder any f a))
-
-(define (tree-every f a) (not (tree-any (negate f) a)))
-
 (define* (tree-contains? a search-value #:optional (equal? equal?))
   "list any [procedure:{any any -> boolean}] -> boolean
    compares all list and non-list elements with search-value and returns true on a match"
@@ -137,6 +124,9 @@
   "symbol list sc-state -> boolean
    arity checks first"
   (case prefix
+    ( (sc-define-syntax sc-define-syntax*)
+      "dont check contents of definition as it can contain pattern pattern variables where lists are expected"
+      (q ok-terminal))
     ( (+ -* /
         array-get cond
         cond* sc-include
@@ -173,10 +163,14 @@
     (else #t)))
 
 (define (sc-syntax-check a state) "list:expressions (string ...) -> boolean | exception"
-  (tree-every
+  (every
     (l (a)
-      (if (and (list? a) (not (null? a)))
-        (or (sc-syntax-check-prefix-list (first a) (tail a) state) (sc-syntax-error a (first a))) #t))
+      (let
+        (b
+          (if (and (list? a) (not (null? a)))
+            (sc-syntax-check-prefix-list (first a) (tail a) state) #t))
+        (if (eqv? b (q ok-terminal)) #t
+          (if b (if (list? a) (sc-syntax-check a state) #t) (sc-syntax-error a (first a))))))
     a))
 
 (define (parenthesise-ambiguous a)
