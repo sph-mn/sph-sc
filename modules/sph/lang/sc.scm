@@ -1020,8 +1020,9 @@
   "define new syntax in sc using syntax-rules style pattern matching. non-hygienic.
    examples:
      (define-syntax (test (a b) ...) ((+ a b) ...))"
-  (match a (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))
-    (((id pattern ...) docstring expansion) (sc-define-syntax-scm id pattern expansion)))
+  (match a
+    (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))
+    (((id pattern ...) (? string? docstring) expansion) (sc-define-syntax-scm id pattern expansion)))
   "")
 
 (define (sc-define-syntax-scm* id pattern procedure)

@@ -1,6 +1,7 @@
-#!/usr/bin/guile
+#!/usr/bin/env guile
 !#
 
 (import (sph) (sph test))
+
 (let (s (test-settings-default-custom path-search "modules" reporter-name (q compact)))
   (test-execute-modules-by-prefix #:settings s (q (test module sph lang sc))))

@@ -1,8 +1,9 @@
 # sph-sc
 * a simpler c syntax. c written as scheme-like s-expressions
+* scheme/lisp like macro system
+* supports c and its preprocessor
 * the output, after formatting, is supposed to be as if originally written in c
-* supports all c and its preprocessor
-* command-line application and scheme library
+* command-line application and guile library
 * possibly also useful as an intermediate language for applications that want to generate c code
 * status: should work, been around for a while, easy to maintain and extend
 * license: gpl3+. does not apply to generated code. generated code has your license
@@ -281,12 +282,13 @@ this way it is possible to match values with =, but alternatively other predicat
 * better support for array types
   * (array x ...), as in declare. for type conversions, function parameters, typedef and dynamic array sizes
   * ``int(*)[3]``, ``int(*a)[3]``, ``typedef int(*a)[3]``, ``int[][3]``
-* keyword arguments: it would be easy for sc to match guile style #:keywords with literal parameter names of function definitions
+* keyword arguments: it would be easy for sc to match guile style #:keywords with the parameter names of function definitions
 * module system: exports-form that compiles to nothing; import form that reads export-form from files and rewrites unexported identifiers to have less likely conflicting internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. or syntax for [clang-modules](https://clang.llvm.org/docs/Modules.html)
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` (or sc-insert). a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library
 * better support for [wisp](https://www.draketo.de/english/wisp), for example with a command-line flag. sc in wisp can be simplified if some replacements are made, for example alternated key/value listings (key value key/value ...) to ((key value) (key value) ...)
 * improve error messages. the existing checks and example patterns can be extended, and a better exception printer installed
 * try to reduce round brackets in the output, as there are cases where they are added when it is optional. arguments to preprocessor macros can lead to ambiguities that are hard to detect
+* support actual switch/case instead of only compiling to if/else
 * hygienic macros
 
 # syntax reference
