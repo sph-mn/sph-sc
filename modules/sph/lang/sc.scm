@@ -125,14 +125,14 @@
    arity checks first"
   (case prefix
     ( (sc-define-syntax sc-define-syntax*)
-      "dont check contents of definition as it can contain pattern pattern variables where lists are expected"
+      "dont check contents of syntax definitions as it can contain pattern pattern variables where lists are expected"
       (q ok-terminal))
+    ((sc-comment) (and (acount? a 1) (q ok-terminal)))
     ( (+ -* /
         array-get cond
         cond* sc-include
         function-pointer label
-        pre-pragma pre-undefine
-        pre-include pre-concat pre-string-concat pre-stringify sc-comment while)
+        pre-pragma pre-undefine pre-include pre-concat pre-string-concat pre-stringify while)
       (acount? a 1))
     ( (array-set* : struct-pointer-get
         do-while bit-or bit-and bit-xor or and modulo pre-let let let* = < > <= >=)
@@ -963,7 +963,7 @@
         (filter-map
           (l (a) "add vector placeholders"
             (if (symbol? a) (assq a replacements)
-              (if (vector? a) (pair (vector-ref a 0) (vector-ref a 1)) a)))
+              (if (vector? a) (pair (vector-ref a 0) (vector-ref a 1)) #f)))
           (flatten (list a))))
       (repetition (apply max (map (l (a) (if (list? (tail a)) (length (tail a)) 1)) replacements)))
       (replacements
@@ -1020,8 +1020,7 @@
   "define new syntax in sc using syntax-rules style pattern matching. non-hygienic.
    examples:
      (define-syntax (test (a b) ...) ((+ a b) ...))"
-  (match a
-    (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))
+  (match a (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))
     (((id pattern ...) (? string? docstring) expansion) (sc-define-syntax-scm id pattern expansion)))
   "")
 
@@ -1148,7 +1147,7 @@
     struct-pointer-get (l (a c s) (apply c-struct-pointer-get (map c a)))
     struct-set sc-struct-set union (l (a c s) (sc-struct-or-union (q union) a c s)) while sc-while))
 
-"square/round brackets ambiguity must be disabled to support type[][3] identifiers"
+"square/round brackets ambiguity disabled to support type[][3] identifiers"
 (read-disable (quote square-brackets))
 
 (define (sc->c* a state) (define (compile a) (sc->c* a state))

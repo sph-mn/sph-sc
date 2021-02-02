@@ -112,7 +112,7 @@ sc supports non-hygienic macros with pattern matching.
 (for-i i 10 (printf "%lu\n" i))
 ~~~
 
-complex ellipsis patterns are supported
+complex ellipsis patterns are possible
 
 ~~~
 (sc-define-syntax (test x ((a b) ...) body ...)
@@ -246,9 +246,9 @@ this repository includes under other/
 
 # other
 * filename extension for source files: ``.sc``
-* clang-format is a recommended auto formatter for c that also handles macro code relatively well (doesnt cleanly format macros without semicolons). unfortunately, it cannot add empty lines between function definitions
+* clang-format is a recommended auto formatter for c that also handles macro code relatively well (but doesnt cleanly format macros without semicolons). unfortunately, it cannot add empty lines between function definitions
 * sc only outputs valid c syntax
-* finding the source of c errors is usually the same as with plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the almost like handwritten c code is available
+* finding the source of c errors is usually the same as with plain c, particularly when the c code is formatted before compilation. modern c compilers indicate run-time errors with context and the directly translated c code is available
 * "sc-include" relative-paths are source-file relative unless they start with a slash. prefer standard pre-include instead of sc-include to not generate big, unwieldy c files
 * sc-macros are only included with sc-include
 * in sc-define-syntax*, (sc-gensym) and (sc-syntax? identifier) are available. the former returns a new identifier with each call, _t1, _t2 and so on, for temporary variable names
