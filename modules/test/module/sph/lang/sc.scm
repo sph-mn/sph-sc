@@ -180,11 +180,11 @@
       (define (abc d e) (uint32_t (pre-concat b 64) b16) (return 0))
       "uint32_t abc(b##64 d,b16 e){return(0);}\n"
       (define (a) void "test-docstring")
-      "/** test-docstring */\nvoid a()"
+      "\n/** test-docstring */\nvoid a()"
       (define (a b) (c d) "e")
-      "/** e */\nc a(d b)"
+      "\n/** e */\nc a(d b)"
       (define (a b c) (void void void) "test-docstring" (+ b c))
-      "/** test-docstring */\nvoid a(void b,void c){(b+c);}\n"
+      "\n/** test-docstring */\nvoid a(void b,void c){(b+c);}\n"
       (do-while #t 1 2 3)
       "do{1;2;3;}while(1)"
       (enum (a b c d e))
@@ -246,13 +246,13 @@
       (pre-define (a) #t)
       "#define a() 1"
       (pre-define (a b) (begin "test-docstring" (+ b c) 3))
-      "/** test-docstring */\n#define a(b) (b+c);3\n"
+      "\n/** test-docstring */\n#define a(b) (b+c);3\n"
       (pre-define ob-ject 3)
       "#define ob_ject 3"
       (pre-define a 1 (id a b) (= a b))
-      "#define a 1\n#define id(a,b) (a==b)\n"
+      "\n#define a 1\n#define id(a,b) (a==b)\n"
       (pre-define a 1 (id) b)
-      "#define a 1\n#define id() b\n"
+      "\n#define a 1\n#define id() b\n"
       (pre-define (->test a b) c)
       "#define _to_test(a,b) c"
       (pre-if (= a b) (begin c d e) (begin f g))
@@ -330,7 +330,7 @@
       (while (not (= 0 (set a (b c)))) #t)
       "while(!(0==(a=b(c)))){1;}"
       (sc-comment "abc")
-      "/* abc */\n"
+      "\n/* abc */\n"
       (sc-comment "abc" "def" "ghi")
       "/* abc\ndef\nghi */\n"
       (!= 1 2 3)
@@ -340,9 +340,9 @@
       (begin (sc-no-semicolon (a 1) (set b 2)))
       "a(1)\nb=2\n"
       (begin (pre-define a (begin (define (a) void 1))) (declare b int))
-      "#define a void a(){1;}\nint b;"
+      "\n#define a void a(){1;}\nint b;"
       (begin (pre-define (a b) (define (c) void 1)) (a "xyz"))
-      "#define a(b) void c(){1;}\na(\"xyz\")\n"
+      "\n#define a(b) void c(){1;}\na(\"xyz\")\n"
       (set+ a 1 b 2)
       "a+=1;b+=2;"
       (set- a 1)
@@ -354,7 +354,7 @@
       (declare a (type (struct (b (array int 3)))))
       "typedef struct{int b[3];} a;"
       (pre-define-if-not-defined abc 3 def 4)
-      "#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
+      "\n#ifndef abc\n#define abc 3\n#endif\n#ifndef def\n#define def 4\n#endif\n"
       (pre-define (a) (begin 1 (sc-comment "b") 2 3))
       "#define a() 1;\\\n/* b */\\\n2;3"
       (case* = myvalue ((3 2) #t) (4 #f) (("a" "b") #t #t) (else #f #f))
@@ -363,7 +363,7 @@
       (begin
         (pre-define (a) (begin "test" b) c d)
         (declare e f))
-      "/** test */\n#define a() b\n#define c d\nf e;"
+      "\n/** test */\n#define a() b\n#define c d\nf e;"
       ; sub expressions need to be joined with commas in these contexts
       (for ( (set a 1 b 2) #t (set c 3 d 4)) #t)
       "for(a=1,b=2;1;c=3,d=4){1;}"

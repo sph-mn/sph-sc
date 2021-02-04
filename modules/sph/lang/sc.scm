@@ -11,7 +11,7 @@
     (ht-create-symbol-q ht-create-symbol ht-delete!
       ht-ref ht-set! ht-from-list ht-hash-symbol ht-create-string))
   ((sph alist) #:select (alist alist-ref))
-  ((sph filesystem) #:select (ensure-trailing-slash search-load-path realpath*)))
+  ((sph filesystem) #:select (ensure-trailing-slash search-load-path)))
 
 (export sc->c sc-default-load-paths
   sph-lang-sc-description sc-syntax-table
@@ -691,7 +691,7 @@
 
 (define (sc-path->full-path load-paths path) "expects load paths to have a trailing slash"
   (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
-    (if path-found (realpath* path-found)
+    (if path-found (canonicalize-path path-found)
       (raise
         (list (q file-not-accessible)
           (string-append (any->string path) " not found in " (any->string load-paths)))))))
@@ -754,7 +754,7 @@
 (define sc-gensym
   (let (gensym-counter 0)
     (nullary
-      "return a quasi-unique identifier (not returned twice but not checked for if user defined) for use inside macros"
+      "return a quasi-unique identifier (not returned twice but not checked for if user defined). can be used inside macros"
       (set! gensym-counter (+ 1 gensym-counter))
       (string->symbol (string-append "_t" (number->string gensym-counter 32))))))
 
@@ -918,7 +918,6 @@
           "&&")))))
 
 (define (sc-address-of a compile state) (c-address-of (apply string-append (map compile a))))
-(export sc-define-syntax-scm sc-define-syntax-scm* sc-syntax-expand)
 
 (define (match->alist a pattern eval-environment)
   "matches with (ice-9 match) but takes pattern as a variable and returns
@@ -933,7 +932,7 @@
 
 (define (get-ellipsis-ids a)
   "return a list of all identifiers followed by ..., which ice-9 match will always put into a list,
-   ambiguous with lists matched by non-ellipsis variables"
+   to differentiate from lists matched by non-ellipsis variables"
   (if (null? a) a
     (let loop ((a (first a)) (rest (tail a)))
       (if (null? rest) null
@@ -943,21 +942,19 @@
           (if (list? a) (append (get-ellipsis-ids a) (loop (first rest) (tail rest)))
             (loop (first rest) (tail rest))))))))
 
-(define (get-matches a pattern eval-environment c) "c:{repeated-ids . singular-ids}"
+(define (get-matches a pattern eval-environment c) "c:{repeated-ids singular-ids -> any}"
   (let
     ((matches (match->alist a pattern eval-environment)) (ellipsis-ids (get-ellipsis-ids pattern)))
     (apply-values c (partition (l (a) (containsq? ellipsis-ids (first a))) matches))))
 
 (define (replace-pattern a replacements)
   "any:pattern alist -> (pattern ...)
-   receives a pattern that is followed by an ellipsis.
-   fill in placeholders and repeat the pattern for each available value.
+   receives a pattern that is followed by an ellipsis and replaces placeholders and repeats the pattern for each available value.
    example
      pattern: (a), replacements: ((a 1 2)), result: ((1) (2)).
-   the placeholder with the most values defines the repetition.
-   the last value is repeated for missing values.
+   the placeholder with the most values defines the count of repetition, the last value is repeated for missing values.
    pattern: (a b), replacements: ((a 1 2) (b 3)), result: ((1 3) (2 3))
-   matches are temporarily replaced with vectors to support nested ellipsis ((name data ...) ...)"
+   matches are replaced with vectors in an intermediate step to support nested ellipsis ((name data ...) ...)"
   (let*
     ( (replacements
         (filter-map
@@ -968,7 +965,7 @@
       (repetition (apply max (map (l (a) (if (list? (tail a)) (length (tail a)) 1)) replacements)))
       (replacements
         (map
-          (l (a) "normalise and possibly repeat the last value"
+          (l (a) "normalise lengths and repeat the last value if shorter"
             (let (values (any->list (tail a)))
               (pair (first a)
                 (if (> repetition (length values))
@@ -976,7 +973,7 @@
           replacements)))
     (apply append
       (map-integers repetition
-        (l (index) "repeatedly replace all placeholders in pattern"
+        (l (index) "replace all placeholders in pattern and repeat for each value"
           (tree-map-leafs
             (l (a)
               (let
@@ -1012,12 +1009,13 @@
       (get-matches a pattern
         (sc-state-eval-env state)
         (l (repeated single)
-          "!! there is a bug here, as replace-ellipsis replaces in expanded code,
-           if the expanded code contains ellipsis"
+          "replace-ellipsis might replace in expanded code if the expanded code contains ellipsis
+           this is currently handled by replacing non-repeated identifiers first"
           (first (replace-ellipsis (replace-identifiers expansion single) repeated)))))))
 
 (define (sc-define-syntax a compile state)
-  "define new syntax in sc using syntax-rules style pattern matching. non-hygienic.
+  "define new syntax in sc using syntax-rules style pattern matching.
+   non-hygienic, that means, without protecting against conflicts with identifiers in the surrounding environment.
    examples:
      (define-syntax (test (a b) ...) ((+ a b) ...))"
   (match a (((id pattern ...) expansion) (sc-define-syntax-scm id pattern expansion))
@@ -1156,10 +1154,8 @@
       (if b (if (list? b) (compile b) b) (sc-apply (first a) (tail a) compile state)))
     (sc-value a)))
 
-(define (post-process a) (string-trim (regexp-replace a "\n\n+" "\n")))
-
 (define* (sc->c a #:optional load-paths state)
   "expression [(string ...) sc-state] -> string
    load-paths is only used if state is not given or false"
   (let (state (or state (sc-state-new (or load-paths (sc-default-load-paths)))))
-    (and (sc-syntax-check (list a) state) (post-process (sc->c* a state)))))
+    (and (sc-syntax-check (list a) state) (sc->c* a state))))
