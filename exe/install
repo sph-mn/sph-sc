@@ -3,6 +3,6 @@
 
 (import (sph install))
 
-(install-cli ()
+(install-cli
   (system-executables 755 "exe/sc")
   (guile-site-modules "modules/sph" "modules/test"))
