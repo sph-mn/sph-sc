@@ -155,7 +155,7 @@ tar -xf sph-sc.tgz
 * copy or symlink exe/sc into a directory listed when executing "echo $PATH". ensure that the execute permission is set ("chmod +x", "ls -l" rwx)
 
 ### with the installer
-the installer uses the cp utility at this point and works only on gnu/linux
+the installer so far is only tested on gnu/linux and installs executables to /usr/bin by default.
 
 ```shell
 cd sph-sc
@@ -163,8 +163,8 @@ su root
 ./exe/install
 ```
 
-the install script has a "--help" and a "--dry-run" option for more information.
-the installer should only copy files and set permissions for non-root users.
+the install script has a "--help" and a "--dry-run" option for more options and information.
+the installer creates directories, copies files and sets permissions.
 
 ### testing
 after everything is installed, run the following inside the sph-sc repository directory to see that everything works without errors.
