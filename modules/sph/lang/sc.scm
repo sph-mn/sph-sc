@@ -128,11 +128,11 @@
       "dont check contents of syntax definitions as it can contain pattern pattern variables where lists are expected"
       (q ok-terminal))
     ((sc-comment) (and (acount? a 1) (q ok-terminal)))
-    ( (+ -* /
-        array-get cond
-        cond* sc-include
-        function-pointer label
-        pre-pragma pre-undefine pre-include pre-concat pre-string-concat pre-stringify while)
+    ( (+ - *
+        / array-get
+        cond cond*
+        sc-include function-pointer
+        label pre-pragma pre-undefine pre-include pre-concat pre-string-concat pre-stringify while)
       (acount? a 1))
     ( (array-set* : struct-pointer-get
         do-while bit-or bit-and bit-xor or and modulo pre-let let let* = < > <= >=)
@@ -898,7 +898,7 @@
         (map-slice 2 (l (field value) (list (q set) (list (q struct-get) struct field) value))
           (tail a))))))
 
-(define (sc-infix-f c-infix)
+(define* (sc-infix-f c-infix #:optional can-be-prefix)
   (l (a compile state)
     (parenthesise
       (string-join
@@ -906,7 +906,7 @@
           (l (a) "consider cases like a&&b=c where a lvalue error would occur for b=c"
             (if (contains-set? a) (parenthesise (compile a)) (compile a)))
           a)
-        c-infix))))
+        c-infix (if (and can-be-prefix (= 1 (length a))) (q prefix) (q infix))))))
 
 (define (sc-comparison-infix-f c-infix)
   (l (a compile state)
@@ -1068,8 +1068,8 @@
     > (sc-comparison-infix-f ">")
     >= (sc-comparison-infix-f ">=")
     * (sc-infix-f "*")
-    + (sc-infix-f "+")
-    - (sc-infix-f "-")
+    + (sc-infix-f "+" #t)
+    - (sc-infix-f "-" #t)
     / (sc-infix-f "/")
     address-of sc-address-of
     and (sc-infix-f "&&")

@@ -20,6 +20,10 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (- (+ x y))
+      "(-(x+y))"
+      (+ (+ x y))
+      "(+(x+y))"
       (sc-define-syntax (x a (b ...) body) (define a (b ...) body))
       ""
       (declare a (array point-t 2 (1 2) (3 4)))
