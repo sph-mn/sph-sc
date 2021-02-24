@@ -20,6 +20,10 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (/ 2)
+      "(1/2)"
+      (/ (+ 1 2))
+      "(1/(1+2))"
       (- (+ x y))
       "(-(x+y))"
       (+ (+ x y))

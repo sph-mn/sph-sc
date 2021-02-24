@@ -5,7 +5,8 @@
   (ice-9 match) (sph)
   (sph list)
   ( (sph string) #:select
-    (parenthesise parenthesised? any->string
+    (string-equal? string-case parenthesise
+      parenthesised? any->string
       any->string-write regexp-match-replace regexp-replace string-replace-string string-enclose))
   ( (sph hashtable) #:select
     (ht-create-symbol-q ht-create-symbol ht-delete!
@@ -900,13 +901,17 @@
 
 (define* (sc-infix-f c-infix #:optional can-be-prefix)
   (l (a compile state)
-    (parenthesise
-      (string-join
+    (let
+      (content
         (map
           (l (a) "consider cases like a&&b=c where a lvalue error would occur for b=c"
             (if (contains-set? a) (parenthesise (compile a)) (compile a)))
-          a)
-        c-infix (if (and can-be-prefix (= 1 (length a))) (q prefix) (q infix))))))
+          a))
+      (parenthesise
+        (if (= 1 (length a))
+          (string-case c-infix ("/" (apply string-append "1" c-infix content))
+            (("+" "-") (apply string-append c-infix content)))
+          (string-join content c-infix))))))
 
 (define (sc-comparison-infix-f c-infix)
   (l (a compile state)
