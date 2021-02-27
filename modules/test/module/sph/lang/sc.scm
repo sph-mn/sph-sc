@@ -331,6 +331,8 @@
       "a->b"
       (struct-pointer-get a b c d)
       "a->b->c->d"
+      (struct-pointer-set a b 3 c 4)
+      "a->b=3;a->c=4;"
       (union (a (unsigned int)) (b (unsigned char) 3))
       "union{unsigned int a;unsigned char b:3;}"
       (while #t 1 2 3)

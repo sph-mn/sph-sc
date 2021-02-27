@@ -892,12 +892,12 @@
                   ((object body ...) (pair (list predicate object subject) body))))
               clauses)))))))
 
-(define (sc-struct-set a compile state)
-  (let (struct (first a))
-    (compile
-      (pair (q begin)
-        (map-slice 2 (l (field value) (list (q set) (list (q struct-get) struct field) value))
-          (tail a))))))
+(define (sc-struct-set-f getter) "symbol:struct-get/struct-pointer-get/... -> procedure"
+  (l (a compile state)
+    (let (struct (first a))
+      (compile
+        (pair (q begin)
+          (map-slice 2 (l (field value) (list (q set) (list getter struct field) value)) (tail a)))))))
 
 (define* (sc-infix-f c-infix #:optional can-be-prefix)
   (l (a compile state)
@@ -1148,7 +1148,9 @@
     struct (l (a c s) (sc-struct-or-union (q struct) a c s))
     struct-literal sc-struct-literal
     struct-pointer-get (l (a c s) (apply c-struct-pointer-get (map c a)))
-    struct-set sc-struct-set union (l (a c s) (sc-struct-or-union (q union) a c s)) while sc-while))
+    struct-set (sc-struct-set-f (q struct-get))
+    struct-pointer-set (sc-struct-set-f (q struct-pointer-get))
+    union (l (a c s) (sc-struct-or-union (q union) a c s)) while sc-while))
 
 "square/round brackets ambiguity disabled to support type[][3] identifiers"
 (read-disable (quote square-brackets))
