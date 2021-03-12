@@ -691,7 +691,11 @@
 (define sc-included-paths (ht-create-string))
 
 (define (sc-path->full-path load-paths path) "expects load paths to have a trailing slash"
-  (let* ((path (string-append path ".sc")) (path-found (search-load-path path load-paths)))
+  (let*
+    ( (path (string-append path ".sc"))
+      (path-found
+        (if (string-prefix? "/" path) (and (file-exists? path) path)
+          (search-load-path path load-paths))))
     (if path-found (canonicalize-path path-found)
       (raise
         (list (q file-not-accessible)

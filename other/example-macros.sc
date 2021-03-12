@@ -1,5 +1,5 @@
-(sc-define-syntax (for-i index limit body ...)
-  (for ((set index 0) (< index limit) (set+ index 1)) body ...))
+(sc-define-syntax (for-each-index index limit body ...)
+  (for ((define index size-t 0) (< index limit) (set+ index 1)) body ...))
 
 (sc-define-syntax* (define-array name type values ...)
   "define an array with data. sets dimensions automatically.
