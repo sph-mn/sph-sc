@@ -9,18 +9,21 @@
       ( (format1 #:value-required? #t
           #:description
           "comma separated list of identifiers for syntax that is format with only one expression per line (1-1-1)")
-        (format2-1 #:value-required? #t)))))
+        (format2-1 #:value-required? #t) (format3-1 #:value-required? #t)))))
 
 (define (sc-format-cli)
   (let*
     ( (options (cli)) (format1 (alist-ref options (q format1)))
-      (format2-1 (alist-ref options (q format2-1))))
+      (format2-1 (alist-ref options (q format2-1))) (format3-1 (alist-ref options (q format3-1))))
     (if format1
       (each (l (a) (ht-set! sc-formatters (string->symbol a) (sc-f 1 1 1)))
         (string-split format1 #\,)))
     (if format2-1
       (each (l (a) (ht-set! sc-formatters (string->symbol a) (sc-f 2 1 1)))
         (string-split format2-1 #\,)))
+    (if format3-1
+      (each (l (a) (ht-set! sc-formatters (string->symbol a) (sc-f 3 1 1)))
+        (string-split format3-1 #\,)))
     (display (sc-format (port->datums (current-input-port) read)))))
 
 (sc-format-cli)

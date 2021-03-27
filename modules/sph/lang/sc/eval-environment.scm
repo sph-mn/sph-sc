@@ -6,7 +6,9 @@
 (re-export any->list flatten
   contains? containsq?
   containsv? first
-  map-with-index tail pair null pairs q qq debug-log sc-gensym sc-syntax? alist-ref map-integers l)
+  second last
+  map-slice map-with-index
+  tail pair null pairs q qq debug-log sc-gensym sc-syntax? alist-ref map-integers l)
 
 (export sc-contains-expression sc-count-expressions sph-lang-sc-eval-environment-description)
 
