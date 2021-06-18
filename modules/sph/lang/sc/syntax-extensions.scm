@@ -6,4 +6,4 @@
     ( (sc-define-syntax (1+ x) (+ x 1))
       (sc-define-syntax (1- x) (- x 1))
       (sc-define-syntax (when test-expr body ...) (if test-expr (begin body ...)))
-      (sc-define-syntax (unless test-exprx body ...) (when (not test-exprx) body ...)))))
+      (sc-define-syntax (unless test-expr body ...) (when (not test-expr) body ...)))))
