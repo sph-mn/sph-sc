@@ -12,7 +12,8 @@
     (ht-create-symbol-q ht-create-symbol ht-delete!
       ht-ref ht-set! ht-from-list ht-hash-symbol ht-create-string))
   ((sph alist) #:select (alist alist-ref))
-  ((sph filesystem) #:select (ensure-trailing-slash search-load-path)))
+  ((sph filesystem) #:select (ensure-trailing-slash search-load-path))
+  (sph lang sc syntax-extensions))
 
 (export sc->c sc-default-load-paths
   sph-lang-sc-description sc-syntax-table
@@ -1002,7 +1003,8 @@
           (pair a (loop (first rest) (tail rest))))))))
 
 (define (replace-identifiers a replacements)
-  (tree-map-leafs (l (a) (or (alist-ref replacements a) a)) a))
+  (tree-map-leafs
+    (l (a) (let (key-value (assoc a replacements)) (if key-value (tail key-value) a))) a))
 
 (define (replace-ellipsis a replacements)
   "expand all patterns followed by ... in lists and sublists"
@@ -1156,17 +1158,18 @@
     struct-pointer-set (sc-struct-set-f (q struct-pointer-get))
     union (l (a c s) (sc-struct-or-union (q union) a c s)) while sc-while))
 
-"square/round brackets ambiguity disabled to support type[][3] identifiers"
-(read-disable (quote square-brackets))
-
 (define (sc->c* a state) (define (compile a) (sc->c* a state))
   (if (list? a)
     (let* ((f (ht-ref sc-syntax-table (first a))) (b (and f (f (tail a) compile state))))
       (if b (if (list? b) (compile b) b) (sc-apply (first a) (tail a) compile state)))
     (sc-value a)))
 
-(define* (sc->c a #:optional load-paths state)
+(define* (sc->c a #:optional load-paths state enable-square-brackets)
   "expression [(string ...) sc-state] -> string
    load-paths is only used if state is not given or false"
+  "disables square/round ambiguity to support type[][3] identifiers"
+  (if (not enable-square-brackets) (read-disable (quote square-brackets)))
   (let (state (or state (sc-state-new (or load-paths (sc-default-load-paths)))))
     (and (sc-syntax-check (list a) state) (sc->c* a state))))
+
+(sc->c* sc-syntax-extensions (sc-state-new (sc-default-load-paths)))

@@ -20,6 +20,14 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (unless #f 1)
+      "if(!0){1;}"
+      (1+ 3)
+      "(3+1)"
+      (1- 3)
+      "(3-1)"
+      (when #t 1)
+      "if(1){1;}"
       (/ 2)
       "(1/2)"
       (/ (+ 1 2))
