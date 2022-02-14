@@ -106,10 +106,10 @@ the replacements are done like guile does it. "-" becomes "_", "->" becomes ``_t
 sc supports non-hygienic macros with pattern matching.
 
 ~~~
-(sc-define-syntax (for-i index limit body ...)
-  (for ((set index 0) (< index limit) (set+ index 1)) body ...))
+(sc-define-syntax (for-each-index index limit body ...)
+  (for ((define index size-t 0) (< index limit) (set+ index 1)) body ...))
 
-(for-i i 10 (printf "%lu\n" i))
+(for-each-index i 10 (printf "%lu\n" i))
 ~~~
 
 complex ellipsis patterns are possible
