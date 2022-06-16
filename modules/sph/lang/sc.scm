@@ -1144,6 +1144,7 @@
     sc-include sc-include-sc
     sc-insert (l (a c s) (first a))
     sc-no-semicolon sc-no-semicolon
+    sc-concat (l (a c s) (apply string-append (map sc-identifier a)))
     set (sc-set-f "=")
     set* (sc-set-f "*=")
     set+ (sc-set-f "+=")

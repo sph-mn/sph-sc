@@ -391,6 +391,8 @@
       "void a(test b)"
       (define (a b) (void (array-type double 3)))
       "void a(double b[3])"
+      (sc-concat type *)
+      "type*"
       )
     (sc-define-syntax
       (id (x ((a b) ...) body ...) (x ((a ...) (b) ...) body ...) (1 ((2 3) (4 5)) b1 b2))
