@@ -6,37 +6,27 @@
 (define cli
   (cli-create #:options
     (q
-      ( (format1 #:value-required? #t
+      ( (format #:value-required? #t
           #:description
-          "comma separated list of identifiers for syntax that is format with only one expression per line (1-1-1)")
-        (format2-1 #:value-required? #t)
-        (format2-2 #:value-required? #t)
-        (format3-1 #:value-required? #t)
-        (format1-2 #:value-required? #t)
-        ))))
+          "custom configuration for expression distribution. example: \"1,1,1:myprefix1,myprefix2;2,1,1:myprefix3\"")))))
+
+(define (parse-format a)
+  (map
+    (l (a)
+      (apply (l (counts prefixes) (list (map string->number counts) (map string->symbol prefixes)))
+        (map (l (a) (string-split a #\,)) (string-split a #\:))))
+    (string-split a #\;)))
 
 (define (sc-format-cli)
-  (let*
-    ( (options (cli)) (format1 (alist-ref options (q format1)))
-      (format2-1 (alist-ref options (q format2-1)))
-      (format1-2 (alist-ref options (q format1-2)))
-      (format2-2 (alist-ref options (q format2-2)))
-      (format3-1 (alist-ref options (q format3-1))))
-    (if format1
-      (each (l (a) (ht-set! sc-formatters (string->symbol a) (sc-f 1 1 1)))
-        (string-split format1 #\,)))
- (if format2-1
-      (each (l (a) (ht-set! sc-formatters (string->symbol a) (sc-f 2 1 1)))
-        (string-split format2-1 #\,)))
-    (if format1-2
-      (each (l (a) (ht-set! sc-formatters (string->symbol a) (sc-f 1 2 1)))
-        (string-split format1-2 #\,)))
-    (if format2-2
-      (each (l (a) (ht-set! sc-formatters (string->symbol a) (sc-f 2 2 1)))
-        (string-split format2-2 #\,)))
-    (if format3-1
-      (each (l (a) (ht-set! sc-formatters (string->symbol a) (sc-f 3 1 1)))
-        (string-split format3-1 #\,)))
+  (let* ((options (cli)) (format (alist-ref options (q format))))
+    (if format
+      (each
+        (l (a)
+          (apply
+            (l (counts prefixes)
+              (each (l (prefix) (ht-set! sc-formatters prefix (apply sc-f counts))) prefixes))
+            a))
+        (parse-format format)))
     (display (sc-format (port->datums (current-input-port) read)))))
 
 (sc-format-cli)
