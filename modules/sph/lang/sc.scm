@@ -1125,6 +1125,10 @@
     pre-cond-not-defined (l (a c s) (sc-pre-cond (q ifndef) a c))
     pre-define-if-not-defined sc-pre-define-if-not-defined
     pre-define sc-pre-define
+    pre-include-guard-begin
+    (l (a c s)
+      (let (id (sc-identifier (first a))) (string-append "#ifndef " id "\n" "#define " id "\n")))
+    pre-include-guard-end (l (a c s) "#endif")
     pre-if-defined (l (a c s) (sc-pre-if (q ifdef) a c))
     pre-if (l (a c s) (sc-pre-if (q if) a c))
     pre-if-not-defined (l (a c s) (sc-pre-if (q ifndef) a c))

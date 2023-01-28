@@ -393,6 +393,8 @@
       "void a(double b[3])"
       (sc-concat type *)
       "type*"
+      (pre-include-guard-begin test-h) "#ifndef test_h\n#define test_h\n"
+      (pre-include-guard-end) "#endif"
       )
     (sc-define-syntax
       (id (x ((a b) ...) body ...) (x ((a ...) (b) ...) body ...) (1 ((2 3) (4 5)) b1 b2))
