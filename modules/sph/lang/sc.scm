@@ -710,12 +710,13 @@
 
 (define (sc-include-sc-once paths compile state) "(string ...) (symbol/string ...) -> list"
   (pair (q begin)
-    (map
-      (l (path)
-        (let (path (sc-path->full-path (sc-state-load-paths state) path))
-          (if (ht-ref sc-included-paths path) (q (begin))
-            (begin (ht-set! sc-included-paths path #t) (pairs (q begin) (file->datums path))))))
-      paths)))
+    (apply append
+      (map
+        (l (path)
+          (let (path (sc-path->full-path (sc-state-load-paths state) path))
+            (if (ht-ref sc-included-paths path) null
+              (begin (ht-set! sc-included-paths path #t) (file->datums path)))))
+        paths))))
 
 (define (sc-list? a)
   (and (list? a) (or (null? a) (not (and (symbol? (first a)) (sc-syntax? (first a)))))))
@@ -1134,6 +1135,7 @@
     pre-if-not-defined (l (a c s) (sc-pre-if (q ifndef) a c))
     pre-include (l (a compile state) (sc-pre-include a))
     pre-let* sc-pre-let*
+    pre-let sc-pre-let*
     pre-pragma
     (l (a compile state) (string-append "#pragma " (string-join (map sc-identifier a) " ") "\n"))
     pre-string-concat (l (a c s) (string-join (map c a) " "))

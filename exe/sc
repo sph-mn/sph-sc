@@ -3,7 +3,8 @@
 
 (use-modules (sph) (sph lang indent-syntax)
   (sph lang scheme) (sph string)
-  ((rnrs exceptions) #:select (guard)) (sph list)
+  ((sph io) #:select (port->lines)) ((rnrs exceptions) #:select (guard))
+  (sph list)
   ((sph filesystem) #:select (ensure-trailing-slash ensure-directory-structure path->full-path))
   (sph alist) (sph lang sc) (sph cli))
 
@@ -27,7 +28,8 @@
 
 (define (each-input-file proc paths) (each (l (a) (with-input-file a proc)) paths))
 
-(define* (sc #:optional source-paths target-path parents check) "appends multiple sources"
+(define* (sc #:optional source-paths target-path parents check includes) "appends multiple sources"
+  (if includes (each-input-file (l (a) (process a (%make-void-port "w") check)) includes))
   (if target-path
     (if parents
       (each
@@ -71,10 +73,18 @@
           ( ( (source-path ... target-path)) ((source-path))
             (parents #:description
               "treat target as directory and recreate the directory structure of source files")
-            (check #:names #\c #:description "only validate syntax")))))
+            (check #:names #\c #:description "only validate syntax")
+            (stdin-input-paths #:description "real input file paths to process from standard input")
+            (includes #:value-required? #t #:description "include macros from these sc files")))))
     (l (arguments)
-      (alist-bind (cli arguments) (source-path target-path parents check)
-        (guard (a ((sc-syntax-error? a) (display-syntax-error a)))
-          (sc (and source-path (any->list source-path)) target-path parents check))))))
+      (alist-bind (cli arguments)
+        (source-path target-path parents check stdin-input-paths includes)
+        (let
+          ( (source-path
+              (if stdin-input-paths (port->lines (current-input-port))
+                (and source-path (any->list source-path))))
+            (includes (and includes (string-split includes #\,))))
+          (guard (a ((sc-syntax-error? a) (display-syntax-error a)))
+            (sc source-path target-path parents check includes)))))))
 
 (sc-cli (tail (program-arguments)))
