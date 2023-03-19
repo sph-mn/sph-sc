@@ -34,9 +34,7 @@
 (define (format-define a recurse config indent)
   (match a ((_ (name ...) types body) ((scd-f 3 1 0 3) a recurse config indent))
     ((_ (name ...) types body ...) ((scd-f 3 1 1 3) a recurse config indent))
-    ((_ name type value) ((sc-f 4 1 0) a recurse config indent))
-    ((_ name type) ((sc-f 4 1 0) a recurse config indent))
-    ((_ name/type ...) ((sc-f 1 2 2) a recurse config indent))))
+    ((_ name/type/value ...) ((sc-f 1 3 3) a recurse config indent))))
 
 (define (format-set a recurse config indent)
   (let (config (ht-copy* config (l (a) (ht-set-multiple! a (q max-exprs-per-line-assoc) 2))))

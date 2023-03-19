@@ -80,7 +80,8 @@
       (alist-bind (cli arguments)
         (source-path target-path parents check stdin-input-paths includes)
         (let
-          ( (source-path
+          ( (target-path (if stdin-input-paths source-path target-path))
+            (source-path
               (if stdin-input-paths (port->lines (current-input-port))
                 (and source-path (any->list source-path))))
             (includes (and includes (string-split includes #\,))))
