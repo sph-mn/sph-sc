@@ -74,7 +74,7 @@
             (parents #:description
               "treat target as directory and recreate the directory structure of source files")
             (check #:names #\c #:description "only validate syntax")
-            (stdin-input-paths #:description "real input file paths to process from standard input")
+            (stdin-input-paths #:description "read input file paths to process from standard input")
             (includes #:value-required? #t #:description "include macros from these sc files")))))
     (l (arguments)
       (alist-bind (cli arguments)
