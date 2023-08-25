@@ -284,11 +284,11 @@ this way it is possible to match values with =, but alternatively other predicat
 
 # possible enhancements and ideas
 * better support for array types
-  * like (array x ...) in declare. for type conversions, function parameters, typedef and dynamic array sizes
   * ``int(*)[3]``, ``int(*a)[3]``, ``typedef int(*a)[3]``, ``int[][3]``
+  * like (array x ...) in declare. for type conversions, function parameters, typedef and dynamic array sizes
 * keyword arguments: it would be easy for sc to match guile style #:keywords with the parameter names of function definitions
 * module system: exports-form that compiles to nothing; import form that reads export-form from files and rewrites unexported identifiers to have less likely conflicting internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. or syntax for [clang-modules](https://clang.llvm.org/docs/Modules.html)
-* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` (or sc-insert). a scheme reader that parses scheme comments exists in sph-lib but it depends on another c library that often does not compile
+* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` or sc-insert. a scheme reader that parses scheme comments exists via sph-lib but requires another c library that often does not compile
 * ``--wisp`` option to read [wisp](https://www.draketo.de/english/wisp) code directly. supporting ((key value) ...) syntax for flat associations (key value ...) could reduce code
 * improve error messages. the existing checks and example patterns can be extended, and a better exception printer installed
 * try to reduce round brackets in the output, as there are cases where they are added when it is optional. this is difficult with arguments to preprocessor macros
