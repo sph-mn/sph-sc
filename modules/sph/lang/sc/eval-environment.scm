@@ -8,7 +8,8 @@
   containsv? first
   second last
   map-slice map-with-index
-  tail pair null pairs q qq debug-log sc-gensym sc-syntax? alist-ref map-integers l)
+  tail pair
+  null pairs q qq debug-log sc-gensym sc-syntax? alist-ref map-integers l sc-map-associations)
 
 (export sc-contains sc-contains-prefix sc-count-prefix sph-lang-sc-eval-environment-description)
 

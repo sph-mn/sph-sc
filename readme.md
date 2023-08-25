@@ -214,9 +214,9 @@ custom syntax can be defined from scheme before using sc->c with:
 (sc-define-syntax-scm id pattern expansion)
 
 ; symbol list {any ... -> string:c/any:sc} -> unspecified
-(sc-define-syntax-scm* id pattern procedure)
+(sc-define-syntax-scm id pattern procedure)
 
-(sc-define-syntax-scm* (quote test) (quote (a b ...))
+(sc-define-syntax-scm (quote test) (quote (a b ...))
   (lambda (a b) (cons* 0 a b)))
 ~~~
 
@@ -257,7 +257,7 @@ this repository includes under other/
 * sc-macros are only included with sc-include
 * in sc-define-syntax*, (sc-gensym) and (sc-syntax? identifier) are available. the former returns a new identifier with each call, _t1, _t2 and so on, for temporary variable names
 * editor modes for scheme can be used and fast scheme-style structural editing is possible
-* indent-syntax (similar to coffeescript or python) can be used in combination with [wisp](https://www.draketo.de/english/wisp)
+* indent-syntax (similar to coffeescript or python) can be used. if [wisp](https://www.draketo.de/english/wisp) is installed, file names ending with .scw are automatically read as wisp. for code read from standard input, the ``--wisp`` option can be used
 * square bracket array accessors can be used as long as they parse to scheme identifiers, for example (+ a[0] a[1])
 * the declare and set syntax lets things be grouped nicely
 
@@ -289,7 +289,6 @@ this way it is possible to match values with =, but alternatively other predicat
 * keyword arguments: it would be easy for sc to match guile style #:keywords with the parameter names of function definitions
 * module system: exports-form that compiles to nothing; import form that reads export-form from files and rewrites unexported identifiers to have less likely conflicting internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. or syntax for [clang-modules](https://clang.llvm.org/docs/Modules.html)
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` or sc-insert. a scheme reader that parses scheme comments exists via sph-lib but requires another c library that often does not compile
-* ``--wisp`` option to read [wisp](https://www.draketo.de/english/wisp) code directly. supporting ((key value) ...) syntax for flat associations (key value ...) could reduce code
 * improve error messages. the existing checks and example patterns can be extended, and a better exception printer installed
 * try to reduce round brackets in the output, as there are cases where they are added when it is optional. this is difficult with arguments to preprocessor macros
 * support actual switch/case instead of only compiling to if/else

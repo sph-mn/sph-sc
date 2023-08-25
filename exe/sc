@@ -1,50 +1,62 @@
 #!/usr/bin/env guile
 !#
 
-(use-modules (sph) (sph lang indent-syntax)
-  (sph lang scheme) (sph string)
-  ((sph io) #:select (port->lines)) ((rnrs exceptions) #:select (guard))
-  (sph list)
+(use-modules ((srfi srfi-1) #:select (every fold-right)) (sph)
+  (sph lang indent-syntax) (sph lang scheme)
+  (sph string) ((sph io) #:select (port->lines))
+  ((rnrs exceptions) #:select (guard)) (sph list)
   ((sph filesystem) #:select (ensure-trailing-slash ensure-directory-structure path->full-path))
   (sph alist) (sph lang sc) (sph cli))
 
-(define (process input-port output-port check)
-  (guard
-    (a
-      ( (sc-syntax-error? a)
-        (raise (append a (list (pair (q port-filename) (port-filename input-port)))))))
-    (let
-      ( (expressions (pair (q begin) (port->datums input-port)))
-        (load-paths
-          (pair
-            (ensure-trailing-slash
-              (let (a (port-filename input-port)) (if a (path->full-path (dirname a)) (getcwd))))
-            (sc-default-load-paths))))
-      (if check (debug-log (sc-syntax-check expressions load-paths))
-        (display (sc->c expressions load-paths) output-port)))))
+(define (process input-port output-port check port->datums*)
+  (let (expressions (pair (q begin) (port->datums* input-port)))
+    (guard
+      (a
+        ( (sc-syntax-error? a)
+          (raise (append a (list (pair (q port-filename) (port-filename input-port)))))))
+      (let
+        ( (load-paths
+            (pair
+              (ensure-trailing-slash
+                (let (a (port-filename input-port)) (if a (path->full-path (dirname a)) (getcwd))))
+              (sc-default-load-paths))))
+        (if check (debug-log (sc-syntax-check expressions load-paths))
+          (display (sc->c expressions (sc-state-new load-paths #f)) output-port))))))
 
 (define (with-input-file path c)
   (call-with-input-file path (l (a) (set-port-filename! a path) (c a))))
 
 (define (each-input-file proc paths) (each (l (a) (with-input-file a proc)) paths))
 
-(define* (sc #:optional source-paths target-path parents check includes) "appends multiple sources"
-  (if includes (each-input-file (l (a) (process a (%make-void-port "w") check)) includes))
-  (if target-path
-    (if parents
-      (each
-        (l (a)
-          (let
-            (target-path
-              (string-append target-path "/" (string-drop-suffix-if-exists ".sc" a) ".c"))
-            (and (ensure-directory-structure (dirname target-path))
-              (call-with-output-file target-path
-                (l (target-file) (with-input-file a (l (a) (process a target-file check))))))))
-        source-paths)
-      (call-with-output-file target-path
-        (l (target-file) (each-input-file (l (a) (process a target-file check)) source-paths))))
-    (if source-paths (each-input-file (l (a) (process a (current-output-port) check)) source-paths)
-      (process (current-input-port) (current-output-port) check))))
+(define* (sc #:optional source-paths target-path parents check includes wisp)
+  "appends multiple sources"
+  (let
+    (process*
+      (l (input-port output-port)
+        (process input-port output-port
+          check
+          (if
+            (or wisp
+              (let (filename (port-filename input-port))
+                (and filename (string-suffix? ".scw" filename))))
+            (module-ref (resolve-interface (q (language wisp))) (q wisp-scheme-read-all))
+            port->datums))))
+    (if includes (each-input-file (l (a) (process* a (%make-void-port "w"))) includes))
+    (if target-path
+      (if parents
+        (each
+          (l (a)
+            (let
+              (target-path
+                (string-append target-path "/" (string-drop-suffix-if-exists ".sc" a) ".c"))
+              (and (ensure-directory-structure (dirname target-path))
+                (call-with-output-file target-path
+                  (l (target-file) (with-input-file a (l (a) (process* a target-file))))))))
+          source-paths)
+        (call-with-output-file target-path
+          (l (target-file) (each-input-file (l (a) (process* a target-file)) source-paths))))
+      (if source-paths (each-input-file (l (a) (process* a (current-output-port))) source-paths)
+        (process* (current-input-port) (current-output-port))))))
 
 (define (display-syntax-error a) (display "sc syntax error\n")
   (display
@@ -75,10 +87,12 @@
               "treat target as directory and recreate the directory structure of source files")
             (check #:names #\c #:description "only validate syntax")
             (stdin-input-paths #:description "read input file paths to process from standard input")
-            (includes #:value-required? #t #:description "include macros from these sc files")))))
+            (includes #:value-required? #t #:description "include macros from these sc files")
+            (wisp #:description
+              "treat input as wisp syntax. forms that accept associations in a flat key/value format will use ((key value) ...) format, which is easier to type in wisp")))))
     (l (arguments)
       (alist-bind (cli arguments)
-        (source-path target-path parents check stdin-input-paths includes)
+        (source-path target-path parents check stdin-input-paths includes wisp)
         (let
           ( (target-path (if stdin-input-paths source-path target-path))
             (source-path
@@ -86,6 +100,6 @@
                 (and source-path (any->list source-path))))
             (includes (and includes (string-split includes #\,))))
           (guard (a ((sc-syntax-error? a) (display-syntax-error a)))
-            (sc source-path target-path parents check includes)))))))
+            (sc source-path target-path parents check includes wisp)))))))
 
 (sc-cli (tail (program-arguments)))

@@ -1,3 +1,4 @@
+
 (define-test-module (test module sph lang sc)
   (import
     (sph test)
@@ -12,10 +13,10 @@
         (sc-define-syntax-scm id pattern expansion)
         (sc-syntax-expand id application))))
 
-  (define-test (sc-define-syntax* a)
+  (define-test (sc-define-syntax-scm a)
     (match a
       ((id pattern expansion application)
-        (sc-define-syntax-scm* id pattern expansion)
+        (sc-define-syntax-scm id pattern expansion)
         (sc-syntax-expand id application))))
 
   (test-execute-procedures-lambda
@@ -394,13 +395,13 @@
       (sc-concat type *)
       "type*"
       (pre-include-guard-begin test-h) "#ifndef test_h\n#define test_h\n"
-      (pre-include-guard-end) "#endif"
-      )
+      (pre-include-guard-end) "#endif")
+    (sc-define-syntax-scm
+      (test* (a b ...) (unquote (lambda (state compile a b) (cons* 0 a b))) (1 2 3))
+      (0 1 2 3))
     (sc-define-syntax
       (id (x ((a b) ...) body ...) (x ((a ...) (b) ...) body ...) (1 ((2 3) (4 5)) b1 b2))
       (1 ((2 4) (3) (5)) b1 b2)
       (id ((name data ...) ...) (a (b name data ...) ...) ((c 1 2 3) (d 4 5 6)))
       (a (b c 1 2 3) (b d 4 5 6)))
-    (sc-define-syntax*
-      (test* (a b ...) (unquote (lambda (a b) (cons* 0 a b))) (1 2 3))
-      (0 1 2 3))))
+))

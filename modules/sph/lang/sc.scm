@@ -19,9 +19,10 @@
   sph-lang-sc-description sc-syntax-table
   sc-syntax-check sc-syntax-error
   sc-syntax? sc-gensym
+  sc-map-associations sc-state-new
   sc-syntax-error? sc-identifier
   sc-not-preprocessor-keyword? sc-not-function-pointer-symbol?
-  sc-path->full-path sc-define-syntax-scm sc-define-syntax-scm* sc-syntax-expand)
+  sc-path->full-path sc-define-syntax-scm sc-syntax-expand)
 
 (define sph-lang-sc-description
   "an s-expression to c compiler.
@@ -106,7 +107,7 @@
       (address-of ((variable)) case
         ( (predicate subject (match-value/else consequent ...) ..1)
           (= variable (3 (return #t)) (5 (return #t)) (else (return #f))))
-        declare ((name type) (name type name type name/type ...))
+        declare ((name type) (name type name type name/type ...) ((name type) ...))
         define
         ( (name type value) (name type value name type value ...)
           ((name parameters ...) (return-type ...) body ...)
@@ -121,6 +122,9 @@
         if ((condition consequent) (condition consequent alternate))
         set ((variable value) (variable value variable value variable/value ...))))
     eq? ht-hash-symbol))
+
+(define (sc-association-check state association-count a)
+  (= 0 (modulo (length a) association-count)))
 
 (define (sc-syntax-check-prefix-list prefix a state)
   "symbol list sc-state -> boolean
@@ -144,22 +148,19 @@
     ((enum) (acount? a 1 2))
     ((convert-type bit-shift-right bit-shift-left) (acount? a 2 2))
     ((case case*) (match a ((predicate subject clauses ..1) #t) (_ #f)))
-    ((declare) (even? (length a)))
+    ((declare) (sc-association-check state 2 a))
     ( (define)
       (match a
         ( ( ( (? sc-not-preprocessor-keyword? name) parameter ...)
             ((? sc-not-function-pointer-symbol? return-type) parameter-types ...) body ...)
           (equal? (length parameter) (length parameter-types)))
         ((((? sc-not-preprocessor-keyword? name)) return-type body ...) #t)
-        ((name type value rest ...) (zero? (modulo (length rest) 3))) (_ #f)))
+        ((name type value rest ...) (sc-association-check state 3 rest)) (_ #f)))
     ((for) (match a (((init test update) body ...) #t) (_ #f)))
     ( (if if* pre-if pre-if-defined pre-if-not-defined)
       (match a ((test consequent) #t) ((test consequent alternate) #t) (_ #f)))
-    ( (pre-define pre-define-if-not-defined)
-      (or (acount? a 1 1) (and (even? (length a)) (acount? a 2))))
-    ( (set)
-      (and (even? (length a))
-        (match a ((name-1 value-1 name-2 value-2 rest ...) #t) ((name value) #t) (_ #f))))
+    ((pre-define pre-define-if-not-defined) (or (acount? a 1 1) (sc-association-check state 2 a)))
+    ((set) (sc-association-check state 2 a))
     ( (struct union)
       (match a (((? symbol?) (name type ...) ...) #t) (((name type ...) ...) #t) (_ #f)))
     (else #t)))
@@ -407,10 +408,12 @@
             (append
               (map (l (n v) (pairs (if (= 1 (length v)) (q set) (q define)) n v)) names values) body)))))))
 
+(define (sc-map-associations association-count f a) (map-slice association-count f a))
+
 (define (sc-pre-define-if-not-defined a compile state)
   (compile
     (pair (q begin)
-      (map-slice 2
+      (sc-map-associations 2
         (l (name value)
           (let
             (identifier (match name (((? sc-not-preprocessor-keyword? name) _ ...) name) (_ name)))
@@ -432,12 +435,13 @@
     ( ( (names+values ...) body ...)
       (string-replace-string
         (string-append
-          (string-join (map-slice 2 (l (n v) (compile (list (q pre-define) n v))) names+values)
-            "\n" (q suffix))
+          (string-join
+            (sc-map-associations 2 (l (n v) (compile (list (q pre-define) n v))) names+values) "\n"
+            (q suffix))
           (compile (pair (q begin) body)) "\n"
           (string-join
-            (map-slice 2 (l (n v) (compile (list (q pre-undefine) (if (pair? n) (first n) n))))
-              names+values)
+            (sc-map-associations 2
+              (l (n v) (compile (list (q pre-undefine) (if (pair? n) (first n) n)))) names+values)
             "\n"))
         "\n\n" "\n"))
     (_ (raise (q syntax-error-for-pre-let*)))))
@@ -632,7 +636,7 @@
           (cp-define (sc-identifier name)
             (string-replace-string (string-trim-right (compile value) #\newline) "\n" "\\\n")))))
     ( (name-1 value-1 name-2 value-2 rest ...)
-      (compile (pair (q begin) (map-slice 2 (l a (pair (q pre-define) a)) a))))
+      (compile (pair (q begin) (sc-map-associations 2 (l a (pair (q pre-define) a)) a))))
     (_ #f)))
 
 (define (sc-pre-include paths)
@@ -749,7 +753,7 @@
       (sc-function compile name return-type body null null))
     ( (name type value rest ...)
       (string-join
-        (map-slice 3
+        (sc-map-associations 3
           (l (name type value)
             (c-define (compile name) (sc-compile-type type compile) (compile value)))
           a)
@@ -781,7 +785,7 @@
 
 (define (sc-declare a compile state)
   (sc-join-expressions
-    (map-slice 2
+    (sc-map-associations 2
       (l (id type)
         (match type
           ( ( (quote struct-variable) type a ...)
@@ -794,13 +798,14 @@
           (_ (or (sc-define (list id type) compile state) (sc-declare-variable id type compile)))))
       a)))
 
+(define (sc-set-join state a)
+  (if (null? (tail a)) (first a)
+    (if (sc-state-comma-join state) (string-join a ",") (sc-join-expressions a))))
+
 (define* (sc-set-f operator)
   (l (a compile state)
-    (match a ((name value) (c-set (compile name) (compile value) operator))
-      ( (name-1 value-1 name-2 value-2 rest ...)
-        (let (b (map-slice 2 (l (name value) (c-set (compile name) (compile value) operator)) a))
-          (if (sc-state-comma-join state) (string-join b ",") (sc-join-expressions b))))
-      (_ #f))))
+    (sc-set-join state
+      (sc-map-associations 2 (l (name value) (c-set (compile name) (compile value) operator)) a))))
 
 (define (sc-cond* a compile state)
   (compile
@@ -874,8 +879,8 @@
   (let (array (first a))
     (compile
       (pair (q begin)
-        (map-slice 2 (l (index value) (list (q set) (list (q array-get) array index) value))
-          (tail a))))))
+        (sc-map-associations 2
+          (l (index value) (list (q set) (list (q array-get) array index) value)) (tail a))))))
 
 (define (sc-array-set* a compile state)
   (let (array (first a))
@@ -903,7 +908,8 @@
     (let (struct (first a))
       (compile
         (pair (q begin)
-          (map-slice 2 (l (field value) (list (q set) (list getter struct field) value)) (tail a)))))))
+          (sc-map-associations 2 (l (field value) (list (q set) (list getter struct field) value))
+            (tail a)))))))
 
 (define* (sc-infix-f c-infix #:optional can-be-prefix)
   (l (a compile state)
@@ -976,7 +982,7 @@
       (repetition (apply max (map (l (a) (if (list? (tail a)) (length (tail a)) 1)) replacements)))
       (replacements
         (map
-          (l (a) "normalise lengths and repeat the last value if shorter"
+          (l (a) "normalize lengths and repeat the last value if shorter"
             (let (values (any->list (tail a)))
               (pair (first a)
                 (if (> repetition (length values))
@@ -1015,15 +1021,22 @@
 (define (sc-define-syntax-scm id pattern expansion)
   "define new sc syntax from scheme.
    in scheme:
-     (sc-define-syntax-scm test (quote (a b ...)) (quote (a (+ 1 b) ...)))"
-  (ht-set! sc-syntax-table id
-    (l (a compile state)
-      (get-matches a pattern
-        (sc-state-eval-env state)
-        (l (repeated single)
-          "replace-ellipsis might replace in expanded code if the expanded code contains ellipsis
-           this is currently handled by replacing non-repeated identifiers first"
-          (first (replace-ellipsis (replace-identifiers expansion single) repeated)))))))
+     (sc-define-syntax-scm test (quote (a b ...)) (quote (a (+ 1 b) ...)))
+   or
+     (sc-define-syntax-scm test (quote (a b ...)) (lambda (state compile a b) (cons* (q printf) \"%d %d\" a b)))"
+  (if (procedure? expansion)
+    (ht-set! sc-syntax-table id
+      (l (a compile state)
+        (let (replacements (match->alist a pattern (sc-state-eval-env state)))
+          (apply expansion state compile (map tail replacements)))))
+    (ht-set! sc-syntax-table id
+      (l (a compile state)
+        (get-matches a pattern
+          (sc-state-eval-env state)
+          (l (repeated single)
+            "replace-ellipsis might replace in expanded code if the expanded code contains ellipsis
+             this is currently handled by replacing non-repeated identifiers first"
+            (first (replace-ellipsis (replace-identifiers expansion single) repeated))))))))
 
 (define (sc-define-syntax a compile state)
   "define new syntax in sc using syntax-rules style pattern matching.
@@ -1034,29 +1047,18 @@
     (((id pattern ...) (? string? docstring) expansion) (sc-define-syntax-scm id pattern expansion)))
   "")
 
-(define (sc-define-syntax-scm* id pattern procedure)
-  "define new sc syntax from scheme.
-   in scheme:
-     (sc-define-syntax-scm* test (quote (a b ...)) (lambda (a b) (cons* (q printf) \"%d %d\" a b)))"
-  (ht-set! sc-syntax-table id
-    (l (a compile state)
-      (let (replacements (match->alist a pattern (sc-state-eval-env state)))
-        (apply procedure (map tail replacements))))))
-
 (define (sc-define-syntax* a compile state)
   "define new syntax in sc using a scheme expression. non-hygienic.
    the scheme expression can return sc as a list or c as a string.
    in sc:
      (define-syntax* (test a b ...) (cons* (q printf) \"%d %d\" a b))"
-  (match a
-    ( ( (id pattern ...) scheme-expression)
-      (let (formals (delete (q ...) (flatten pattern)))
-        (sc-define-syntax-scm* id pattern
+  (apply
+    (l (id pattern scheme-expression)
+      (let (formals (pairs (q sc-state) (q sc-compile) (delete (q ...) (flatten pattern))))
+        (sc-define-syntax-scm id pattern
           (eval (list (q lambda) formals scheme-expression) (sc-state-eval-env state)))))
-    ( ( (id pattern ...) docstring scheme-expression)
-      (let (formals (delete (q ...) (flatten pattern)))
-        (sc-define-syntax-scm* id pattern
-          (eval (list (q lambda) formals scheme-expression) (sc-state-eval-env state))))))
+    (match a (((id pattern ...) scheme-expression) (list id pattern scheme-expression))
+      (((id pattern ...) docstring scheme-expression) (list id pattern scheme-expression))))
   "")
 
 (define (sc-syntax-expand id pattern) "return the direct result from a syntax handler"
@@ -1070,6 +1072,11 @@
   (let (a-string (string-join (map any->string a) "\n"))
     (if (string-contains a-string "\n") (string-append "/* " a-string " */\n")
       (string-append "\n/* " a-string " */\n"))))
+
+(define (sc-type-identifier a compile)
+  (if
+    (and (list? a) (or (containsq? (q (struct union enum)) (first a)) (not (sc-syntax? (first a)))))
+    (string-join (map compile a) " ") (compile a)))
 
 (define sc-syntax-table
   (ht-create-symbol-q : (l (a c s) (apply c-struct-pointer-get (map c a)))
@@ -1101,7 +1108,9 @@
     compound-statement (l (a compile state) (c-compound (sc-join-expressions (map compile a))))
     cond sc-cond
     cond* sc-cond*
-    convert-type (l (a compile state) (apply c-convert-type (map compile a)))
+    convert-type
+    (l (a compile state)
+      (c-convert-type (compile (first a)) (sc-type-identifier (second a) compile)))
     declare sc-declare
     define sc-define
     do-while sc-do-while
@@ -1165,18 +1174,23 @@
     struct-pointer-set (sc-struct-set-f (q struct-pointer-get))
     union (l (a c s) (sc-struct-or-union (q union) a c s)) while sc-while))
 
-(define (sc->c* a state) (define (compile a) (sc->c* a state))
-  (if (list? a)
-    (let* ((f (ht-ref sc-syntax-table (first a))) (b (and f (f (tail a) compile state))))
-      (if b (if (list? b) (compile b) b) (sc-apply (first a) (tail a) compile state)))
-    (sc-value a)))
+(define (sc->c* a state)
+  "like sc->c but with less options and does not do a preliminary syntax check"
+  (let (compile (l (a) (sc->c* a state)))
+    (if (list? a)
+      (let* ((f (ht-ref sc-syntax-table (first a))) (b (and f (f (tail a) compile state))))
+        (if b (if (list? b) (sc->c* b state) b) (sc-apply (first a) (tail a) compile state)))
+      (sc-value a))))
 
-(define* (sc->c a #:optional load-paths state enable-square-brackets)
+(define* (sc->c a #:optional state-or-load-paths enable-square-brackets)
   "expression [(string ...) sc-state] -> string
    load-paths is only used if state is not given or false"
   "disables square/round ambiguity to support type[][3] identifiers"
   (if (not enable-square-brackets) (read-disable (quote square-brackets)))
-  (let (state (or state (sc-state-new (or load-paths (sc-default-load-paths)))))
+  (let
+    (state
+      (if (vector? state-or-load-paths) state-or-load-paths
+        (sc-state-new (or state-or-load-paths (sc-default-load-paths)) #f)))
     (and (sc-syntax-check (list a) state) (sc->c* a state))))
 
 (sc->c* sc-syntax-extensions (sc-state-new (sc-default-load-paths)))
