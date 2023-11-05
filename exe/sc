@@ -48,7 +48,8 @@
           (l (a)
             (let
               (target-path
-                (string-append target-path "/" (string-drop-suffix-if-exists ".sc" a) ".c"))
+                (string-append target-path "/"
+                  (string-drop-suffix-if-exists (if (string-suffix? ".scw" a) ".scw" ".sc") a) ".c"))
               (and (ensure-directory-structure (dirname target-path))
                 (call-with-output-file target-path
                   (l (target-file) (with-input-file a (l (a) (process* a target-file))))))))
