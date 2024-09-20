@@ -139,7 +139,7 @@ install all dependencies
 
 ### download
 * [download](https://github.com/sph-mn/sph-sc/archive/master.zip)
-* alternatives: [releases](http://files.sph.mn/u/software/releases), git clone git://sph.mn/sph-sc, [github](https://github.com/sph-mn/sph-sc)
+* alternatives: [releases](http://sph.mn/files/u/software/releases), `git clone git://sph.mn/sph-sc`, [github](https://github.com/sph-mn/sph-sc)
 
 ### unpack
 unpack the downloaded archive. for example
@@ -262,8 +262,8 @@ this repository includes under other/
 * the declare and set syntax lets things be grouped nicely
 
 * example code from projects using sc
-  * [sph-sp](http://files.sph.mn/u/software/sourcecode/sph-sp/source)
-  * [sph-db](http://files.sph.mn/u/software/sourcecode/sph-db/source)
+  * [sph-sp](http://sph.mn/files/u/software/sourcecode/sph-sp/source)
+  * [sph-db](http://sph.mn/files/u/software/sourcecode/sph-db/source)
 
 # notes
 ## macro usage and semicolons
@@ -288,9 +288,10 @@ this way it is possible to match values with =, but alternatively other predicat
   * like (array x ...) in declare. for type conversions, function parameters, typedef and dynamic array sizes
 * keyword arguments: it would be easy for sc to match guile style #:keywords with the parameter names of function definitions
 * module system: exports-form that compiles to nothing; import form that reads export-form from files and rewrites unexported identifiers to have less likely conflicting internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. or syntax for [clang-modules](https://clang.llvm.org/docs/Modules.html)
-* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` or sc-insert. a scheme reader that parses scheme comments exists via sph-lib but requires another c library that often does not compile
+* translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` or sc-insert. a scheme reader that parses scheme comments exists via sph-lib but requires a c library that often does not compile
+* drop the dependency on sph-lib and include the necessary helpers in the repository
 * improve error messages. the existing checks and example patterns can be extended, and a better exception printer installed
-* try to reduce round brackets in the output, as there are cases where they are added when it is optional. this is difficult with arguments to preprocessor macros
+* try to reduce optional round brackets in the output. this is difficult in the case of arguments to preprocessor macros
 * support actual switch/case instead of only compiling to if/else
 * hygienic macros
 
