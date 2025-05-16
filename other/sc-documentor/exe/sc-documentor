@@ -102,24 +102,64 @@
 
 (define (remove-begin a) (match a (((quote begin) a ...) a) (else (list a))))
 
-(define (extract-from-file path) "string -> sc-doc-elements"
-  (stream-fold
-    (l (result a)
-      (let
-        (a
-          (match a
-            ( ( (quote sc-include) paths ...)
-              (let
-                (load-paths
-                  (pair (ensure-trailing-slash (dirname (path->full-path path)))
-                    (sc-default-load-paths)))
-                (append-map (l (b) (extract-from-file (sc-path->full-path load-paths b))) paths)))
-            (else (let (matched (extract-one a)) (or matched null)))))
-        (append result a)))
-    null (file->stream path read)))
+(define (load-file path)
+  (map
+    (l (a)
+      (match a
+        ( ( (quote sc-include) paths ...)
+          (let
+            (load-paths
+              (pair (ensure-trailing-slash (dirname (path->full-path path)))
+                (sc-default-load-paths)))
+            (append-map (l (b) (load-file (sc-path->full-path load-paths b))) paths)))
+        (else a)))
+    (file->datums path read)))
 
-(define (extract-from-files-combined paths)
-  "extract from multiple files and display a merged result" (append-map extract-from-file paths))
+(define (extract-one-expander a)
+  (any
+    (l (extractor)
+      (and (not (null? a)) (eq? (first extractor) (first a)) ((tail extractor) (tail a))))
+    expander-extractors))
+
+(define (make-pre-define-expander params body)
+  (l args
+    (let ((param-map (map cons params args)))
+      (let loop ((expr body))
+        (cond
+          ((symbol? expr) (let ((p (assq expr param-map))) (if p (cdr p) expr)))
+          ( (pair? expr)
+            (if (eq? (car expr) (quote pre-concat))
+              (apply symbol-append (map (l (e) (loop e)) (cdr expr))) (map (l (e) (loop e)) expr)))
+          (else expr))))))
+
+(define (extract-pre-define-expander a)
+  (if (= 1 (length a)) #f
+    (filter identity
+      (map-slice 2
+        (l (name value)
+          (let (docstring (extract-pre-define-value-docstring value))
+            (match name
+              ((name parameter ...) (pair name (make-pre-define-expander parameter value))) (_ #f))))
+        a))))
+
+(define expander-extractors
+  (alist-q pre-define extract-pre-define-expander
+    pre-define-if-not-defined extract-pre-define-expander))
+
+(define (extract-from-files paths) "string -> sc-doc-elements"
+  (let*
+    ( (content (append-map load-file paths))
+      (expanders
+        (fold
+          (l (a result) (append result (let (matched (extract-one-expander a)) (or matched null))))
+          null content))
+      (content
+        (map
+          (l (a)
+            (let (macro (assq (first a) expanders)) (if macro (apply (tail macro) (tail a)) a)))
+          content)))
+    (fold (l (a result) (append result (let (matched (extract-one a)) (or matched null)))) null
+      content)))
 
 (define group-order (q (function macro variable type enum)))
 
@@ -316,7 +356,7 @@
                 (with-docstrings)))
             #:description sph-sc-documentor-cli-description)))
       (config (get-config (alist-ref options (q config))))
-      (extracted (extract-from-files-combined (alist-ref options (q sc-file-path))))
+      (extracted (extract-from-files (alist-ref options (q sc-file-path))))
       (extracted
         (apply-config-replace (apply-config-remove (apply-config-add extracted config) config)
           config))
