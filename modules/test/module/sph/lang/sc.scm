@@ -21,6 +21,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (declare a (type (struct (b c) (union (d e) (f (struct (g h)))))))
+      "typedef struct{c b;union {e d;struct {h g;} f;};} a;"
       (unless #f 1 2)
       "if(!0){1;2;}"
       (1+ 3)

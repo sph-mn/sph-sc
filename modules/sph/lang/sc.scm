@@ -677,23 +677,6 @@
     (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries))
       (((entries ...)) (c "" entries)))))
 
-(define (sc-struct-or-union-body elements compile state)
-  (string-join
-    (map
-      (l (a)
-        (match a
-          ( (name type (? integer? bits))
-            (string-append
-              (string-join (map (l (a) (sc-compile-type a compile)) type) " " (q suffix))
-              (compile name) ":" (sc-value bits)))
-          ( (name type)
-            (if (sc-function-pointer? type)
-              (apply sc-function-pointer compile (compile name) (tail type))
-              (match type (((quote array) a ...) (sc-define-array (pair name a) compile state))
-                (else (string-append (sc-compile-type type compile) " " (compile name))))))))
-      elements)
-    ";" (q suffix)))
-
 (define sc-included-paths (ht-create-string))
 
 (define (sc-path->full-path load-paths path) "expects load paths to have a trailing slash"
@@ -769,6 +752,42 @@
       "return a quasi-unique identifier (not returned twice but not checked for if user defined). can be used inside macros"
       (set! gensym-counter (+ 1 gensym-counter))
       (string->symbol (string-append "_t" (number->string gensym-counter 32))))))
+
+(define (sc-struct-type? x)
+  (and (list? x) (>= (length x) 2)
+    (let ((kw (first x)) (id (second x)))
+      (and (or (eq? kw (quote struct)) (eq? kw (quote union)))
+        (or (symbol? id) (and (list? id) (preprocessor-keyword? (first id)))) (null? (cddr x))))))
+
+(define (sc-struct-or-union-body a compile state)
+  (string-join
+    (map
+      (l (a)
+        (match a
+          ( (name (? sc-struct-type? t))
+            (string-append (sc-compile-type t compile) " " (compile name)))
+          ( (name ((or (quote struct) (quote union)) hd ...))
+            (let ((keyword (first (second a))))
+              (string-append (symbol->string keyword) " {"
+                (sc-struct-or-union-body (cdr (second a)) compile state) "} " (compile name))))
+          ( ( (or (quote struct) (quote union)) body ...)
+            (string-append (symbol->string (first a)) " "
+              (string-append "{" (sc-struct-or-union-body body compile state) "}")))
+          ( (name ((or (quote struct) (quote union)) body ...))
+            (let ((keyword (first (second a))))
+              (string-append (symbol->string keyword) " {"
+                (sc-struct-or-union-body body compile state) "} " (compile name))))
+          ( (name type (? integer? bits))
+            (string-append
+              (string-join (map (l (a) (sc-compile-type a compile)) type) " " (q suffix))
+              (compile name) ":" (sc-value bits)))
+          ( (name type)
+            (if (sc-function-pointer? type)
+              (apply sc-function-pointer compile (compile name) (tail type))
+              (match type (((quote array) a ...) (sc-define-array (pair name a) compile state))
+                (else (string-append (sc-compile-type type compile) " " (compile name))))))))
+      a)
+    ";" (q suffix)))
 
 (define (sc-struct-or-union keyword a compile state) "symbol/false ? procedure -> string"
   (let
