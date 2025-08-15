@@ -257,7 +257,7 @@ this repository includes under other/
 * sc-macros are only included with sc-include
 * in sc-define-syntax*, (sc-gensym) and (sc-syntax? identifier) are available. the former returns a new identifier with each call, _t1, _t2 and so on, for temporary variable names
 * editor modes for scheme can be used and fast scheme-style structural editing is possible
-* indent-syntax (similar to coffeescript or python) can be used. if [wisp](https://www.draketo.de/english/wisp) is installed, file names ending with .scw are automatically read as wisp. for code read from standard input, the ``--wisp`` option can be used
+* indent-syntax (similar to coffeescript or python) can be used. file names ending with .scw are automatically read as wisp. for code read from standard input, the ``--wisp`` option can be used
 * square bracket array accessors can be used as long as they parse to scheme identifiers, for example (+ a[0] a[1])
 * the declare and set syntax lets things be grouped nicely
 
@@ -1040,6 +1040,21 @@ for(a=1,b=2;1;c=3,d=4){1;}
 #define a() b
 #define c d
 f e;
+~~~
+
+# using indent syntax
+if you prefer writing c using coffeescript- or python-like indented structure, sc allows you to do so using the wisp syntax. all file names ending with .scw are automatically parsed as wisp.
+
+example.scw
+~~~
+pre-include "stdio.h"
+
+define (main argc argv) : int int char**
+  declare i int
+  printf "the number of program arguments passed is %d\n" argc
+  for : (set i 0) (< i argc) (set+ i 1)
+    printf "argument %d is %s\n" (+ i 1) (array-get argv i)
+  return 0
 ~~~
 
 # similar projects

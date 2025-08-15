@@ -6,7 +6,7 @@
   (sph string) ((sph io) #:select (port->lines))
   ((rnrs exceptions) #:select (guard)) (sph list)
   ((sph filesystem) #:select (ensure-trailing-slash ensure-directory-structure path->full-path))
-  (sph alist) (sph lang sc) (sph cli))
+  (sph alist) (sph lang sc) (sph lang wisp) (sph cli))
 
 (define (process input-port output-port check port->datums*)
   (let (expressions (pair (q begin) (port->datums* input-port)))
@@ -39,8 +39,7 @@
             (or wisp
               (let (filename (port-filename input-port))
                 (and filename (string-suffix? ".scw" filename))))
-            (module-ref (resolve-interface (q (language wisp))) (q wisp-scheme-read-all))
-            port->datums))))
+            wisp-read-all port->datums))))
     (if includes (each-input-file (l (a) (process* a (%make-void-port "w"))) includes))
     (if target-path
       (if parents
