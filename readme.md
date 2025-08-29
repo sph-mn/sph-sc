@@ -167,7 +167,7 @@ the install script has a "--help" and a "--dry-run" option for more options and 
 the installer creates directories, copies files and sets permissions.
 
 ### testing
-after everything is installed, run the following inside the sph-sc repository directory to see that everything works without errors.
+after everything is installed, the following can be run inside the sph-sc repository directory to see that everything works without issues.
 
 ```shell
 ./exe/test
