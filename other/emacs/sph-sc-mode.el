@@ -2,12 +2,9 @@
 ; version 2025-08-09
 
 (defgroup sph-sc nil "Scheme-like s-expr editing" :group 'languages)
-
 (defcustom sph-sc-compress-on-indent t "Compress spaces on indent/newline outside strings/comments." :type 'boolean :group 'sph-sc)
 (defcustom sph-sc-highlight-brackets t "Highlight () with sph-sc-bracket-face." :type 'boolean :group 'sph-sc)
-
 (defface sph-sc-bracket-face '((t :inherit default)) "Face for ()" :group 'sph-sc)
-
 (defalias 'sequence-ref 'elt)
 
 (defvar scheme-mode-syntax-table
@@ -100,18 +97,18 @@
     '("[()]" . sph-sc-bracket-face)))
 
 (defconst sph-sc-font-lock-keywords-2
-  (list
-    '("(\\(pre-define[^ ]?\\) (\\(\\sw+\\)" (2 font-lock-function-name-face))
-    '("(\\(pre-\\w+\\)" (1 font-lock-preprocessor-face))
-    '("(\\(sc-\\w+\\)" (1 font-lock-preprocessor-face))
-    '("(\\(define[^ ]*?\\) +(\\(\\sw+\\) \\(.*?\\))" (2 font-lock-function-name-face))
-    '("[()]" . sph-sc-bracket-face)
-    '("(\\(define[^? ]*?\\) +\\(\\sw+\\)" (2 font-lock-variable-name-face))
-    '("(\\(label\\) +\\(\\sw+\\)" (2 font-lock-function-name-face))
-    (list (concat "(\\(" (regexp-opt '("debug-log" "set" "declare") t) "\\)\\>") 1 'font-lock-builtin-face)
-    '("\\_<#\\(t\\|f\\)\\_>" . font-lock-constant-face)
-    '("#\\\\[^ ]" . font-lock-constant-face)
-    '("\\<\\(\\+\\|-\\)?[0-9]+\\(\\.[0-9]+\\)?" . font-lock-constant-face)))
+  `(
+    ("(\\(pre-define[^ ]?\\) (\\(\\sw+\\)" (2 font-lock-function-name-face))
+    ("(\\(pre-\\w+\\)" (1 font-lock-preprocessor-face))
+    ("(\\(sc-\\w+\\)" (1 font-lock-preprocessor-face))
+    ("(\\(define[^ ]*?\\) +(\\(\\sw+\\) \\(.*?\\))" (2 font-lock-function-name-face))
+    ("[()]" . sph-sc-bracket-face)
+    ("(\\(define[^? ]*?\\) +\\(\\sw+\\)" (2 font-lock-variable-name-face))
+    ("(\\(label\\) +\\(\\sw+\\)" (2 font-lock-function-name-face))
+    (,(concat "(\\(" (regexp-opt '("debug-log" "set" "declare") t) "\\)\\>") 1 'font-lock-builtin-face)
+    ("\\_<#\\(t\\|f\\)\\_>" . font-lock-constant-face)
+    ("#\\\\[^ ]" . font-lock-constant-face)
+    ("\\<\\(\\+\\|-\\)?[0-9]+\\(\\.[0-9]+\\)?" . font-lock-constant-face)))
 
 (defvar sph-sc-font-lock-keywords sph-sc-font-lock-keywords-1)
 
@@ -141,12 +138,12 @@
     (when sph-sc-compress-on-indent (sph-sc--line-compress want))))
 
 (defun sph-sc-newline-and-indent () (interactive) (newline) (sph-sc-indent-line))
-
 (defvar sph-sc-mode-map (let ((m (make-sparse-keymap))) (define-key m (kbd "RET") 'sph-sc-newline-and-indent) m))
 
 ;;;###autoload
 (define-derived-mode sph-sc-mode prog-mode "sph-sc"
   :syntax-table scheme-mode-syntax-table
+  :keymap sph-sc-mode-map
   (setq-local parse-sexp-ignore-comments t)
   (setq-local indent-line-function 'sph-sc-indent-line)
   (setq-local comment-start ";")
@@ -165,7 +162,6 @@
       (font-lock-extra-managed-props syntax-table)))
   (font-lock-refresh-defaults)
   (when (fboundp 'font-lock-flush) (font-lock-flush))
-  (when (fboundp 'font-lock-ensure) (font-lock-ensure))
-  (use-local-map sph-sc-mode-map))
+  (when (fboundp 'font-lock-ensure) (font-lock-ensure)))
 
 (provide 'sph-sc-mode)
