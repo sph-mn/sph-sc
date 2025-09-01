@@ -174,7 +174,7 @@ after everything is installed, the following can be run inside the sph-sc reposi
 ```
 
 ## pacman
-with [aurget](https://github.com/pbrisbin/aurget): ``aurget -S --deps sph-sc-git``
+with [rua](https://github.com/vn971/rua): ``rua install sph-sc-git``
 
 # command-line application
 $ sc --help
@@ -262,7 +262,7 @@ this repository includes under other/
 * the declare and set syntax lets things be grouped nicely
 
 * example code from projects using sc
-  * [sph-sp](http://sph.mn/files/u/software/sourcecode/sph-sp/source)
+  * [sph-sp](http://sph.mn/files/u/software/sourcecode/sph-sp/src)
   * [sph-db](http://sph.mn/files/u/software/sourcecode/sph-db/source)
 
 # notes
@@ -289,7 +289,7 @@ this way it is possible to match values with =, but alternatively other predicat
 * keyword arguments: it would be easy for sc to match guile style #:keywords with the parameter names of function definitions
 * module system: exports-form that compiles to nothing; import form that reads export-form from files and rewrites unexported identifiers to have less likely conflicting internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. or syntax for [clang-modules](https://clang.llvm.org/docs/Modules.html)
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` or sc-insert. a scheme reader that parses scheme comments exists via sph-lib but requires a c library that often does not compile
-* drop the dependency on sph-lib and include the necessary helpers in the repository
+* drop the dependency on sph-lib and include the necessary helpers in sph-sc
 * improve error messages. the existing checks and example patterns can be extended, and a better exception printer installed
 * try to reduce optional round brackets in the output. this is difficult in the case of arguments to preprocessor macros
 * support actual switch/case instead of only compiling to if/else
