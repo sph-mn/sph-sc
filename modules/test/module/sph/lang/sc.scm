@@ -21,6 +21,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (define (a) ())
+      "void a(void)"
       (declare a (type (struct (b c) (union (d e) (f (struct (g h)))))))
       "typedef struct{c b;union {e d;struct {h g;} f;};} a;"
       (unless #f 1 2)
@@ -185,7 +187,7 @@
         (function-pointer (function-pointer (function-pointer int float) double) (long long int)))
       "int(*(*(*a)(long long int))(double))(float);"
       (define (a) (function-pointer uint32_t uint64_t) #t)
-      "uint32_t(*a())(uint64_t){1;}\n"
+      "uint32_t(*a(void))(uint64_t){1;}\n"
       (define (a b) ((function-pointer uint32-t uint64_t) (function-pointer uint32-t uint64_t)) #t)
       "uint32_t(*a(uint32_t(*b)(uint64_t)))(uint64_t){1;}\n"
       (define (a b) ((function-pointer (function-pointer uint32_t b-16) uint8_t) b-64))
@@ -193,13 +195,13 @@
       (define (pre-concat a b) uint32_t 1)
       "uint32_t a##b=1"
       (define (abc) uint32_t (return 0))
-      "uint32_t abc(){return(0);}\n"
+      "uint32_t abc(void){return(0);}\n"
       (define (abc d e) (uint32_t uint64_t b16) (return 0))
       "uint32_t abc(uint64_t d,b16 e){return(0);}\n"
       (define (abc d e) (uint32_t (pre-concat b 64) b16) (return 0))
       "uint32_t abc(b##64 d,b16 e){return(0);}\n"
       (define (a) void "test-docstring")
-      "\n/** test-docstring */\nvoid a()"
+      "\n/** test-docstring */\nvoid a(void)"
       (define (a b) (c d) "e")
       "\n/** e */\nc a(d b)"
       (define (a b c) (void void void) "test-docstring" (+ b c))
@@ -361,9 +363,9 @@
       (begin (sc-no-semicolon (a 1) (set b 2)))
       "a(1)\nb=2\n"
       (begin (pre-define a (begin (define (a) void 1))) (declare b int))
-      "\n#define a void a(){1;}\nint b;"
+      "\n#define a void a(void){1;}\nint b;"
       (begin (pre-define (a b) (define (c) void 1)) (a "xyz"))
-      "\n#define a(b) void c(){1;}\na(\"xyz\")\n"
+      "\n#define a(b) void c(void){1;}\na(\"xyz\")\n"
       (set+ a 1 b 2)
       "a+=1;b+=2;"
       (set- a 1)

@@ -560,7 +560,10 @@
 
 (define (sc-function compile name return-type body parameter-names parameter-types)
   (let
-    ( (parameters (sc-function-parameters compile parameter-names parameter-types name))
+    ( (return-type (if (and (null? return-type) (null? body)) (q (void)) return-type))
+      (parameters
+        (sc-function-parameters compile (if (null? parameter-names) (list #f) parameter-names)
+          (if (null? parameter-types) (q (void)) parameter-types) name))
       (name (compile name)))
     (get-body-and-docstring& body compile
       #f
@@ -602,9 +605,11 @@
 
 (define (sc-function-parameter compile name type)
   (cond
-    ((sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type)))
-    ((sc-array-type? type) (sc-array-type compile (compile name) (tail type)))
-    (else (string-append (sc-compile-type type compile) " " (compile name)))))
+    ( (sc-function-pointer? type)
+      (apply sc-function-pointer compile (if name (compile name) "") (tail type)))
+    ((sc-array-type? type) (sc-array-type compile (if name (compile name) "") (tail type)))
+    (else
+      (string-append (sc-compile-type type compile) (if name (string-append " " (compile name)) "")))))
 
 (define (sc-function-parameters compile names types function-name)
   (parenthesize

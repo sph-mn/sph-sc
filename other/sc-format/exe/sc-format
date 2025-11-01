@@ -29,6 +29,7 @@
     (define a b 3) (define c d 4)))
 
 (define (merge-and-simplify a)
+  "currently not used because it merges subsequent set in if, for, and custom macros"
   (tree-map-lists-self
     (l (a)
       (let
@@ -60,6 +61,6 @@
               (each (l (prefix) (ht-set! sc-formatters prefix (apply sc-f counts))) prefixes))
             a))
         (parse-format format)))
-    (display (sc-format (merge-and-simplify (port->datums (current-input-port) read))))))
+    (display (sc-format (port->datums (current-input-port) read)))))
 
 (sc-format-cli)
