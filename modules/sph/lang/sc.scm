@@ -17,12 +17,12 @@
 
 (export sc->c sc-default-load-paths
   sph-lang-sc-description sc-syntax-table
-  sc-syntax-check sc-syntax-error
-  sc-syntax? sc-gensym
-  sc-map-associations sc-state-new
-  sc-syntax-error? sc-identifier
-  sc-not-preprocessor-keyword? sc-not-function-pointer-symbol?
-  sc-path->full-path sc-define-syntax-scm sc-syntax-expand)
+  sc-call-with-error-printer sc-syntax-check
+  sc-syntax-error sc-syntax?
+  sc-gensym sc-map-associations
+  sc-state-new sc-syntax-error?
+  sc-identifier sc-not-preprocessor-keyword?
+  sc-not-function-pointer-symbol? sc-path->full-path sc-define-syntax-scm sc-syntax-expand)
 
 (define sph-lang-sc-description
   "an s-expression to c compiler.
@@ -90,14 +90,8 @@
 
 (define* (sc-syntax-error #:optional irritant syntax-name expected)
   "false/any false/symbol false/(any ...) | exception"
-  (raise
-    (pair (q sc-syntax-error)
-      (compact
-        (list (and irritant (pair (q irritant) irritant))
-          (or (and expected (pair (q expected) expected))
-            (and syntax-name
-              (and-let* ((examples (sc-syntax-examples-get syntax-name)))
-                (pair (q expected) examples)))))))))
+  (throw (q sc-syntax-error) irritant
+    (or expected (and syntax-name (sc-syntax-examples-get syntax-name)))))
 
 (define* (acount? a min #:optional max) "arity count"
   (let (b (length a)) (and (if min (<= min b) #t) (if max (>= max b) #t))))
@@ -154,7 +148,7 @@
       (match a
         ( ( ( (? sc-not-preprocessor-keyword? name) parameter ...)
             ((? sc-not-function-pointer-symbol? return-type) parameter-types ...) body ...)
-          (equal? (length parameter) (length parameter-types)))
+          (<= (length parameter) (length parameter-types)))
         ((((? sc-not-preprocessor-keyword? name)) return-type body ...) #t)
         ((name type value rest ...) (sc-association-check state 3 rest)) (_ #f)))
     ((for) (match a (((init test update) body ...) #t) (_ #f)))
@@ -176,6 +170,12 @@
         (if (eqv? b (q ok-terminal)) #t
           (if b (if (list? a) (sc-syntax-check a state) #t) (sc-syntax-error a (first a))))))
     a))
+
+(define (sc-call-with-error-printer f)
+  (catch (q sc-syntax-error) f
+    (l (key irritant expected)
+      (simple-format #t "~A\n  irritant: ~S\n  expected any of:\n    ~A\n"
+        key irritant (string-join (map (l (a) (simple-format #f "~S" a)) expected) "\n    ")))))
 
 (define (parenthesize-ambiguous a)
   (if (or (parenthesized? a) (not (regexp-exec ambiguous-regexp a))) a (parenthesize a)))
@@ -200,7 +200,7 @@
         ((if) "if")
         ((ifdef) "ifdef")
         ((ifndef) "ifndef")
-        (else (raise (list (q sc-syntax-error) (q pre-if) type test consequent alternate))))
+        (else (throw (q sc-syntax-error) (q pre-if) type test consequent alternate)))
       " " test
       "\n" consequent "\n" (if alternate (string-append "#else\n" alternate "\n") "") "#endif")
     "\n\n" "\n"))
@@ -253,12 +253,13 @@
     (cond
       ((symbol? a) (symbol->string a))
       ((string? a) a)
-      (else (throw (q cannot-convert-to-c-identifier))))))
+      (else (throw (q sc-cannot-convert-to-c-identifier))))))
 
 (define (c-identifier-list a)
   (parenthesize
     (if (list? a) (string-join (map c-identifier a) ",")
-      (if (or (symbol? a) (string? a)) (c-identifier a) (throw (q cannot-convert-to-c-identifier))))))
+      (if (or (symbol? a) (string? a)) (c-identifier a)
+        (throw (q sc-cannot-convert-to-c-identifier))))))
 
 (define (c-function-parameter name type) (string-append type " " name))
 
@@ -267,9 +268,9 @@
     (if (list? names)
       (if (equal? (length names) (length types))
         (string-join (map c-function-parameter names types) ",")
-        (throw (q type-and-parameter-list-length-mismatch) names))
+        (throw (q sc-type-and-parameter-list-length-mismatch) names))
       (if (or (symbol? names) (string? names)) (c-function-parameter names types)
-        (throw (q cannot-convert-to-c-parameter))))))
+        (throw (q sc-cannot-convert-to-c-parameter))))))
 
 (define* (c-function name type-output body #:optional (names (list)) (type-input (list)))
   (string-append (if type-output (string-append type-output " ") "") name
@@ -326,7 +327,7 @@
     ( (char? a)
       (let (a (any->string-write (string a)))
         (string-enclose (substring a 1 (- (string-length a) 1)) "'")))
-    (else (throw (q cannot-convert-to-c-value) a))))
+    (else (throw (q sc-cannot-convert-to-c-value) a))))
 
 (define (sc-no-semicolon-register state name)
   "symbol -> unspecified
@@ -445,7 +446,7 @@
               (l (n v) (compile (list (q pre-undefine) (if (pair? n) (first n) n)))) names+values)
             "\n"))
         "\n\n" "\n"))
-    (_ (raise (q syntax-error-for-pre-let*)))))
+    (_ (throw (q sc-syntax-error-for-pre-let*)))))
 
 (define (sc-for a compile state)
   (let
@@ -558,12 +559,17 @@
         (if (string? (first body)) (list (docstring->comment (first body)) (tail body))
           (list #f body))))))
 
+(define (pad-parameter-names a b)
+  (let* ((a-length (length a)) (b-length (length b)) (difference (- b-length a-length)))
+    (if (> difference 0) (append a (make-list difference #f)) a)))
+
 (define (sc-function compile name return-type body parameter-names parameter-types)
-  (let
+  (let*
     ( (return-type (if (and (null? return-type) (null? body)) (q (void)) return-type))
+      (parameter-types (if (null? parameter-types) (q (void)) parameter-types))
       (parameters
-        (sc-function-parameters compile (if (null? parameter-names) (list #f) parameter-names)
-          (if (null? parameter-types) (q (void)) parameter-types) name))
+        (sc-function-parameters compile (pad-parameter-names parameter-names parameter-types)
+          parameter-types name))
       (name (compile name)))
     (get-body-and-docstring& body compile
       #f
@@ -616,7 +622,7 @@
     (if (list? names)
       (string-join (map (l a (apply sc-function-parameter compile a)) names types) ",")
       (if (or (symbol? names) (string? names)) (string-append (compile types) " " (compile names))
-        (raise (q cannot-convert-to-c-parameter))))))
+        (throw (q sc-cannot-convert-to-c-parameter))))))
 
 (define (sc-identifier-list a) (parenthesize (string-join (map sc-identifier a) ",")))
 
@@ -691,9 +697,8 @@
         (if (string-prefix? "/" path) (and (file-exists? path) path)
           (search-load-path path load-paths))))
     (if path-found (canonicalize-path path-found)
-      (raise
-        (list (q file-not-accessible)
-          (string-append (any->string path) " not found in " (any->string load-paths)))))))
+      (throw (q sc-file-not-accessible)
+        (string-append (any->string path) " not found in " (any->string load-paths))))))
 
 (define (sc-include-sc paths compile state) "(string ...) (string ...) -> list"
   (pair (q begin)
