@@ -133,7 +133,7 @@
         / array-get
         cond cond*
         sc-include function-pointer
-        label pre-pragma pre-undefine pre-include pre-concat pre-string-concat pre-stringify while)
+        label pre-pragma pre-undefine pre-include pre-concat pre-concat-string pre-stringify while)
       (acount? a 1))
     ( (array-set* : struct-pointer-get
         do-while bit-or bit-and bit-xor or and modulo pre-let let let* = < > <= >=)
@@ -1177,7 +1177,7 @@
     pre-let sc-pre-let*
     pre-pragma
     (l (a compile state) (string-append "#pragma " (string-join (map sc-identifier a) " ") "\n"))
-    pre-string-concat (l (a c s) (string-join (map c a) " "))
+    pre-concat-string (l (a c s) (string-join (map c a) " "))
     pre-stringify (l (a c s) (cp-stringify (c (first a))))
     pre-undefine
     (l (a compile state) (string-join (map (compose cp-undef sc-identifier) a) "\n" (q suffix)))
