@@ -19,37 +19,29 @@
         (map (l (a) (string-split a #\,)) (string-split a #\:))))
     (string-split a #\;)))
 
-#;(define merge-and-simplify-test-daat
-  (define (test a) (declare a b c d)
-    (declare e f g h) (declare i j)
-    (set a 1) (set c (struct-get v z))
-    (declare k) (set d (address-of x))
-    (declare l) (declare m)
-    (set e (pointer-get (+ a 3))) (set (struct-pointer-get f u t) (address-of (pointer-get y)))
-    (define a b 3) (define c d 4)))
+(define (merge-simplify a)
+  (if (and (not (null? a)) (contains? (quote (define begin)) (first a)))
+    (fold
+      (l (p a)
+        (map-consecutive (l (b) (and (list? b) (not (null? b)) (p b)))
+          (l b (append (first b) (apply append (map (l (b) (tail b)) (tail b))))) a))
+      a
+      (pair (l (a) (match a (((quote define) (? symbol?) value _ ...) #t) (_ #f)))
+        (map (l (prefix) (l (a) (eq? prefix (first a)))) (quote (declare set set+ set- pre-define)))))
+    a))
+
+(define (replace-simplify a)
+  (match a (((quote pointer-get) (? symbol? b)) (symbol-append (q *) b))
+    (((quote address-of) (? symbol? b)) (symbol-append (q &) b))
+    ( ( (quote struct-get) (? symbol? b) ...)
+      (string->symbol (string-join (map symbol->string b) ".")))
+    ( ( (quote struct-pointer-get) (? symbol? b) ...)
+      (string->symbol (string-join (map symbol->string b) ":")))
+    (_ a)))
 
 (define (merge-and-simplify a)
   "currently not used because it merges subsequent set in if, for, and custom macros"
-  (tree-map-lists-self
-    (l (a)
-      (let
-        (a
-          (fold
-            (l (p a)
-              (map-consecutive (l (b) (and (list? b) (not (null? b)) (p b)))
-                (l b (append (first b) (apply append (map (l (b) (tail b)) (tail b))))) a))
-            a
-            (pair (l (a) (match a (((quote define) (? symbol?) value _ ...) #t) (_ #f)))
-              (map (l (prefix) (l (a) (eq? prefix (first a))))
-                (quote (declare set set+ set- pre-define))))))
-        (match a (((quote pointer-get) (? symbol? b)) (symbol-append (q *) b))
-          (((quote address-of) (? symbol? b)) (symbol-append (q &) b))
-          ( ( (quote struct-get) (? symbol? b) ...)
-            (string->symbol (string-join (map symbol->string b) ".")))
-          ( ( (quote struct-pointer-get) (? symbol? b) ...)
-            (string->symbol (string-join (map symbol->string b) ":")))
-          (_ a))))
-    a))
+  (tree-map-lists-self (l (a) (replace-simplify (merge-simplify a))) a))
 
 (define (sc-format-cli)
   (let* ((options (cli)) (format (alist-ref options (q format))))
@@ -61,6 +53,6 @@
               (each (l (prefix) (ht-set! sc-formatters prefix (apply sc-f counts))) prefixes))
             a))
         (parse-format format)))
-    (display (sc-format (port->datums (current-input-port) read)))))
+    (display (sc-format (merge-and-simplify (port->datums (current-input-port) read))))))
 
 (sc-format-cli)

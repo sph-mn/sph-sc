@@ -102,7 +102,7 @@ the replacements are done like guile does it. "-" becomes "_", "->" becomes ``_t
 (sc-insert "// free c code string to be included as is")
 ```
 
-## scheme macros
+## s-expression macros
 sc supports non-hygienic macros with pattern matching.
 
 ~~~
@@ -127,6 +127,21 @@ sc-define-syntax* uses scheme expressions to generate the expansion and can retu
 
 (sc-define-syntax* (test* a b ...)
   (quasiquote (if (unquote a) 1 (begin (unquote-splicing b)))))
+~~~
+
+# using indent-based syntax
+if you prefer writing c using coffeescript- or python-like indented structure, sc allows you to do so using the [wisp (srfi-119)](https://srfi.schemers.org/srfi-119/srfi-119.html) syntax. all file names ending with .scw are automatically parsed as wisp.
+
+example.scw
+~~~
+pre-include "stdio.h"
+
+define (main argc argv) : int int char**
+  declare i int
+  printf "the number of program arguments passed is %d\n" argc
+  for : (set i 0) (< i argc) (set+ i 1)
+    printf "argument %d is %s\n" (+ i 1) (array-get argv i)
+  return 0
 ~~~
 
 # dependencies
@@ -1040,21 +1055,6 @@ for(a=1,b=2;1;c=3,d=4){1;}
 #define a() b
 #define c d
 f e;
-~~~
-
-# using indent syntax
-if you prefer writing c using coffeescript- or python-like indented structure, sc allows you to do so using the wisp syntax. all file names ending with .scw are automatically parsed as wisp.
-
-example.scw
-~~~
-pre-include "stdio.h"
-
-define (main argc argv) : int int char**
-  declare i int
-  printf "the number of program arguments passed is %d\n" argc
-  for : (set i 0) (< i argc) (set+ i 1)
-    printf "argument %d is %s\n" (+ i 1) (array-get argv i)
-  return 0
 ~~~
 
 # similar projects
