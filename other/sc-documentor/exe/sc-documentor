@@ -6,7 +6,7 @@
   (ice-9 match) (sph lang sc)
   (srfi srfi-2) (sph lang scheme)
   ((sph filesystem) #:select (path->full-path ensure-trailing-slash)) (sph alist)
-  (sph list) (sph cli) (sph list other) (sph string) (rnrs sorting))
+  (sph list) (sph cli) (sph string) (rnrs sorting))
 
 (define sph-sc-documentor-cli-description
   "extracts declarations from sc files and displays an overview in markdown format")
