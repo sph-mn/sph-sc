@@ -14,7 +14,10 @@
         (sc-syntax-expand id application))))
 
   (test-execute-procedures-lambda
-    (sc->c (define (a) (void double)) "void a(double)"
+    (sc->c
+      (define a (array char 3) "12")
+      "char a[3]=\"12\""
+      (define (a) (void double)) "void a(double)"
       (define (a) ()) "void a(void)"
       (declare a (type (struct (b c) (union (d e) (f (struct (g h)))))))
       "typedef struct{c b;union {e d;struct {h g;} f;};} a;" (unless #f 1 2)
@@ -222,7 +225,7 @@
       (for ((set a 1 b 2) #t (set c 3 d 4)) #t) "for(a=1,b=2;1;c=3,d=4){1;}"
       (if* #t (set a 1 b 2) 0) "(1?(a=1,b=2):0)"
       (define (a b) (void (sc-insert "test"))) "void a(test b)"
-      (define (a b) (void (array-type double 3))) "void a(double b[3])"
+      (define (a b) (void (array double 3))) "void a(double b[3])"
       (sc-concat type *) "type*"
       (pre-include-guard-begin test-h) "#ifndef test_h\n#define test_h\n"
       (pre-include-guard-end) "#endif")

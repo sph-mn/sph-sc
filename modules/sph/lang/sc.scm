@@ -522,7 +522,7 @@
           (not
             (and (symbol? a-first)
               (or (preprocessor-keyword? a-first) (eq? (q function-pointer) a-first)
-                (eq? (q array-type) a-first) (eq? (q sc-insert) a-first))))))
+                (eq? (q array) a-first) (eq? (q sc-insert) a-first))))))
       (string-join (map compile a) " ") (compile a))
     (sc-identifier a)))
 
@@ -532,7 +532,7 @@
 (define (sc-function-pointer? a)
   (and (list? a) (not (null? a)) (eq? (q function-pointer) (first a))))
 
-(define (sc-array-type? a) (and (list? a) (not (null? a)) (eq? (q array-type) (first a))))
+(define (sc-array? a) (and (list? a) (not (null? a)) (eq? (q array) (first a))))
 
 (define (sc-function-pointer compile inner type-output . type-input)
   "procedure string ? ? ... -> string"
@@ -604,7 +604,7 @@
     (string-append (sc-compile-type type-output compile) (parenthesize (string-append "*" inner))
       (sc-compile-types type-input compile))))
 
-(define (sc-array-type compile name type) "implementation incomplete"
+(define (sc-array compile name type) "the implementation is incomplete"
   (match type
     ( (type size ...)
       (string-append (sc-compile-type type compile) " " (apply c-array-get name (map compile size))))))
@@ -613,7 +613,7 @@
   (cond
     ( (sc-function-pointer? type)
       (apply sc-function-pointer compile (if name (compile name) "") (tail type)))
-    ((sc-array-type? type) (sc-array-type compile (if name (compile name) "") (tail type)))
+    ((sc-array? type) (sc-array compile (if name (compile name) "") (tail type)))
     (else
       (string-append (sc-compile-type type compile) (if name (string-append " " (compile name)) "")))))
 
@@ -748,8 +748,14 @@
     ( (name type value rest ...)
       (string-join
         (sc-map-associations 3
-          (l (name type value)
-            (c-define (compile name) (sc-compile-type type compile) (compile value)))
+          (l (id type value)
+            (match type
+              ( ( (quote struct-variable) type a ...)
+                (sc-define (list id type (pair (q struct-literal) a)) compile state))
+              ( ( (quote array) type size)
+                (string-append (sc-define-array (list id type size) compile state) "="
+                  (compile value)))
+              (_ (c-define (compile id) (sc-compile-type type compile) (compile value)))))
           a)
         ";"))
     (_ #f)))
@@ -820,7 +826,9 @@
         (match type
           ( ( (quote struct-variable) type a ...)
             (sc-define (list id type (pair (q struct-literal) a)) compile state))
-          (((quote array) a ...) (sc-define-array (pair id a) compile state))
+          ( ( (quote array) type size values ...)
+            (sc-define-array (pairs id type size values) compile state))
+          (((quote array) type size) (sc-define-array (list id type size) compile state))
           (((quote enum) a ...) (sc-enum a compile state))
           ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
             (sc-struct-or-union (first type) (pair id (tail type)) compile state))
@@ -1147,7 +1155,7 @@
     enum sc-enum
     for sc-for
     function-pointer (l (a compile state) (apply sc-function-pointer compile "" a))
-    array-type (l (a compile state) (apply sc-array-type compile "" a))
+    array (l (a compile state) (apply sc-array compile a))
     goto (l (a compile state) (string-append "goto " (compile (first a))))
     if sc-if
     if* sc-if*
