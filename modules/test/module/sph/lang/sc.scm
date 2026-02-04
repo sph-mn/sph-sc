@@ -15,6 +15,10 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (declare a struct)
+      "struct a;"
+      (declare a (type (struct a)))
+      "typedef struct a a;"
       (define a (array char 3) "12")
       "char a[3]=\"12\""
       (define (a) (void double)) "void a(double)"

@@ -808,7 +808,9 @@
 (define (sc-struct-or-union keyword a compile state) "symbol/false ? procedure -> string"
   (let
     ( (keyword-string (symbol->string keyword)) (a-first (first a))
-      (c (l (name body) (c-statement name (sc-struct-or-union-body body compile state)))))
+      (c
+        (l (name body)
+          (if (null? body) name (c-statement name (sc-struct-or-union-body body compile state))))))
     (if (or (symbol? a-first) (and (list? a-first) (preprocessor-keyword? (first a-first))))
       (c (string-append keyword-string " " (compile a-first)) (tail a)) (c keyword-string a))))
 
