@@ -15,6 +15,8 @@
 
   (test-execute-procedures-lambda
     (sc->c
+      (convert-type (compound-literal 0) b)
+      "((b){0})"
       (declare a struct)
       "struct a;"
       (declare a (type (struct a)))
@@ -196,8 +198,8 @@
       (struct testname (a (uns-igned int)) (b (unsigned char) 3))
       "struct testname{uns_igned int a;unsigned char b:3;}"
       (struct (a-b (function-pointer b c-e d)) (b i-nt)) "struct{b(*a_b)(c_e,d);i_nt b;}"
-      (struct-literal (a 1) (b "2")) "{.a=1,.b=\"2\"}"
-      (struct-literal a 1) "{a,1}"
+      (compound-literal (a 1) (b "2")) "{.a=1,.b=\"2\"}"
+      (compound-literal a 1) "{a,1}"
       (struct-set a b 1 c 2) "a.b=1;a.c=2;"
       (struct-pointer-get a b) "a->b"
       (struct-pointer-get a b c d) "a->b->c->d"

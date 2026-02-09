@@ -223,10 +223,6 @@
 (define (c-for init test update body) (string-append "for(" init ";" test ";" update "){" body "}"))
 (define (c-typedef name a) (string-append "typedef " a " " name))
 
-(define (c-convert-type a type)
-  "extra round brackets ensure nestability in function pointer cases like this: (dg_pair_reader_t)((*state).reader)(state,count,result)"
-  (string-append "((" type ")(" a "))"))
-
 (define* (c-statement keyword body #:optional prefix-a suffix-a)
   "\"keyword (prefix-a) { body } (suffix-a)\""
   (string-append keyword (if prefix-a (parenthesize prefix-a) "")
@@ -751,7 +747,7 @@
           (l (id type value)
             (match type
               ( ( (quote struct-variable) type a ...)
-                (sc-define (list id type (pair (q struct-literal) a)) compile state))
+                (sc-define (list id type (pair (q compound-literal) a)) compile state))
               ( ( (quote array) type size)
                 (string-append (sc-define-array (list id type size) compile state) "="
                   (compile value)))
@@ -818,7 +814,7 @@
   (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
     (c-variable (compile name) (sc-compile-type type compile))))
 
-(define (sc-struct-literal a compile state)
+(define (sc-compound-literal a compile state)
   (c-compound (map (l (a) (if (list? a) (map compile a) (compile a))) a)))
 
 (define (sc-declare a compile state)
@@ -827,7 +823,7 @@
       (l (id type)
         (match type
           ( ( (quote struct-variable) type a ...)
-            (sc-define (list id type (pair (q struct-literal) a)) compile state))
+            (sc-define (list id type (pair (q compound-literal) a)) compile state))
           ( ( (quote array) type size values ...)
             (sc-define-array (pairs id type size values) compile state))
           (((quote array) type size) (sc-define-array (list id type size) compile state))
@@ -1118,6 +1114,16 @@
     (and (list? a) (or (containsq? (q (struct union enum)) (first a)) (not (sc-syntax? (first a)))))
     (string-join (map compile a) " ") (compile a)))
 
+(define (c-convert-type a type)
+  "extra round brackets ensure nestability in function pointer cases like this: (dg_pair_reader_t)((*state).reader)(state,count,result)")
+
+(define (sc-convert-type a compile state)
+  (match a
+    ( ( ( (quote compound-literal) value) type)
+      (string-append "((" (sc-type-identifier type compile)
+        ")" (compile (list (q compound-literal) value)) ")"))
+    ((value type) (string-append "((" (sc-type-identifier type compile) ")(" (compile value) "))"))))
+
 (define sc-syntax-table
   (ht-create-symbol-q : (l (a c s) (apply c-struct-pointer-get (map c a)))
     != (sc-comparison-infix-f "!=")
@@ -1145,12 +1151,10 @@
     bit-xor (sc-infix-f "^")
     case (sc-case-f #f)
     case* (sc-case-f #t)
-    compound-statement (l (a compile state) (c-compound (sc-join-expressions (map compile a))))
+    compound-expression (l (a compile state) (c-compound (sc-join-expressions (map compile a))))
     cond sc-cond
     cond* sc-cond*
-    convert-type
-    (l (a compile state)
-      (c-convert-type (compile (first a)) (sc-type-identifier (second a) compile)))
+    convert-type sc-convert-type
     declare sc-declare
     define sc-define
     do-while sc-do-while
@@ -1208,7 +1212,7 @@
     set% (sc-set-f "%=")
     struct-get (l (a c s) (apply c-struct-get (map c a)))
     struct (l (a c s) (sc-struct-or-union (q struct) a c s))
-    struct-literal sc-struct-literal
+    compound-literal sc-compound-literal
     struct-pointer-get (l (a c s) (apply c-struct-pointer-get (map c a)))
     struct-set (sc-struct-set-f (q struct-get))
     struct-pointer-set (sc-struct-set-f (q struct-pointer-get))
