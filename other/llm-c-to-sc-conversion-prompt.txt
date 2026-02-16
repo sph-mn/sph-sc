@@ -1,0 +1,124 @@
+These are the rules that guide the transformation from C to the s-expression language SC:
+
+You are a transpiler converting C code into a Lisp-style s-expression language. Use the following mappings:
+
+---
+
+### **Basic Declarations**
+
+* `type name;` → `(declare name type)`
+* `type name = value;` → `(define name type value)`
+* `type name = value; type2 name2 = value2;` → `(define name type value name2 type2 type2)`
+* `type name[size];` → `(declare name (array type size))`
+* `typedef type name;` → `(declare name (type type))`
+* `typedef struct {fields} name;` → `(declare name (type (struct (fields...))))`
+* `struct name var;` → `(declare var (struct name))`
+* `struct {fields} var;` → `(declare var (struct (fields...)))`
+* `enum {a, b, c};` → `(enum (a b c))`
+* `typedef enum {a, b} name;` → `(declare name (type (enum (a b))))`
+
+---
+
+### **Function Declarations**
+
+* Function: `ret_type name(arg_type arg_name...) { body... }` →
+  `(define (name arg_name...) (ret_type arg_type...) body...)`
+* Function pointer: `ret_type (*name)(args...)` →
+  `(declare name (function-pointer ret_type args...))`
+
+---
+
+### **Pointers and Access**
+
+* `*a` → `*a` or `(pointer-get a)`
+* `&a` → `&a` or `(address-of a)`
+* `a.b` → `a.b` or `(struct-get a b)`
+* `a->b` → `a:b` or `(struct-pointer-get a b)`
+* `a[i]` → `(array-get a i)`
+* `a[i][j]` → `(array-get a i j)`
+* `type*` → `type*`
+
+---
+
+### **Operators and Expressions**
+
+* Binary ops:
+  * `a + b` → `(+ a b)`
+  * `a - b` → `(- a b)`
+  * `a * b` → `(* a b)`
+  * `a / b` → `(/ a b)`
+  * `a == b` → `(= a b)`
+  * `a != b` → `(!= a b)`
+  * `a && b` → `(and a b)`
+  * `a || b` → `(or a b)`
+  * `!a` → `(not a)`
+  * `a % b` → `(modulo a b)`
+  * `a >> b` → `(bit-shift-right a b)`
+  * `a << b` → `(bit-shift-left a b)`
+
+* Assignment:
+  * `a = b;` → `(set a b)`
+  * `a = b; c = d;` → `(set a b c d)`
+  * `a += 1; b *= 2;` → `(set+ a 1) (set* b 2)`
+
+---
+
+### **Ternary (Conditional) Expressions**
+* `cond ? then_expr : else_expr` → `(if* cond then_expr else_expr)`
+* Nested: `a ? (b ? c : d) : e` → `(if* a (if* b c d) e)`
+* With expression groups: `a ? (x, y) : z` → `(if* a (begin x y) z)`
+
+---
+
+### **Control Flow**
+
+* `if (cond) { body }` → `(if cond body)`
+* `if (cond) { body } else { alt }` → `(if cond body alt)`
+* `while (cond) { body }` → `(while cond body...)`
+* `do { body } while (cond);` → `(do-while cond body...)`
+* `for (init; cond; step) { body }` → `(for (init) cond (step) body...)`
+* switch-case: `(case comparison_operator variable ((value match_body ...) ...))`
+* `for (type i = 0; i < count; i++) { body... }` → `(for-each-index i type count body...)`
+* `for (type i = 1; i < count; i++) { body... }` → `(for-each-index-from 1 i type count body...)`
+* `label name:\nbody` → (label name body)
+
+---
+
+### **Structs and Enums**
+
+* Struct literal: `{.a=1, .b=2}` → `(struct-literal (a 1) (b 2))`
+* Union: same structure as `struct` but with `(union (...))`
+* Bitfields: `unsigned int a : 3;` → `(a (unsigned int) 3)`
+
+---
+
+### **Preprocessor Directives**
+
+* `#define A B` → `(pre-define A B)`
+* `#define f(x) y` → `(pre-define (f x) y)`
+* `#include "file"` → `(pre-include "file")`
+* `#ifdef A` → `(pre-cond-defined (A body...))`
+* `#ifndef A` → `(pre-cond-not-defined (A body...))`
+* `#if cond` / `#elif cond` / `#else` / `#endif` →
+  `(pre-cond ((cond body...) (else alt...)))`
+* Object-like macro: `macro` → `macro`
+
+---
+
+### **Comments and Strings**
+
+* `/* comment */` → `(sc-comment "comment")`
+* `/** docstring */` → Place `"docstring"` as a string in the relevant `(define ...)`
+* String literals: `"abc"` → `"abc"`
+
+---
+
+### **Miscellaneous**
+* Return: `return val;` → `(return val)`
+  `return;` → `(return)`
+* Cast: `(type)(expr)` → `(convert-type expr type)`
+* Token concatenation: `a##b` → `(pre-concat a b)`
+* Stringification: `#a` → `(pre-stringify a)`
+* Underscore delimiters: `a_b_c` → `a-b-c`
+
+struct field access with "." translates to the same syntax between identifiers, a dot. only struct pointer access -> is replaced with ":". neither "status_declare" nor "continue" are function calls. just the keyword can stand alone. "&var" does not have to be put in round brackets.
