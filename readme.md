@@ -154,7 +154,6 @@ install all dependencies
 
 ### download
 * [download](https://github.com/sph-mn/sph-sc/archive/master.zip)
-* alternatives: [releases](http://sph.mn/files/u/software/releases), `git clone git://sph.mn/sph-sc`, [github](https://github.com/sph-mn/sph-sc)
 
 ### unpack
 unpack the downloaded archive. for example
@@ -314,6 +313,78 @@ this way it is possible to match values with =, but alternatively other predicat
 sc expression and the c result. taken from the automated tests
 
 ~~~
+(convert-type (compound-literal 0) b)
+->
+((b){0})
+
+(declare a struct)
+->
+struct a;
+
+(declare a (type (struct a)))
+->
+typedef struct a a;
+
+(define a (array char 3) "12")
+->
+char a[3]="12"
+
+(define (a) (void double))
+->
+void a(double)
+
+(define (a) ())
+->
+void a(void)
+
+(declare a (type (struct (b c) (union (d e) (f (struct (g h)))))))
+->
+typedef struct{c b;union {e d;struct {h g;} f;};} a;
+
+(unless #f 1 2)
+->
+if(!0){1;2;}
+
+(#{1+}# 3)
+->
+(3+1)
+
+(#{1-}# 3)
+->
+(3-1)
+
+(when #t 1 2)
+->
+if(1){1;2;}
+
+(/ 2)
+->
+(1/2)
+
+(/ (+ 1 2))
+->
+(1/(1+2))
+
+(- (+ x y))
+->
+(-(x+y))
+
+(+ (+ x y))
+->
+(+(x+y))
+
+(sc-define-syntax (x a (b ...) body) (define a (b ...) body))
+->
+
+
+(declare a (array point-t 2 (1 2) (3 4)))
+->
+point_t a[2]={{1,2},{3,4}};
+
+(array-set* a 2 3 4)
+->
+a[0]=2;a[1]=3;a[2]=4;
+
 (struct (pre-concat a b) (c (struct (pre-concat a b*))))
 ->
 struct a##b{struct a##b* c;}
@@ -345,10 +416,6 @@ a__b;
 (struct-get (a b) c)
 ->
 (a(b)).c
-
-(if* #t (set a 1 b 2) 0)
-->
-(1?((a=1),(b=2)):0)
 
 (*a b)
 ->
@@ -405,10 +472,6 @@ aaa[3][4][5]
 (array-set aa 0 11 1 22 3 33)
 ->
 aa[0]=11;aa[1]=22;aa[3]=33;
-
-(array-set* a 2 3 4)
-->
-a[0]=2;a[1]=3;a[2]=4;
 
 (begin "\"\"")
 ->
@@ -600,7 +663,7 @@ int(*(*(*a)(long long int))(double))(float);
 
 (define (a) (function-pointer uint32_t uint64_t) #t)
 ->
-uint32_t(*a())(uint64_t){1;}
+uint32_t(*a(void))(uint64_t){1;}
 
 (define (a b) ((function-pointer uint32-t uint64_t) (function-pointer uint32-t uint64_t)) #t)
 ->
@@ -616,7 +679,7 @@ uint32_t a##b=1
 
 (define (abc) uint32_t (return 0))
 ->
-uint32_t abc(){return(0);}
+uint32_t abc(void){return(0);}
 
 (define (abc d e) (uint32_t uint64_t b16) (return 0))
 ->
@@ -629,7 +692,7 @@ uint32_t abc(b##64 d,b16 e){return(0);}
 (define (a) void "test-docstring")
 ->
 /** test-docstring */
-void a()
+void a(void)
 
 (define (a b) (c d) "e")
 ->
@@ -940,11 +1003,11 @@ struct testname{uns_igned int a;unsigned char b:3;}
 ->
 struct{b(*a_b)(c_e,d);i_nt b;}
 
-(struct-literal (a 1) (b "2"))
+(compound-literal (a 1) (b "2"))
 ->
 {.a=1,.b="2"}
 
-(struct-literal a 1)
+(compound-literal a 1)
 ->
 {a,1}
 
@@ -959,6 +1022,10 @@ a->b
 (struct-pointer-get a b c d)
 ->
 a->b->c->d
+
+(struct-pointer-set a b 3 c 4)
+->
+a->b=3;a->c=4;
 
 (union (a (unsigned int)) (b (unsigned char) 3))
 ->
@@ -998,12 +1065,12 @@ b=2
 
 (begin (pre-define a (begin (define (a) void 1))) (declare b int))
 ->
-#define a void a(){1;}
+#define a void a(void){1;}
 int b;
 
 (begin (pre-define (a b) (define (c) void 1)) (a "xyz"))
 ->
-#define a(b) void c(){1;}
+#define a(b) void c(void){1;}
 a("xyz")
 
 (set+ a 1 b 2)
@@ -1045,16 +1112,41 @@ typedef struct{int b[3];} a;
 ->
 (((3==myvalue)||(2==myvalue))?1:((4==myvalue)?0:((("a"==myvalue)||("b"==myvalue))?(1,1):(0,0))))
 
-(for ((set a 1 b 2) #t (set c 3 d 4)) #t)
-->
-for(a=1,b=2;1;c=3,d=4){1;}
-
 (begin (pre-define (a) (begin "test" b) c d) (declare e f))
 ->
 /** test */
 #define a() b
 #define c d
 f e;
+
+(for ((set a 1 b 2) #t (set c 3 d 4)) #t)
+->
+for(a=1,b=2;1;c=3,d=4){1;}
+
+(if* #t (set a 1 b 2) 0)
+->
+(1?(a=1,b=2):0)
+
+(define (a b) (void (sc-insert "test")))
+->
+void a(test b)
+
+(define (a b) (void (array double 3)))
+->
+void a(double b[3])
+
+(sc-concat type *)
+->
+type*
+
+(pre-include-guard-begin test-h)
+->
+#ifndef test_h
+#define test_h
+
+(pre-include-guard-end)
+->
+#endif
 ~~~
 
 # similar projects
