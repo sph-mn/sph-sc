@@ -20,7 +20,7 @@
     (string-split a #\;)))
 
 (define (merge-simplify a)
-  (if (and (not (null? a)) (contains? (quote (define begin)) (first a)))
+  (if (and (not (null? a)) (contains? (quote (define begin while for)) (first a)))
     (fold
       (l (p a)
         (map-consecutive (l (b) (and (list? b) (not (null? b)) (p b)))
