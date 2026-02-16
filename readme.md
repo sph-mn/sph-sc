@@ -274,10 +274,7 @@ this repository includes under other/
 * indent-syntax (similar to coffeescript or python) can be used. file names ending with .scw are automatically read as wisp. for code read from standard input, the ``--wisp`` option can be used
 * square bracket array accessors can be used as long as they parse to scheme identifiers, for example (+ a[0] a[1])
 * the declare and set syntax lets things be grouped nicely
-
-* example code from projects using sc
-  * [sph-sp](http://sph.mn/files/u/software/sourcecode/sph-sp/src)
-  * [sph-db](http://sph.mn/files/u/software/sourcecode/sph-db/source)
+* modern chatbots can convert from c to sc. see [other/llm-c-to-sc-conversion-prompt.txt](other/llm-c-to-sc-conversion-prompt.txt)
 
 # notes
 ## macro usage and semicolons
