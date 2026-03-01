@@ -296,7 +296,7 @@
 (define (c-struct-pointer-get a . fields)
   (string-append (parenthesize-ambiguous a) (string-join fields "->" (q prefix))))
 
-(define (c-pointer-get a) (string-append " *" (parenthesize-ambiguous a)))
+(define (c-pointer-get a) (string-append "*" (parenthesize-ambiguous a)))
 (define* (c-set name value #:optional (operator "=")) (string-append name operator value))
 (define (c-pointer type) (string-append type " * "))
 (define (c-address-of a) (string-append "&" (parenthesize-ambiguous a)))
@@ -385,15 +385,13 @@
   (let*
     ( (a (regexp-match-replace a identifier-replacements))
       (contains-infix (any (l (char) (string-index a char)) sc-identifier-infixes))
-      (after-prefix-index (string-skip a (l (a) (containsq? sc-identifier-prefixes a))))
-      (b
-        (if (and after-prefix-index (not (zero? after-prefix-index)))
-          (if contains-infix
-            (string-append (substring a 0 after-prefix-index)
-              (parenthesize (sc-identifier-struct-pointer-get (substring a after-prefix-index))))
-            a)
-          (if contains-infix (sc-identifier-struct-pointer-get a) a))))
-    (if (string-prefix? "*" b) (string-append " " b) b)))
+      (after-prefix-index (string-skip a (l (a) (containsq? sc-identifier-prefixes a)))))
+    (if (and after-prefix-index (not (zero? after-prefix-index)))
+      (if contains-infix
+        (string-append (substring a 0 after-prefix-index)
+          (parenthesize (sc-identifier-struct-pointer-get (substring a after-prefix-index))))
+        a)
+      (if contains-infix (sc-identifier-struct-pointer-get a) a))))
 
 (define (sc-identifier a)
   (if (symbol? a) (translate-identifier (symbol->string a))
@@ -955,7 +953,8 @@
       (content
         (map
           (l (a) "consider cases like a&&b=c where a lvalue error would occur for b=c"
-            (if (contains-set? a) (parenthesize (compile a)) (compile a)))
+            (if (contains-set? a) (parenthesize (compile a))
+              (let (b (compile a)) (if (string-prefix? "*" b) (string-append " " b) b))))
           a))
       (parenthesize
         (if (= 1 (length a))

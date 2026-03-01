@@ -45,7 +45,7 @@
       "long unsigned int a[3];" (begin #\newline)
       "'\\n';" (begin a--b)
       "a__b;" (begin *a.b)
-      " *(a.b);" (struct-get (pointer-get a) b)
+      "*(a.b);" (struct-get (pointer-get a) b)
       "(*a).b" (struct-get (a b) c)
       "(a(b)).c" (*a b)
       "(*a)(b)" (: ab cd)
