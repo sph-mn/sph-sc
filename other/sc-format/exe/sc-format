@@ -37,7 +37,7 @@
       (string->symbol (string-join (map symbol->string b) ".")))
     ( ( (quote struct-pointer-get) (? symbol? b) ...)
       (string->symbol (string-join (map symbol->string b) ":")))
-    (_ a)))
+    (((quote begin) b) b) (_ a)))
 
 (define (merge-and-simplify a)
   "currently not used because it merges subsequent set in if, for, and custom macros"
