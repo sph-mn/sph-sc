@@ -1,19 +1,8 @@
 (define-module (sph lang sc))
 
 (use-modules (srfi srfi-1) (srfi srfi-2)
-  ((rnrs io ports) #:select (get-datum)) (rnrs eval)
-  (ice-9 match) (sph)
-  (sph list)
-  ( (sph string) #:select
-    (string-equal? string-case parenthesize
-      parenthesized? any->string
-      any->string-write regexp-match-replace regexp-replace string-replace-string string-enclose))
-  ( (sph hashtable) #:select
-    (ht-create-symbol-q ht-create-symbol ht-delete!
-      ht-ref ht-set! ht-from-list ht-hash-symbol ht-create-string))
-  ((sph alist) #:select (alist alist-ref))
-  ((sph filesystem) #:select (ensure-trailing-slash search-load-path))
-  (sph lang sc syntax-extensions))
+  (ice-9 regex) ((rnrs io ports) #:select (get-datum))
+  ((rnrs hashtables) #:prefix rnrs-) (rnrs eval) (ice-9 match) (sph) (sph lang sc syntax-extensions))
 
 (export sc->c sc-default-load-paths
   sph-lang-sc-description sc-syntax-table
@@ -35,15 +24,212 @@
      * cp-: like c- but creates code for the c preprocessor
      * sc-: takes sc or strings and returns strings")
 
-(define (vector-accessor index)
-  "integer -> procedure:{vector -> any}
-   return a procedure that when called with a vector returns the value at index"
-  (l (a) (vector-ref a index)))
+(define-syntax-rules ht-create-symbol (() (ht-make ht-hash-symbol eq?))
+  ((associations ...) (ht-from-list (list associations ...) eq? ht-hash-symbol)))
 
-(define (vector-setter index)
-  "integer -> procedure:{vector value -> unspecified}
-   return a procedure that when called with a vector and a value sets index to value"
-  (l (a value) (vector-set! a index value)))
+(define-syntax-rules ht-create-symbol-q (() (ht-make ht-hash-symbol eq?))
+  ((associations ...) (ht-from-list (quote-odd associations ...) eq? ht-hash-symbol)))
+
+(define-syntax-rules ht-create-string (() (ht-make ht-hash-string string-equal?))
+  ((associations ...) (ht-from-list (list associations ...) string-equal? ht-hash-string)))
+
+(define-syntax-rules alist-ref ((a k d) ((l (r) (if r (tail r) d)) (assoc k a)))
+  ((a k) (assoc-ref a k)))
+
+(define-syntax-rules ht-ref ((h k d) (rnrs-hashtable-ref h k d))
+  ((h k) (rnrs-hashtable-ref h k #f)))
+
+(define (string-indices a search-string)
+  "string string -> (integer ...)
+   result in a list of indices at which search-string occurs in a string"
+  (let ((search-string-length (string-length search-string)) (a-length (string-length a)))
+    (let loop ((index (string-contains a search-string)))
+      (if index
+        (if (= index a-length) (list index)
+          (pair index
+            (loop (string-contains a search-string (+ index (max 1 search-string-length))))))
+        (list)))))
+
+(define (regexp-match-replace a replacements)
+  "string ((regexp . string:replacement)/(regexp string:search-string . string:replacement) ...) -> string
+   replace strings inside string portions matched by regular expressions
+   the two part replacement element makes a simple replace,
+   the three part version replaces search-string only inside matches with replacement"
+  (fold
+    (l (a result)
+      (fold-matches (first a) result
+        result
+        (l (match result)
+          (if (pair? (tail a))
+            (string-replace-string result (match:substring match)
+              (string-replace-string (match:substring match) (first (tail a)) (tail (tail a))))
+            (string-replace-string result (match:substring match) (tail a))))))
+    a replacements))
+
+(define (regexp-replace str regexp replacement)
+  "string string/regexp string/procedure:{match-structure -> string} -> string
+   replace all occurences of regexp in string with replacement"
+  (regexp-substitute/global #f regexp str (q pre) replacement (q post)))
+
+(define (string-replace-string a replace replacement)
+  "string string string -> string
+   replace all occurences of string \"replace\" inside string \"a\" with string \"replacement\".
+   tests have shown it to be up to 28x times faster than regexp-substitute/global (guile2.06 22x, guile3 5.75-28x).
+   this procedure is quite nice to debug - comment out one or all string-copy! calls and
+   the result string will be a partial result"
+  (let (indices (string-indices a replace))
+    (if (null? indices) a
+      (let
+        ( (replace-length (string-length replace)) (replacement-length (string-length replacement))
+          (a-length (string-length a)))
+        "calculate result string size and create result string"
+        (let ((r-length (+ a-length (* (length indices) (- replacement-length replace-length)))))
+          (let (r (make-string r-length))
+            "each match index, copy characters before match-end to the result string"
+            (let loop
+              ((r-index 0) (prev-index 0) (cur-index (first indices)) (rest (tail indices)))
+              (string-copy! r r-index a prev-index cur-index)
+              (let (r-index (- r-index (- prev-index cur-index)))
+                (string-copy! r r-index replacement)
+                (if (null? rest)
+                  (begin
+                    (if (< (+ cur-index replace-length) a-length)
+                      (string-copy! r (+ r-index replacement-length)
+                        a (+ cur-index replace-length) a-length))
+                    r)
+                  (loop (+ r-index replacement-length) (+ cur-index replace-length)
+                    (first rest) (tail rest)))))))))))
+
+(define (string-brackets-enclosed? a start-char end-char)
+  "string character character -> boolean
+   check if string has start-char as the first character and end-char as the last, and if
+   occurrences of start-char and end-char as opening and closing brackets are balanced"
+  (let (len (string-length a))
+    (and (< 1 len) (eq? start-char (string-ref a 0))
+      (eq? end-char (string-ref a (- len 1)))
+      (let loop ((index 1) (depth 1))
+        (cond
+          ((= depth 0) (= len index))
+          ( (< index len)
+            (loop (+ 1 index)
+              (cond
+                ((eqv? start-char (string-ref a index)) (+ depth 1))
+                ((eqv? end-char (string-ref a index)) (- depth 1))
+                (else depth))))
+          (else #f))))))
+
+(define string-equal? string=)
+
+(define-syntax-case (string-case a (condition expr) ...) s
+  (let*
+    ( (b (syntax->datum (syntax ((condition expr) ...)))) (c (gensym "string-case-"))
+      (cond-datum
+        (pair (q cond)
+          (map
+            (l (a) "(else x) is passed directly to the parent cond"
+              (let ((a-first (first a)) (a-tail (tail a)))
+                (cond
+                  ((string? a-first) (pair (list (q string-equal?) a-first c) a-tail))
+                  ((list? a-first) (pair (list (q member) c (list (q quote) a-first)) a-tail))
+                  ( (and (symbol? a-first) (not (eq? (q else) a-first)))
+                    (pair (list (q member) c a-first) a-tail))
+                  (else a))))
+            b))))
+    (quasisyntax ((unsyntax (datum->syntax s (qq (lambda ((unquote c)) (unquote cond-datum))))) a))))
+
+(define (any->string-write a) (object->string a write))
+
+(define (string-enclose a enclose-str) "append enclose-str to beginning and end of argument string"
+  (string-append enclose-str a enclose-str))
+
+(define (parenthesize a)
+  "string -> string
+   surround string with an open and a closing round bracket"
+  (string-append "(" a ")"))
+
+(define (any->string a)
+  "any -> string
+   generalized string conversion function.
+   get the string representation for the value of an object.
+   symbols like \".\" are converted to \"#{.}\" using display."
+  (if (string? a) a
+    (if (symbol? a) (symbol->string a) (call-with-output-string (l (port) (display a port))))))
+
+(define (parenthesized? a)
+  "string -> boolean
+   checks if the string is enclosed by round brackets.
+   also checks if every opening bracket is paired with a closing one after it"
+  (string-brackets-enclosed? a #\( #\)))
+
+(define ht-delete! rnrs-hashtable-delete!)
+(define ht-hash-string rnrs-string-hash)
+(define ht-hash-equal rnrs-equal-hash)
+(define ht-hash-symbol rnrs-symbol-hash)
+(define ht-make rnrs-make-hashtable)
+(define ht-set! rnrs-hashtable-set!)
+
+(define* (ht-from-list a #:optional (equal-proc equal?) (hash-proc ht-hash-equal))
+  (let (result (ht-make hash-proc equal-proc))
+    (fold (l (value key) (if key (begin (ht-set! result key value) #f) value)) #f a) result))
+
+(define (map-with-index f . a)
+  (let loop ((rest a) (index 0))
+    (if (any null? rest) (list)
+      (pair (apply f index (map first rest)) (loop (map tail rest) (+ 1 index))))))
+
+(define (fold-segments size f init a)
+  (let loop ((rest a) (buf (list)) (r init) (count size))
+    (if (null? rest) (if (null? buf) r (apply f r buf))
+      (if (< count 1) (loop (tail rest) (append (tail buf) (list (first rest))) (apply f r buf) 0)
+        (loop (tail rest) (append buf (list (first rest))) r (- count 1))))))
+
+(define alist-prepend acons)
+(define (containsq? a value) (if (memq value a) #t #f))
+(define (any->list a) (if (list? a) a (list a)))
+
+(define (flatten a)
+  (fold-right (l (e r) (if (list? e) (append (flatten e) r) (pair e r))) (list) a))
+
+(define (ensure-trailing-slash str) "string -> string"
+  (if (or (string-null? str) (not (eqv? #\/ (string-ref str (- (string-length str) 1)))))
+    (string-append str "/") str))
+
+(define (map-segments size f a)
+  (fold-segments size (l (result . a) (append result (list (apply f a)))) (list) a))
+
+(define (map-integers count f) (let loop ((n 0)) (if (= n count) null (pair (f n) (loop (+ 1 n))))))
+
+(define* (search-load-path path #:optional (load-paths %load-path))
+  (any
+    (l (base-path)
+      (let (full-path (string-append base-path path)) (if (file-exists? full-path) full-path #f)))
+    load-paths))
+
+(define (map-slice slice-length f a)
+  "integer procedure:{any ... -> any} list -> list
+   call \"f\" with each \"slice-length\" number of consecutive elements of \"a\""
+  (let loop ((rest a) (slice (list)) (slice-ele-length 0) (r (list)))
+    (if (null? rest) (reverse (if (null? slice) r (pair (apply f (reverse slice)) r)))
+      (if (= slice-length slice-ele-length)
+        (loop (tail rest) (list (first rest)) 1 (pair (apply f (reverse slice)) r))
+        (loop (tail rest) (pair (first rest) slice) (+ 1 slice-ele-length) r)))))
+
+(define list->alist
+  (let (proc (l (a alt prev r) (if alt (list #f #f (alist-prepend prev a r)) (list #t a r))))
+    (lambda (lis)
+      (if (null? lis) lis
+        (let (r (fold-multiple proc (tail lis) #t (first lis) (list)))
+          (reverse!
+            (if (first r) (pair (list (list-ref r 1)) (first (tail (tail r))))
+              (first (tail (tail r))))))))))
+
+(define (fold-multiple f a . custom-state-values)
+  (if (null? a) custom-state-values
+    (apply fold-multiple f (tail a) (apply f (first a) custom-state-values))))
+
+(define (alist . key/value) (list->alist key/value))
+(define (vector-accessor index) (l (a) (vector-ref a index)))
+(define (vector-setter index) (l (a value) (vector-set! a index value)))
 
 (define (tree-map-lists f a) "bottom to top"
   (map (l (a) (if (list? a) (f (tree-map-lists f a)) a)) a))
@@ -211,8 +397,7 @@
    (a): {string}
    (a b): {a,b}
    ((a b) (c d)): {.a=b,.c=d}
-   ((a b) c): {.a=b,c}
-   also creates compound literals"
+   ((a b) c): {.a=b,c}"
   (string-append "{"
     (if (list? a)
       (string-join (map (l (a) (if (list? a) (string-append "." (first a) "=" (second a)) a)) a)
@@ -504,12 +689,6 @@
       prev))
   (apply string-append (reverse (fold fold-f null (remove string-null? a)))))
 
-(define* (sc-define-type compile name value) "any any -> string"
-  (let (name (compile name))
-    (if (sc-function-pointer? value)
-      (string-append "typedef " (apply sc-function-pointer compile name (tail value)))
-      (c-typedef name (compile value)))))
-
 (define (sc-compile-type a compile)
   (if (list? a)
     (if
@@ -715,9 +894,37 @@
 (define (sc-list? a)
   (and (list? a) (or (null? a) (not (and (symbol? (first a)) (sc-syntax? (first a)))))))
 
-(define (sc-array-literal a compile state) "list -> string"
+(define (sc-array-literal a compile state) "(e, (a b) (c d)) -> {e,[a]=b,[c]=d}"
   (string-append "{"
-    (string-join (map (l (a) (if (sc-list? a) (sc-array-literal a compile state) (compile a))) a)
+    (string-join
+      (map
+        (l (a)
+          (if (and (list? a) (not (eq? (q array-literal) (first a))))
+            (string-append "[" (compile (first a)) "]=" (compile (second a))) (compile a)))
+        a)
+      ",")
+    "}"))
+
+(define (sc-array-literal* a compile state)
+  "((a b) (c d)) ((e f) (g h))) -> {{{a,b},{c,d}},{{e,f},{g,h}}"
+  (string-append "{"
+    (string-join
+      (map
+        (l (a)
+          (if (and (list? a) (sc-not-preprocessor-keyword? (first a)))
+            (sc-array-literal* a compile state) (compile a)))
+        a)
+      ",")
+    "}"))
+
+(define (sc-compound-literal a compile state) "(e, (a b) (c d)) -> {e,.a=b,.c=d}"
+  (string-append "{"
+    (string-join
+      (map
+        (l (a)
+          (if (list? a) (string-append "." (compile (first a)) "=" (compile (second a)))
+            (compile a)))
+        a)
       ",")
     "}"))
 
@@ -814,25 +1021,33 @@
   (if (sc-function-pointer? type) (apply sc-function-pointer compile (compile name) (tail type))
     (c-variable (compile name) (sc-compile-type type compile))))
 
-(define (sc-compound-literal a compile state)
-  (c-compound (map (l (a) (if (list? a) (map compile a) (compile a))) a)))
+(define (sc-declare-map-associations a compile state)
+  (sc-map-associations 2
+    (l (id type)
+      (match type
+        ( ( (quote struct-variable) type a ...)
+          (sc-define (list id type (pair (q compound-literal) a)) compile state))
+        (((quote array) type size) (sc-define-array (list id type size) compile state))
+        (((quote enum) a ...) (sc-enum a compile state))
+        ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
+          (sc-struct-or-union (first type) (pair id (tail type)) compile state))
+        ( ( (quote type) value)
+          (match value
+            ( ( (quote array) a ...)
+              (apply string-append "typedef "
+                (sc-declare-map-associations (list id value) compile state)))
+            (_ (sc-define-type compile id value))))
+        (_ (or (sc-define (list id type) compile state) (sc-declare-variable id type compile)))))
+    a))
+
+(define* (sc-define-type compile name value) "any any -> string"
+  (let (name (compile name))
+    (if (sc-function-pointer? value)
+      (string-append "typedef " (apply sc-function-pointer compile name (tail value)))
+      (c-typedef name (compile value)))))
 
 (define (sc-declare a compile state)
-  (sc-join-expressions
-    (sc-map-associations 2
-      (l (id type)
-        (match type
-          ( ( (quote struct-variable) type a ...)
-            (sc-define (list id type (pair (q compound-literal) a)) compile state))
-          ( ( (quote array) type size values ...)
-            (sc-define-array (pairs id type size values) compile state))
-          (((quote array) type size) (sc-define-array (list id type size) compile state))
-          (((quote enum) a ...) (sc-enum a compile state))
-          ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
-            (sc-struct-or-union (first type) (pair id (tail type)) compile state))
-          (((quote type) type) (sc-define-type compile id type))
-          (_ (or (sc-define (list id type) compile state) (sc-declare-variable id type compile)))))
-      a)))
+  (sc-join-expressions (sc-declare-map-associations a compile state)))
 
 (define (sc-set-join state a)
   (if (null? (tail a)) (first a)
@@ -1141,6 +1356,7 @@
     and (sc-infix-f "&&")
     array-get (l (a compile state) (apply c-array-get (map compile a)))
     array-literal sc-array-literal
+    array-literal* sc-array-literal*
     array-set sc-array-set
     array-set* sc-array-set*
     begin (l (a compile state) (sc-join-expressions (map compile a)))

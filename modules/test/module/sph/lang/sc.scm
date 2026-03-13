@@ -14,20 +14,17 @@
         (sc-syntax-expand id application))))
 
   (test-execute-procedures-lambda
-    (sc->c
-      (/ 1.0 *a)
-      "(1.0/ *a)"
-      (convert-type (compound-literal 0) b)
-      "((b){0})"
-      (declare a struct)
-      "struct a;"
-      (declare a (type (struct a)))
-      "typedef struct a a;"
-      (define a (array char 3) "12")
-      "char a[3]=\"12\""
-      (define (a) (void double)) "void a(double)"
-      (define (a) ()) "void a(void)"
-      (declare a (type (struct (b c) (union (d e) (f (struct (g h)))))))
+    (sc->c (array-literal a (b (compound-literal c (d e))) (array-literal f))
+      "{a,[b]={c,.d=e},{f}}" (array-literal* ((a b) (c d)) ((e f) (g h)))
+      "{{{a,b},{c,d}},{{e,f},{g,h}}}" (declare a (type (array b 1)))
+      "typedef b a[1];" (/ 1.0 *a)
+      "(1.0/ *a)" (convert-type (compound-literal 0) b)
+      "((b){0})" (declare a struct)
+      "struct a;" (declare a (type (struct a)))
+      "typedef struct a a;" (define a (array char 3) "12")
+      "char a[3]=\"12\"" (define (a) (void double))
+      "void a(double)" (define (a) ())
+      "void a(void)" (declare a (type (struct (b c) (union (d e) (f (struct (g h)))))))
       "typedef struct{c b;union {e d;struct {h g;} f;};} a;" (unless #f 1 2)
       "if(!0){1;2;}" (1+ 3)
       "(3+1)" (1- 3)
@@ -37,8 +34,8 @@
       "(1/(1+2))" (- (+ x y))
       "(-(x+y))" (+ (+ x y))
       "(+(x+y))" (sc-define-syntax (x a (b ...) body) (define a (b ...) body))
-      "" (declare a (array point-t 2 (1 2) (3 4)))
-      "point_t a[2]={{1,2},{3,4}};" (array-set* a 2 3 4)
+      "" (define a (array point-t 2) (array-literal* (1 2) (3 4)))
+      "point_t a[2]={{1,2},{3,4}}" (array-set* a 2 3 4)
       "a[0]=2;a[1]=3;a[2]=4;" (struct (pre-concat a b) (c (struct (pre-concat a b*))))
       "struct a##b{struct a##b* c;}" (declare a (array (struct b) 3))
       "struct b a[3];" (declare a (array (long unsigned int) 3))
@@ -93,9 +90,8 @@
       ((convert-type abc function-t) d e) "((function_t)(abc))(d,e)"
       (convert-type a (function-pointer void void*)) "((void(*)(void*))(a))"
       (declare aa (array size-t (b-b))) "size_t aa[b_b];"
-      (declare aa
-        (array size-t (1 2 3) (array-literal (array-literal -4 5 test-c) (array-literal 6 7 8))))
-      "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}};" (declare a (struct test))
+      (define aa (array size-t (1 2 3)) (array-literal* ((-4 5 test-c) (6 7 8))))
+      "size_t aa[1][2][3]={{{-4,5,test_c},{6,7,8}}}" (declare a (struct test))
       "struct test a;" (declare a (struct (test int)))
       "struct a{int test;};"
       (declare type-name (type (function-pointer type-return type-argument-1 type-argument-2)))
@@ -105,8 +101,8 @@
       "typedef struct{b(*a_b)(c_e,d);i_nt b;} e;"
       (declare a uint32_t (b ba bb) (void uint8_t uint32_t))
       "uint32_t a;void b(uint8_t ba,uint32_t bb);"
-      (declare c (array uint8_t (3 4)) c (array uint8_t 5) c (array uint8_t (2) 0 0))
-      "uint8_t c[3][4];uint8_t c[5];uint8_t c[2]={0,0};"
+      (declare c (array uint8_t (3 4)) c (array uint8_t 5) c (array uint8_t (2)))
+      "uint8_t c[3][4];uint8_t c[5];uint8_t c[2];"
       (declare e (enum (ea eb ec)) d (struct (da (unsigned int))))
       "enum{ea,eb,ec};struct d{unsigned int da;};"
       (declare f (type uint8_t) g (type (struct (ga (unsigned int)))))
