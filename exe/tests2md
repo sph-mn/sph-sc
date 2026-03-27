@@ -1,0 +1,35 @@
+#!/usr/bin/env -S guile -s
+!#
+
+(use-modules (ice-9 match))
+(define path (quote (define-test-module test-execute-procedures-lambda sc->c)))
+
+(define (read-all port)
+  (let loop ((forms (quote ())))
+    (let ((form (read port))) (if (eof-object? form) (reverse forms) (loop (cons form forms))))))
+
+(define (write-string value) (call-with-output-string (lambda (port) (write value port))))
+
+(define (find-by-path value path)
+  (define (seek value path)
+    (cond
+      ((null? path) #f)
+      ( (pair? value)
+        (let ((symbol (car path)) (rest (cdr path)))
+          (or
+            (and (list? value) (pair? value)
+              (eq? (car value) symbol) (if (null? rest) value (seek (cdr value) rest)))
+            (seek (car value) path) (seek (cdr value) path))))
+      (else #f)))
+  (seek value path))
+
+(define (print-pairs-flat items)
+  (let loop ((items items) (first? #t))
+    (match items (() #t)
+      ( (a b . rest) (unless (string? b) (error "expected string as second of pair" b))
+        (unless first? (newline) (newline)) (display (write-string a))
+        (newline) (display "->") (newline) (display (string-trim-both b)) (loop rest #f))
+      (_ (error "expected an even-length list of (data string) pairs")))))
+
+(let* ((forms (read-all (current-input-port))) (target (find-by-path forms path)))
+  (unless target (error "path not found")) (print-pairs-flat (cdr target)) (newline))

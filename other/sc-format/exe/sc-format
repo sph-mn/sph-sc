@@ -30,6 +30,12 @@
         (map (l (prefix) (l (a) (eq? prefix (first a)))) (quote (declare set set+ set- pre-define)))))
     a))
 
+"(struct-pointer-get (struct-pointer-get a b) c)
+(address-of (array-get a b))
+(pointer-get (+ a b))
+(pointer-get (+ a b c))
+(struct-pointer-get (+ a b) c)"
+
 (define (replace-simplify a)
   (match a (((quote pointer-get) (? symbol? b)) (symbol-append (q *) b))
     (((quote address-of) (? symbol? b)) (symbol-append (q &) b))
@@ -37,7 +43,18 @@
       (string->symbol (string-join (map symbol->string b) ".")))
     ( ( (quote struct-pointer-get) (? symbol? b) ...)
       (string->symbol (string-join (map symbol->string b) ":")))
-    (((quote begin) b) b) (_ a)))
+    (((quote begin) b) b)
+    ( ( (quote define) (name formals ...) (type) body ...)
+      (pairs (q define) (pair name formals) type body))
+    ( ( (quote struct-pointer-get) ((quote struct-pointer-get) a b) c)
+      (list (q struct-pointer-get) a b c))
+    (((quote struct-get) ((quote struct-get) a b) c) (list (q struct-get) a b c))
+    (((quote address-of) ((quote array-get) a b)) (list (q +) a b))
+    (((quote pointer-get) ((quote +) a b)) (list (q array-get) a b))
+    (((quote pointer-get) ((quote +) a b ...)) (list (q array-get) a (pair (q +) b)))
+    ( ( (quote struct-pointer-get) ((quote +) a b) c ...)
+      (pairs (q struct-get) (list (q array-get) a b) c))
+    (_ a)))
 
 (define (merge-and-simplify a)
   "currently not used because it merges subsequent set in if, for, and custom macros"

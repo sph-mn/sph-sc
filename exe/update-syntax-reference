@@ -1,0 +1,3 @@
+#!/bin/sh
+
+cat modules/test/module/sph/lang/sc.scm | ./exe/tests2md > other/syntax-reference.md
