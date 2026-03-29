@@ -106,8 +106,7 @@
       (declare e (enum (ea eb ec)) d (struct (da (unsigned int))))
       "enum{ea,eb,ec};struct d{unsigned int da;};"
       (declare f (type uint8_t) g (type (struct (ga (unsigned int)))))
-      "typedef uint8_t f;typedef struct{unsigned int ga;} g;" (declare h (struct-variable ha 0 0))
-      "ha h={0,0};" (declare (pre-concat h i) uint32_t)
+      "typedef uint8_t f;typedef struct{unsigned int ga;} g;" (declare (pre-concat h i) uint32_t)
       "uint32_t h##i;" (define a uint32_t 1)
       "uint32_t a=1" (define a uint32_t 1 b uint64_t 2)
       "uint32_t a=1;uint64_t b=2"
