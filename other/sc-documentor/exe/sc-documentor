@@ -1,12 +1,12 @@
 #!/usr/bin/env guile
 !#
 
-(use-modules (srfi srfi-1) (sph)
-  (srfi srfi-41) (sph stream)
-  (ice-9 match) (sph lang sc)
-  (srfi srfi-2) (sph lang scheme)
-  ((sph filesystem) #:select (path->full-path ensure-trailing-slash)) (sph alist)
-  (sph list) (sph cli) (sph string) (rnrs sorting))
+(use-modules (srfi srfi-1) (srfi srfi-41)
+  (srfi srfi-2) (ice-9 match)
+  (rnrs sorting) (sph lang sc sph)
+  (sph lang sc sph stream) (sph lang sc sph lang scheme)
+  (sph lang sc) ((sph filesystem) #:select (path->full-path ensure-trailing-slash))
+  (sph alist) (sph list) (sph cli) (sph string))
 
 (define sph-sc-documentor-cli-description
   "extracts declarations from sc files and displays an overview in markdown format")

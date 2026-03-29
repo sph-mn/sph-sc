@@ -1,0 +1,42 @@
+#!/bin/sh
+
+source_root_path=$1
+target_root_path=$(pwd)
+
+module_relative_paths="
+modules/sph.scm
+modules/sph/alist.scm
+modules/sph/cli.scm
+modules/sph/filesystem.scm
+modules/sph/hashtable.scm
+modules/sph/io.scm
+modules/sph/list.scm
+modules/sph/stream.scm
+modules/sph/string.scm
+modules/sph/test.scm
+modules/sph/test/base.scm
+modules/sph/test/report.scm
+modules/sph/tree.scm
+modules/sph/install.scm
+modules/sph/lang/scheme.scm
+modules/sph/lang/indent-syntax.scm
+modules/sph/lang/scm-format.scm
+modules/sph/lang/scm-format/format.scm
+modules/sph/number.scm
+modules/sph/module.scm
+modules/sph/vector.scm
+modules/sph/other.scm
+modules/sph/math.scm
+modules/sph/lang/indent-tree.scm
+"
+
+for relative_path in $module_relative_paths; do
+  source_file="$source_root_path/$relative_path"
+  target_file="$target_root_path/$(printf '%s\n' "$relative_path" | sed 's|^modules/sph|modules/sph/lang/sc/sph|')"
+
+  mkdir -p "$(dirname "$target_file")"
+
+  sed -e 's|(sph |(sph lang sc sph |g' \
+      -e 's|(sph)|(sph lang sc sph)|g' \
+      "$source_file" > "$target_file"
+done

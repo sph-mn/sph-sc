@@ -146,50 +146,51 @@ define (main argc argv) : int int char**
 
 # dependencies
 * [guile](https://www.gnu.org/software/guile) >= 3
-* [sph-lib](https://github.com/sph-mn/sph-lib)
 
 # installation
-## manual
-install all dependencies
+## download
+download the project archive:
+* <https://github.com/sph-mn/sph-sc/archive/master.zip>
 
-### download
-* [download](https://github.com/sph-mn/sph-sc/archive/master.zip)
-
-### unpack
-unpack the downloaded archive. for example
-```shell
+## unpack
+extract the archive:
+```
 tar -xf sph-sc.tgz
 ```
-
-* -x is for extract
-* -f is for the source file name
-
-### without the installer
-* copy or symlink everything that is under "modules" into a directory listed when executing "guile -c '(display %load-path)'". a final example path is /usr/share/guile/site/sph/lang/sc.scm. also ensure that the user who will use the modules has the permissions to read the files
-* copy or symlink exe/sc into a directory listed when executing "echo $PATH". ensure that the execute permission is set ("chmod +x", "ls -l" rwx)
-
-### with the installer
-the installer so far is only tested on gnu/linux and installs executables to /usr/bin by default.
-
-```shell
+## install
+run the installer:
+```
 cd sph-sc
-su root
 ./exe/install
 ```
+this installs:
+* modules into your guile load path
+* the `sc` executable into your system path
 
-the install script has a "--help" and a "--dry-run" option for more options and information.
-the installer creates directories, copies files and sets permissions.
-
-### testing
-after everything is installed, the following can be run inside the sph-sc repository directory to see that everything works without issues.
-
-```shell
+### optional prefix
+you can install relative to a custom location:
+```
+./exe/install /your/prefix
+```
+## alternative: symlink install
+instead of copying files, you can symlink them:
+```
+cd sph-sc
+./exe/install-symlink
+```
+## test
+run the test script:
+```
 ./exe/test
 ```
+if it runs without errors, the installation is complete.
+## notes
+* if `sc` is not found, ensure your `PATH` includes the install location.
+* if modules are not found, ensure your `GUILE_LOAD_PATH` includes the install location.
 
 ## arch user repository (aur) package
 * [detail page](https://aur.archlinux.org/packages/sph-sc-git)
-* installation with [rua](https://github.com/vn971/rua): ``rua install sph-sc-git``
+* installation with [rua](https://github.com/vn971/rua): `rua install sph-sc-git
 
 # command-line application
 $ sc --help
@@ -295,7 +296,6 @@ this way it is possible to match values with =, but alternatively other predicat
 # possible enhancements and ideas
 * keyword arguments: it would be easy for sc to match guile style #:keywords with the parameter names of function definitions
 * module system: exports-form that compiles to nothing; import form that reads export-form from files and rewrites unexported identifiers to have less likely conflicting internal names. option to add prefix to imported bindings. bindings from preprocessor macros should be handled. or syntax for [clang-modules](https://clang.llvm.org/docs/Modules.html)
-* rewrite the sc implementation as a single file with only guile as the dependency
 * translate scheme comments. function and macro docstrings are translated as expected but scheme comments dont appear in c, only with ``(sc-comment "comment string")`` or sc-insert. a scheme reader that parses scheme comments exists via sph-lib but requires a c library that often does not compile
 * improve error messages. currently, guile exceptions are displayed. there is an existing syntax check function with example patterns that can be extended, with a better exception printer, errors could be handled nicely by showing both what is wrong and how it can look like.
 * support actual switch/case instead of compiling to if/else, which is currently done to add an extra feature that c does not have

@@ -1,8 +1,21 @@
-#!/usr/bin/env guile
-!#
+#!/bin/sh
 
-(import (sph install))
+if test $# -eq 0
+then
+  echo "arguments: [prefix [--symlink]]"
+  exit 0
+fi
 
-(install-cli
-  (system-executables 755 "exe/sc")
-  (guile-site-modules "modules/sph" "modules/test"))
+if test -n "$1";then prefix="$1"; else prefix=""; fi
+if test -n "$2";then cp_or_ln="/usr/bin/cp -sf"; else cp_or_ln=cp; fi
+
+lib="$prefix/usr/lib"
+site="$prefix/usr/share/guile/site"
+modules="$PWD"/modules
+
+mkdir -p "$site"
+
+find "$modules" -type d -exec chmod 755 {} \;
+find "$modules" -type f -exec chmod 644 {} \;
+
+$cp_or_ln -R "$modules"/sph "$site"

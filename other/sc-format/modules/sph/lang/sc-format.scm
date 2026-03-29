@@ -1,7 +1,7 @@
 (define-module (sph lang sc-format))
 
 (use-modules ((srfi srfi-1) #:select (split-at)) (ice-9 match)
-  (sph) (sph hashtable)
+  (sph lang sc sph) (sph hashtable)
   (sph lang scm-format) (sph lang scm-format format) (sph string) ((sph list) #:select (map-slice)))
 
 (export sc-format sc-f scd-f sc-format-config sc-formatters)

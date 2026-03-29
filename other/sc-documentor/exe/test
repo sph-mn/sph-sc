@@ -2,7 +2,7 @@
 !#
 
 ; extract all expressions from sc tests and write them to a file, then call sc-documentor for this file.
-(import (ice-9 match) (sph) (sph tree) (sph list) (sph lang scheme))
+(import (ice-9 match) (sph lang sc sph) (sph tree) (sph list) (sph lang scheme))
 
 (let
   ( (code

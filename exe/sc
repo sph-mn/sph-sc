@@ -1,12 +1,13 @@
 #!/usr/bin/env guile
 !#
 
-(use-modules ((srfi srfi-1) #:select (every fold-right)) (sph)
-  (sph lang indent-syntax) (sph lang scheme)
-  (sph string) ((sph io) #:select (port->lines))
-  ((rnrs exceptions) #:select (guard)) (sph list)
-  ((sph filesystem) #:select (ensure-trailing-slash ensure-directory-structure path->full-path))
-  (sph alist) (sph lang sc) (sph lang wisp) (sph cli))
+(use-modules ((srfi srfi-1) #:select (every fold-right)) (sph lang sc sph)
+  (sph lang sc sph lang indent-syntax) (sph lang sc sph lang scheme)
+  (sph lang sc sph string) ((sph lang sc sph io) #:select (port->lines))
+  ((rnrs exceptions) #:select (guard)) (sph lang sc sph list)
+  ( (sph lang sc sph filesystem) #:select
+    (ensure-trailing-slash ensure-directory-structure path->full-path))
+  (sph lang sc sph alist) (sph lang sc) (sph lang wisp) (sph lang sc sph cli))
 
 (define (process input-port output-port check port->datums*)
   (let (expressions (pair (q begin) (port->datums* input-port)))

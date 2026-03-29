@@ -941,7 +941,7 @@
           (sc-identifier type))
         " " (compile name)
         (apply string-append
-          (if (null? size) "[]"
+          (if (null? size) (list "[]")
             (map (l (a) (if (null? a) "[]" (string-append "[" (compile a) "]"))) (any->list size))))
         (if (null? values) "" (string-append "=" (sc-array-literal values compile state)))))))
 

@@ -1,7 +1,7 @@
 (define-module (sph lang sc eval-environment))
 
-(use-modules (srfi srfi-1) (sph list)
-  (sph alist) (sph hashtable) (sph) (sph lang sc) ((sph tree) #:select (tree-any)))
+(use-modules (srfi srfi-1) (sph lang sc sph list)
+  (sph lang sc sph alist) (sph lang sc sph hashtable) (sph) (sph lang sc) ((sph lang sc sph tree) #:select (tree-any)))
 
 (re-export any->list flatten
   contains? containsq?

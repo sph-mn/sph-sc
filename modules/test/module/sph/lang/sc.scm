@@ -1,5 +1,5 @@
 (define-test-module (test module sph lang sc)
-  (import (sph test) (sph lang sc) (ice-9 match))
+  (import (ice-9 match) (sph lang sc sph test) (sph lang sc))
 
   (define-test (sc->c arguments) (sc-call-with-error-printer (l () (sc->c arguments))))
 
@@ -14,7 +14,10 @@
         (sc-syntax-expand id application))))
 
   (test-execute-procedures-lambda
-    (sc->c (array-literal a (b (compound-literal c (d e))) (array-literal f))
+    (sc->c
+      (define a (array b ()) "c")
+      "b a[]=\"c\""
+      (array-literal a (b (compound-literal c (d e))) (array-literal f))
       "{a,[b]={c,.d=e},{f}}" (array-literal* ((a b) (c d)) ((e f) (g h)))
       "{{{a,b},{c,d}},{{e,f},{g,h}}}" (declare a (type (array b 1)))
       "typedef b a[1];" (/ 1.0 *a)

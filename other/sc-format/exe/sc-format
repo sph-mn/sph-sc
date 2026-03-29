@@ -1,9 +1,10 @@
 #!/usr/bin/guile
 !#
 
-(use-modules (sph) (sph cli)
-  (sph hashtable) (sph lang sc-format)
-  (ice-9 match) (sph lang scheme) (sph alist) (sph tree) (sph list) (srfi srfi-1))
+(use-modules (ice-9 match) (srfi srfi-1)
+  (sph lang sc sph) (sph lang sc sph cli)
+  (sph lang sc sph hashtable) (sph lang sc-format)
+  (sph lang sc sph lang scheme) (sph lang sc sph alist) (sph lang sc sph tree) (sph lang sc sph list))
 
 (define cli
   (cli-create #:options
@@ -30,11 +31,7 @@
         (map (l (prefix) (l (a) (eq? prefix (first a)))) (quote (declare set set+ set- pre-define)))))
     a))
 
-"(struct-pointer-get (struct-pointer-get a b) c)
-(address-of (array-get a b))
-(pointer-get (+ a b))
-(pointer-get (+ a b c))
-(struct-pointer-get (+ a b) c)"
+"(struct-pointer-get (struct-pointer-get a b) c)\n(address-of (array-get a b))\n(pointer-get (+ a b))\n(pointer-get (+ a b c))\n(struct-pointer-get (+ a b) c)"
 
 (define (replace-simplify a)
   (match a (((quote pointer-get) (? symbol? b)) (symbol-append (q *) b))
