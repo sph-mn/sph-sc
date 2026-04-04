@@ -32,4 +32,5 @@
       (_ (error "expected an even-length list of (data string) pairs")))))
 
 (let* ((forms (read-all (current-input-port))) (target (find-by-path forms path)))
-  (unless target (error "path not found")) (print-pairs-flat (cdr target)) (newline))
+  (unless target (error "path not found")) (display "~~~\n")
+  (print-pairs-flat (cdr target)) (display "\n~~~") (newline))

@@ -1,7 +1,20 @@
-# sc syntax reference
-sc expression and the c result. taken from the automated tests.
-
 ~~~
+(array b 1)
+->
+b[1]
+
+(a (array b 1))
+->
+a(b[1])
+
+(declare a (array-pointer b 3))
+->
+b (*a)[3];
+
+(define a (array b ()) "c")
+->
+b a[]="c"
+
 (array-literal a (b (compound-literal c (d e))) (array-literal f))
 ->
 {a,[b]={c,.d=e},{f}}
@@ -156,7 +169,7 @@ a[1]
 
 (array-get (array-get a 1) 2)
 ->
-(a[1])[2]
+a[1][2]
 
 (array-get aaa 3)
 ->
@@ -341,10 +354,6 @@ enum{ea,eb,ec};struct d{unsigned int da;};
 (declare f (type uint8_t) g (type (struct (ga (unsigned int)))))
 ->
 typedef uint8_t f;typedef struct{unsigned int ga;} g;
-
-(declare h (struct-variable ha 0 0))
-->
-ha h={0,0};
 
 (declare (pre-concat h i) uint32_t)
 ->

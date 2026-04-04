@@ -1,11 +1,15 @@
 # SC Transpilation Rules
 Rules for converting C code into the s-expression language SC.
+
 # Declarations
 `type name;` -> `(declare name type)`
 `type name = value;` -> `(define name type value)`
 `type name[size] = {value, ...};` -> `(define name (array type size) (array-literal value ...))`
 `type first_name = first_value; type second_name = second_value;` -> `(define first_name type first_value second_name type second_value)`
 `type name[size];` -> `(declare name (array type size))`
+`type (*name)[size];` -> `(declare name (array-pointer type size))`
+`type name[size1][size2];` -> `(declare name (array type (size1 size2)))`
+`type (*name)[size1][size2];` -> `(declare name (array-pointer type (size1 size2)))`
 `typedef type name;` -> `(declare name (type type))`
 `typedef struct name alias;` -> `(declare alias (type (struct name)))`
 `typedef union name alias;` -> `(declare alias (type (union name)))`
@@ -13,24 +17,27 @@ Rules for converting C code into the s-expression language SC.
 `union name variable_name;` -> `(declare variable_name (union name))`
 `enum name {a, b, c};` -> `(declare name (enum (a b c)))`
 `typedef enum {a, b} name;` -> `(declare name (type (enum (a b))))`
+
 # Functions
 `return_type name(argument_type argument_name, ...) { body }` -> `(define (name argument_name ...) (return_type argument_type ...) body...)`
 `return_type name(argument_type argument_name, ...);` -> `(declare (name argument_name ...) (return_type argument_type ...))`
 `return_type (*name)(arguments...)` -> `(declare name (function-pointer return_type arguments...))`
+
 # Memory Access
 `*identifier` -> `(pointer-get identifier)`
 `&identifier` -> `(address-of identifier)`
 `a.b` -> `(struct-get a b)`
-`a.b->c` -> `(struct-pointer-get (struct-get a b) c)`
+`a.b->c` → `(struct-pointer-get (struct-get a b) c)`
 `a->b` -> `(struct-pointer-get a b)`
-`a->b.c` -> `(struct-get (struct-pointer-get a b) c)`
-`a[i].b` -> `(struct-get (array-get a i) b)`
-`a[i]->b` -> `(struct-pointer-get (array-get a i) b)`
+`a->b.c` → `(struct-get (struct-pointer-get a b) c)`
+`a[i].b` → `(struct-get (array-get a i) b)`
+`a[i]->b` → `(struct-pointer-get (array-get a i) b)`
 `a[i]` -> `(array-get a i)`
 `a[i][j]` -> `(array-get a i j)`
 `type*` -> `type*`
 `*expression` -> `(pointer-get expression)`
 `&expression` -> `(address-of expression)`
+
 # Expressions
 `a + b` -> `(+ a b)`
 `a - b` -> `(- a b)`
@@ -47,6 +54,7 @@ Rules for converting C code into the s-expression language SC.
 `a | b` -> `(bit-or a b)`
 `!a` -> `(not a)`
 `~a` -> `(bit-not a)`
+
 # Assignment
 `a = b;` -> `(set a b)`
 `a = b; c = d;` -> `(set a b c d)`
@@ -54,10 +62,12 @@ Rules for converting C code into the s-expression language SC.
 `a -= value` -> `(set- a value)`
 `a *= value` -> `(set* a value)`
 `a /= value` -> `(set/ a value)`
+
 # Conditional Expressions
 `condition ? then_expression : else_expression` -> `(if* condition then_expression else_expression)`
 `a ? (b ? c : d) : e` -> `(if* a (if* b c d) e)`
 `a ? (x, y) : z` -> `(if* a (begin x y) (begin z))`
+
 # Control Flow
 `if (condition) { body }` -> `(if condition (begin body...))`
 `if (condition) { body } else { alternative_body }` -> `(if condition (begin body...) (begin alternative_body...))`
@@ -69,6 +79,7 @@ Rules for converting C code into the s-expression language SC.
 `label name: body` -> `(label name body...)`
 `continue` -> `continue`
 `break` -> `break`
+
 # Structs, Unions, Enums
 `struct name { member... };` -> `(declare name (struct member...))`
 `union name { member... };` -> `(declare name (union member...))`
@@ -85,27 +96,34 @@ Rules for converting C code into the s-expression language SC.
 `{.a=1, .b=2}` -> `(compound-literal (a 1) (b 2))`
 `{0}` -> `(compound-literal 0)`
 `{[a]=1}` -> `(array-literal (a 1))`
+
 # Preprocessor
 `#define A B` -> `(pre-define A B)`
 `#define f(x) y` -> `(pre-define (f x) y)`
-`#include "file"` -> `(pre-include "file")`
+`#include "file"` -> `(pre-include "./file")`
+`#include <file>` -> `(pre-include "file")`
 `#ifdef A` -> `(pre-cond-defined (A body...))`
 `#ifndef A` -> `(pre-cond-not-defined (A body...))`
 `#if condition ... #elif ... #else ... #endif` -> `(pre-cond ((condition body...) (else alternative_body...)))`
 `a##b` -> `(pre-concat a b)`
 `#a` -> `(pre-stringify a)`
 `macro_name` -> `macro_name`
+
 # Comments and Strings
 `/* comment */` -> `(sc-comment "comment")`
 `/** docstring */` -> place `"docstring"` inside the corresponding `(define ...)`
 `"abc"` -> `"abc"`
+
 # Miscellaneous
 `return value;` -> `(return value)`
 `return;` -> `return`
 `(type)(expression)` -> `(convert-type expression type)`
 `a_b_c` -> `a-b-c`
 `expression ...` -> `(begin expression ...)`
+
 # Formatting
 formatting should simply use regular indendation (indent_depth equals nesting depth) and use up to 240 characters per line)
+
 # note
+
 be careful about nested struct access `a->b.c` is `(struct-get (struct-pointer-get a b) c)`
