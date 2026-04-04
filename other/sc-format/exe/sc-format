@@ -27,8 +27,10 @@
         (map-consecutive (l (b) (and (list? b) (not (null? b)) (p b)))
           (l b (append (first b) (apply append (map (l (b) (tail b)) (tail b))))) a))
       a
-      (pair (l (a) (match a (((quote define) (? symbol?) value _ ...) #t) (_ #f)))
-        (map (l (prefix) (l (a) (eq? prefix (first a)))) (quote (declare set set+ set- pre-define)))))
+      (pair
+        (l (a)
+          (match a (((quote define) (? symbol?) value _ ...) #t) (_ #f)))
+        (map (l (prefix) (l (a) (eq? prefix (first a)))) (quote (declare set set+ set- pre-define pre-include)))))
     a))
 
 "(struct-pointer-get (struct-pointer-get a b) c)\n(address-of (array-get a b))\n(pointer-get (+ a b))\n(pointer-get (+ a b c))\n(struct-pointer-get (+ a b) c)"

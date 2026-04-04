@@ -15,19 +15,23 @@
 
   (test-execute-procedures-lambda
     (sc->c
-      (define a (array b ()) "c")
-      "b a[]=\"c\""
-      (array-literal a (b (compound-literal c (d e))) (array-literal f))
-      "{a,[b]={c,.d=e},{f}}" (array-literal* ((a b) (c d)) ((e f) (g h)))
-      "{{{a,b},{c,d}},{{e,f},{g,h}}}" (declare a (type (array b 1)))
-      "typedef b a[1];" (/ 1.0 *a)
-      "(1.0/ *a)" (convert-type (compound-literal 0) b)
-      "((b){0})" (declare a struct)
-      "struct a;" (declare a (type (struct a)))
-      "typedef struct a a;" (define a (array char 3) "12")
-      "char a[3]=\"12\"" (define (a) (void double))
-      "void a(double)" (define (a) ())
-      "void a(void)" (declare a (type (struct (b c) (union (d e) (f (struct (g h)))))))
+      (array b 1)
+      "b[1]"
+      (a (array b 1))
+      "a(b[1])"
+      (declare a (array-pointer b 3)) "b (*a)[3];"
+      (define a (array b ()) "c") "b a[]=\"c\""
+      (array-literal a (b (compound-literal c (d e))) (array-literal f)) "{a,[b]={c,.d=e},{f}}"
+      (array-literal* ((a b) (c d)) ((e f) (g h))) "{{{a,b},{c,d}},{{e,f},{g,h}}}"
+      (declare a (type (array b 1))) "typedef b a[1];"
+      (/ 1.0 *a) "(1.0/ *a)"
+      (convert-type (compound-literal 0) b) "((b){0})"
+      (declare a struct) "struct a;"
+      (declare a (type (struct a))) "typedef struct a a;"
+      (define a (array char 3) "12") "char a[3]=\"12\""
+      (define (a) (void double)) "void a(double)"
+      (define (a) ()) "void a(void)"
+      (declare a (type (struct (b c) (union (d e) (f (struct (g h)))))))
       "typedef struct{c b;union {e d;struct {h g;} f;};} a;" (unless #f 1 2)
       "if(!0){1;2;}" (1+ 3)
       "(3+1)" (1- 3)
@@ -56,7 +60,7 @@
       "(1&&2&&3)" (and a (set b (c d)))
       "(a&&(b=c(d)))" (array-get a 1)
       "a[1]" (array-get (array-get a 1) 2)
-      "(a[1])[2]" (array-get aaa 3)
+      "a[1][2]" (array-get aaa 3)
       "aaa[3]" (array-get aaa 3 4 5)
       "aaa[3][4][5]" (array-get *a 3)
       "(*a)[3]" (array-literal 1 "2" 3 4)

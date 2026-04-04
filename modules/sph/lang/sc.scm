@@ -215,7 +215,7 @@
 (define sc-state-comma-join (vector-accessor 3))
 (define sc-state-comma-join-set! (vector-setter 3))
 (define sc-state-eval-env (vector-accessor 4))
-(define ambiguous-regexp (make-regexp "^(\\*|&)+|\\.|->|\\[|\\("))
+(define ambiguous-regexp (make-regexp "^(\\*|&)+|\\.|->|\\("))
 
 (define* (sc-state-new load-paths #:optional eval-env)
   (vector (q sc-state) load-paths
@@ -462,10 +462,10 @@
 (define (parenthesize-ambiguous a)
   (if (or (parenthesized? a) (not (regexp-exec ambiguous-regexp a))) a (parenthesize a)))
 
-(define* (c-pre-define name #:optional body parameters)
+(define* (sc-c-pre-define name #:optional body parameters)
   (string-append "#define " name (or parameters "") (if body (string-append " " body) "")))
 
-(define (c-compound a)
+(define (sc-c-compound a)
   "string/((string string) ...) -> string
    a: {a}
    (a): {string}
@@ -479,33 +479,33 @@
       a)
     "}"))
 
-(define* (c-statement keyword body #:optional prefix-a suffix-a)
+(define* (sc-c-statement keyword body #:optional prefix-a suffix-a)
   "\"keyword (prefix-a) { body } (suffix-a)\""
   (string-append keyword (if prefix-a (parenthesize prefix-a) "")
-    (c-compound body) (if suffix-a (parenthesize suffix-a) "")))
+    (sc-c-compound body) (if suffix-a (parenthesize suffix-a) "")))
 
-(define* (c-if-statement test consequent #:optional alternate)
+(define* (sc-c-if-statement test consequent #:optional alternate)
   (string-append "if" (if (parenthesized? test) test (parenthesize test))
     "{" consequent "}" (if alternate (string-append "else{" alternate "}") "")))
 
-(define (c-array-get a indices)
+(define (sc-c-array-get a indices)
   (apply string-append (parenthesize-ambiguous a) (map (l (a) (string-append "[" a "]")) indices)))
 
-(define (c-struct-pointer-get a . fields)
+(define (sc-c-struct-pointer-get a . fields)
   (string-append (parenthesize-ambiguous a) (string-join fields "->" (q prefix))))
 
-(define c-character-escapes
+(define sc-c-character-escapes
   (alist "\"" "\\\"" "\a" "\\a" "\n" "\\n" "\b" "\\b" "\f" "\\f" "\r" "\\r" "\t" "\\t" "\v" "\\v"))
 
-(define (c-string a)
+(define (sc-c-string a)
   (string-append "\""
-    (fold (l (a result) (string-replace-string result (first a) (tail a))) a c-character-escapes)
+    (fold (l (a result) (string-replace-string result (first a) (tail a))) a sc-c-character-escapes)
     "\""))
 
-(define (c-value a) "handles the default conversions between scheme and c types"
+(define (sc-c-value a) "handles the default conversions between scheme and c types"
   (cond
     ((symbol? a) (symbol->string a))
-    ((string? a) (c-string a))
+    ((string? a) (sc-c-string a))
     ((number? a) (number->string a))
     ((boolean? a) (if a "1" "0"))
     ( (char? a)
@@ -563,7 +563,7 @@
       ".<=" (pair "<=" "_leq") ".>=" (pair ">=" "_geq") ".%" (pair "%" "_percent"))))
 
 (define (sc-identifier-struct-pointer-get a)
-  (let (a (string-split a #\:)) (if (= 1 (length a)) (first a) (apply c-struct-pointer-get a))))
+  (let (a (string-split a #\:)) (if (= 1 (length a)) (first a) (apply sc-c-struct-pointer-get a))))
 
 (define (translate-identifier a)
   (let*
@@ -582,7 +582,7 @@
     (if (list? a) (string-join (map sc-identifier a) " ") (any->string a))))
 
 (define (sc-let* a compile state)
-  (c-compound
+  (sc-c-compound
     (match a
       ( ( ( (names values ...) ...) body ...)
         (compile
@@ -607,7 +607,7 @@
 (define (sc-do-while a compile state)
   (match a
     ( (test body ...)
-      (string-append "do" (c-compound (compile (pair (q begin) body)))
+      (string-append "do" (sc-c-compound (compile (pair (q begin) body)))
         "while" (parenthesize (compile test))))))
 
 (define (sc-pre-let* a compile state)
@@ -641,9 +641,9 @@
 (define (sc-if a compile state)
   (match a
     ( (test consequent alternate)
-      (c-if-statement (compile test) (compile (list (q begin) consequent))
+      (sc-c-if-statement (compile test) (compile (list (q begin) consequent))
         (compile (list (q begin) alternate))))
-    ((test consequent) (c-if-statement (compile test) (compile (list (q begin) consequent))))))
+    ((test consequent) (sc-c-if-statement (compile test) (compile (list (q begin) consequent))))))
 
 (define (sc-semicolon-list-to-comma-list a)
   "this would not work with string or character literals that contain semicolons.
@@ -770,7 +770,7 @@
       (string-append (or docstring "")
         (string-replace-string
           (string-trim-right
-            (c-pre-define (sc-identifier name) body-string
+            (sc-c-pre-define (sc-identifier name) body-string
               (parenthesize (string-join (map sc-identifier parameter) ",")))
             #\newline)
           "\n" "\\\n")
@@ -797,7 +797,7 @@
   (cond
     ((symbol? a) (translate-identifier (symbol->string a)))
     ((boolean? a) (if a "1" "0"))
-    (else (c-value a))))
+    (else (sc-c-value a))))
 
 (define (sc-pre-if-block type a compile)
   (apply
@@ -822,13 +822,13 @@
     a))
 
 (define (sc-pre-define a compile state) "-> string"
-  (match a ((name) (c-pre-define (sc-identifier name)))
+  (match a ((name) (sc-c-pre-define (sc-identifier name)))
     ( (name value)
       (match name
         ( (name parameter ...) (sc-no-semicolon-track state name value)
           (sc-macro-function name parameter (list value) compile))
         (_ (sc-no-semicolon-track state name value)
-          (c-pre-define (sc-identifier name)
+          (sc-c-pre-define (sc-identifier name)
             (string-replace-string (string-trim-right (compile value) #\newline) "\n" "\\\n")))))
     ( (name-1 value-1 name-2 value-2 rest ...)
       (compile (pair (q begin) (map-slice 2 (l a (pair (q pre-define) a)) a))))
@@ -841,7 +841,7 @@
     (map
       (l (a)
         (if (or (string-prefix? "./" a) (string-prefix? "../" a) (string-prefix? "/" a))
-          (string-append "#include " (c-string a)) (string-append "#include <" a ">")))
+          (string-append "#include " (sc-c-string a)) (string-append "#include <" a ">")))
       a)
     "\n"))
 
@@ -866,7 +866,8 @@
     ","))
 
 (define (sc-enum a compile state)
-  (let (c (l (name entries) (c-statement (string-append "enum" name) (sc-enum-entries entries))))
+  (let
+    (c (l (name entries) (sc-c-statement (string-append "enum" name) (sc-enum-entries entries))))
     (match a ((name (entries ...)) (c (string-append " " (sc-identifier name)) entries))
       (((entries ...)) (c "" entries)))))
 
@@ -933,17 +934,25 @@
       ",")
     "}"))
 
-(define (sc-define-array a compile state)
+(define (sc-array-sizes size compile)
+  (apply string-append
+    (if (null? size) (list "[]")
+      (map (l (a) (if (null? a) "[]" (string-append "[" (compile a) "]"))) (any->list size)))))
+
+(define (sc-define-array-or-array-pointer a compile state is-pointer)
   (match a
     ( (name type size values ...)
       (string-append
         (if (and (list? type) (preprocessor-keyword? (first type))) (compile type)
           (sc-identifier type))
-        " " (compile name)
-        (apply string-append
-          (if (null? size) (list "[]")
-            (map (l (a) (if (null? a) "[]" (string-append "[" (compile a) "]"))) (any->list size))))
+        " " (if is-pointer (parenthesize (string-append "*" (compile name))) (compile name))
+        (sc-array-sizes size compile)
         (if (null? values) "" (string-append "=" (sc-array-literal values compile state)))))))
+
+(define (sc-define-array a compile state) (sc-define-array-or-array-pointer a compile state #f))
+
+(define (sc-define-array-pointer a compile state)
+  (sc-define-array-or-array-pointer a compile state #t))
 
 (define (sc-define a compile state)
   "(argument ...) procedure -> string/false
@@ -1011,7 +1020,7 @@
     ( (keyword-string (symbol->string keyword)) (a-first (first a))
       (c
         (l (name body)
-          (if (null? body) name (c-statement name (sc-struct-or-union-body body compile state))))))
+          (if (null? body) name (sc-c-statement name (sc-struct-or-union-body body compile state))))))
     (if (or (symbol? a-first) (and (list? a-first) (preprocessor-keyword? (first a-first))))
       (c (string-append keyword-string " " (compile a-first)) (tail a)) (c keyword-string a))))
 
@@ -1024,6 +1033,8 @@
   (map-slice 2
     (l (id type)
       (match type (((quote array) type size) (sc-define-array (list id type size) compile state))
+        ( ( (quote array-pointer) type size)
+          (sc-define-array-pointer (list id type size) compile state))
         (((quote enum) a ...) (sc-enum a compile state))
         ( ( (or (quote struct) (quote union)) (not (? symbol?)) _ ...)
           (sc-struct-or-union (first type) (pair id (tail type)) compile state))
@@ -1097,28 +1108,29 @@
 (define (sc-cond a compile state)
   (match a
     ( (only-cond)
-      (c-if-statement (compile (first only-cond)) (compile (pair (q begin) (tail only-cond)))))
+      (sc-c-if-statement (compile (first only-cond)) (compile (pair (q begin) (tail only-cond)))))
     ( (first-cond middle-cond ... last-cond)
       (string-append
-        (c-if-statement (compile (first first-cond)) (compile (pair (q begin) (tail first-cond))))
+        (sc-c-if-statement (compile (first first-cond))
+          (compile (pair (q begin) (tail first-cond))))
         (apply string-append
           (map
             (l (a)
               (string-append "else "
-                (c-if-statement (compile (first a)) (compile (pair (q begin) (tail a))))))
+                (sc-c-if-statement (compile (first a)) (compile (pair (q begin) (tail a))))))
             middle-cond))
         (let
           ( (test (compile (first last-cond)))
             (consequent (compile (pair (q begin) (tail last-cond)))))
           (string-append "else"
             (if (eq? (q else) (first last-cond)) (string-append "{" consequent "}")
-              (string-append " " (c-if-statement test consequent)))))))))
+              (string-append " " (sc-c-if-statement test consequent)))))))))
 
 (define (sc-while a compile state)
   (match a
     ( (test body ...)
       (string-append "while" (parenthesize (compile test))
-        (c-compound (compile (pair (q begin) body)))))))
+        (sc-c-compound (compile (pair (q begin) body)))))))
 
 (define (sc-default-load-paths)
   (map ensure-trailing-slash (let (a (getenv "SC_LOAD_PATH")) (if a (string-split a #\:) null))))
@@ -1217,7 +1229,7 @@
   (string-append (parenthesize-ambiguous (compile (first a)))
     (string-join (map compile (tail a)) "->" (q prefix))))
 
-(define (sc-array-get a compile state) (c-array-get (compile (first a)) (map compile (tail a))))
+(define (sc-array-get a compile state) (sc-c-array-get (compile (first a)) (map compile (tail a))))
 
 (define (sc-address-of a compile state)
   (string-append "&" (parenthesize-ambiguous (apply string-append (map compile a)))))
@@ -1230,11 +1242,15 @@
 
 (define (sc-function-pointer a compile state) (apply sc-function-pointer-build compile "" a))
 
-(define (sc-array a compile state)
+(define (sc-array-or-array-pointer a compile is-pointer)
   (match a
-    ( (name type size ...)
-      (string-append (sc-compile-type type compile) " " (c-array-get name (map compile size))))))
+    ( (name type size)
+      (string-append (sc-compile-type type compile) " "
+        (sc-identifier name) (sc-array-sizes size compile)))
+    ((type size) (string-append (sc-compile-type type compile) (sc-array-sizes size compile)))))
 
+(define (sc-array a compile state) (sc-array-or-array-pointer a compile #f))
+(define (sc-array-pointer a compile state) (sc-array-or-array-pointer a compile #t))
 (define (sc-goto a compile state) (string-append "goto " (compile (first a))))
 
 (define (sc-label a compile state)
