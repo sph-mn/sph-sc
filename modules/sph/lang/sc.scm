@@ -1010,7 +1010,9 @@
           ( (name type)
             (if (sc-function-pointer? type)
               (apply sc-function-pointer-build compile (compile name) (tail type))
-              (match type (((quote array) a ...) (sc-define-array (pair name a) compile state))
+              (match type
+                (((quote array) a ...) (sc-define-array (pair name a) compile state))
+                (((quote array-pointer) a ...) (sc-define-array-pointer (pair name a) compile state))
                 (else (string-append (sc-compile-type type compile) " " (compile name))))))))
       a)
     ";" (q suffix)))
